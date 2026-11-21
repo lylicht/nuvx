@@ -6,6 +6,8 @@ Every nuvx release, newest first. Downloads and checksums are on each version's 
 
 ## Unreleased
 
+- **Desktop Light Theme lyrics:** made lyric text readable. Thanks @vantom0101 for reporting #349.
+- **Playback reliability:** clear stale Smart Fade markers, retry unavailable Loop Mix lyrics, preserve cancellation, and test crossfade phase policies. Thanks @vantom0101 for #341 and #343–#345.
 - Update InnerTubeX to v0.12.0 across Android and Apple builds.
 - **Desktop backup export and import** (Settings → Your data → Backup): saves your playlists as `nuvx-backup-<date>.json`, the same
   file the phone's backup writes, so a backup from either one restores on the other. Importing adds playlists you don't
