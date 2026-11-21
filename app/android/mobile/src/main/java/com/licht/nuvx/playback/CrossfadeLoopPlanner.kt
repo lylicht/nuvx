@@ -1,5 +1,6 @@
 package com.licht.nuvx.playback
 
+import android.os.SystemClock
 import android.util.Log
 import androidx.media3.common.MediaItem
 import androidx.media3.exoplayer.ExoPlayer
@@ -14,6 +15,7 @@ import com.licht.nuvx.playback.smart.TrackAnalysis
 import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.roundToInt
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -32,7 +34,7 @@ internal class CrossfadeLoopPlanner(
     private class LyricSpans(val spans: List<LoopMix.Span>?)
 
     private val lyricSpans = ConcurrentHashMap<String, LyricSpans>()
-    private val lyricsAsked = ConcurrentHashMap.newKeySet<String>()
+    private val lyricRequests = LoopLyricsRequestTracker(LOOP_LYRICS_RETRY_MS)
 
     val planned: LoopMix.Plan? get() = loopPlanned
     val refusal: String? get() = loopRefusal
@@ -113,18 +115,30 @@ internal class CrossfadeLoopPlanner(
 
     private fun askLyrics(item: MediaItem, durationMs: Long) {
         val id = item.mediaId
-        if (!lyricsAsked.add(id)) return
+        if (!lyricRequests.begin(id, SystemClock.elapsedRealtime(), AppSettings.syncedLyrics.value)) return
         scope.launch(Dispatchers.IO) {
-            val lines = runCatching { syncedLines(item, durationMs) }.getOrNull()
-            val spans = lines?.takeIf { found -> found.count { it.timeMs > 0 } >= 4 }?.let { found ->
-                LoopMix.sungSpans(
-                    found.map { line ->
+            try {
+                val lines = syncedLines(item, durationMs)
+                val usableLines = lines?.takeIf { found -> found.count { it.timeMs > 0 } >= 4 }
+                if (usableLines == null) {
+                    lyricRequests.unavailable(id, SystemClock.elapsedRealtime())
+                    return@launch
+                }
+                val spans = LoopMix.sungSpans(
+                    usableLines.map { line ->
                         val end = line.sungUntilMs ?: line.words.lastOrNull()?.endMs
                         LoopMix.Line(line.timeMs, end, blank = line.isGap || line.text.isBlank())
                     },
                 )
+                lyricSpans[id] = LyricSpans(spans)
+                lyricRequests.succeeded(id)
+            } catch (cancelled: CancellationException) {
+                lyricRequests.cancelled(id)
+                throw cancelled
+            } catch (failure: Exception) {
+                lyricRequests.unavailable(id, SystemClock.elapsedRealtime())
+                Log.w(TAG, "loop mix lyrics lookup failed for $id", failure)
             }
-            lyricSpans[id] = LyricSpans(spans)
         }
     }
 
@@ -157,5 +171,6 @@ internal class CrossfadeLoopPlanner(
         const val TAG = "NuvxCrossfade"
         const val LOOP_SETUP_SECONDS = 15.0
         const val LOOP_MIN_LEAD_MS = 9_000L
+        const val LOOP_LYRICS_RETRY_MS = 30_000L
     }
 }
