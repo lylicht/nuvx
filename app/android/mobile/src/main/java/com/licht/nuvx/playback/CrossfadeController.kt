@@ -725,17 +725,9 @@ class CrossfadeController(
 
         const val HANDOFF_GUARD_MS = 400L
 
-        const val IDLE_STEP_MS = 250L
-
-        const val ARM_STEP_MS = 40L
-        const val FADE_STEP_MS = 30L
-
-        const val HALF_TICK_NANOS = FADE_STEP_MS * 500_000L
+        const val HALF_TICK_NANOS = CrossfadeLifecycle.FADE_STEP_MS * 500_000L
 
         const val MAX_EXTRAPOLATION_NANOS = 600_000_000L
-        const val BAIL_STEP_MS = 15L
-
-        const val LOOP_STEP_MS = 20L
 
     }
 }
