@@ -6,6 +6,7 @@ Every nuvx release, newest first. Downloads and checksums are on each version's 
 
 ## Unreleased
 
+- **Desktop Light Theme player bar:** improved visibility and title contrast. Thanks @0xsynix for reporting #351.
 - Update InnerTubeX to v0.12.0 across Android and Apple builds.
 - **Desktop backup export and import** (Settings → Your data → Backup): saves your playlists as `nuvx-backup-<date>.json`, the same
   file the phone's backup writes, so a backup from either one restores on the other. Importing adds playlists you don't
