@@ -74,7 +74,7 @@ pub(super) fn paint_words(
         let quads = word_glyphs(ctx, w, lit, cfg, wob, atlas);
         let dim_c = if w.bg { dim * 0.78 } else { dim } * opacity;
         for q in &quads {
-            push_quad(&mut base, xf.rect(q.rect), q.uv, theme::with_alpha(Color32::WHITE, dim_c), &|_| 1.0, &no_cut);
+            push_quad(&mut base, xf.rect(q.rect), q.uv, theme::with_alpha(theme::text(), dim_c), &|_| 1.0, &no_cut);
         }
         per_word.push((quads, wob));
     }

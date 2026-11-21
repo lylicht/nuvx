@@ -203,9 +203,9 @@ impl View {
                 let a = if credits_focused { 0.85 } else { 0.2 };
                 let a = theme::anim(&ctx, ("lyr-credits", f.key), a, 0.35);
                 let o = transform_origin(block_rect, b.align, content.x);
-                let g = ctx.fonts_mut(|fv| fv.layout(text.clone(), font.clone(), Color32::WHITE, line_w - cfg.size * 0.5));
+                let g = ctx.fonts_mut(|fv| fv.layout(text.clone(), font.clone(), theme::text(), line_w - cfg.size * 0.5));
                 let xf = Xf { origin: o, scale: cfg.scale, content };
-                paint_galley(&painter, &g, pos2(0.0, cfg.padding), &xf, theme::with_alpha(Color32::WHITE, a), atlas);
+                paint_galley(&painter, &g, pos2(0.0, cfg.padding), &xf, theme::with_alpha(theme::text(), a), atlas);
                 continue;
             }
             let li = b.line.unwrap();
@@ -303,7 +303,7 @@ impl View {
                     .iter()
                     .filter_map(|d| match &d.body {
                         DecoBody::Text(text, font) => {
-                            let g = ctx.fonts_mut(|fv| fv.layout(text.clone(), font.clone(), Color32::WHITE, d.rect.width() + 1.0));
+                            let g = ctx.fonts_mut(|fv| fv.layout(text.clone(), font.clone(), theme::text(), d.rect.width() + 1.0));
                             let pad = if d.pill { vec2(cfg.rem() * 0.75 + 1.0, cfg.rem() * 0.25 + 1.0) } else { Vec2::ZERO };
                             Some((g, d.rect.min + pad, text_alpha))
                         }
@@ -315,7 +315,7 @@ impl View {
                 if let Some((tex, rr, uv)) = self.glow.blurred_line(&ctx, (f.key, i), r, &words, &texts, &pills, scale, atlas, ppp) {
                     let to = xf.rect(rr);
                     let snapped = (to.min.to_vec2() * ppp).round() / ppp;
-                    painter.image(tex, to.translate(snapped - to.min.to_vec2()), uv, theme::with_alpha(Color32::WHITE, opacity));
+                    painter.image(tex, to.translate(snapped - to.min.to_vec2()), uv, theme::with_alpha(theme::text(), opacity));
                 }
                 animating |= st.exit.is_some();
             } else {
@@ -327,7 +327,7 @@ impl View {
                     if d.pill {
                         let r = dxf.rect(d.rect);
                         let radius = (cfg.rem() * scale).min(255.0) as u8;
-                        painter.rect(r, radius, theme::with_alpha(Color32::WHITE, 0.05 * a), egui::Stroke::new(1.0, theme::with_alpha(Color32::WHITE, 0.1 * a)), egui::StrokeKind::Inside);
+                        painter.rect(r, radius, theme::with_alpha(theme::text(), 0.05 * a), egui::Stroke::new(1.0, theme::with_alpha(theme::text(), 0.1 * a)), egui::StrokeKind::Inside);
                     }
                     match &d.body {
                         DecoBody::Timed { words, groups } => {
@@ -335,9 +335,9 @@ impl View {
                         }
                         DecoBody::Text(text, font) => {
                             let wrap = d.rect.width() + 1.0;
-                            let g = ctx.fonts_mut(|fv| fv.layout(text.clone(), font.clone(), Color32::WHITE, wrap));
+                            let g = ctx.fonts_mut(|fv| fv.layout(text.clone(), font.clone(), theme::text(), wrap));
                             let pad = if d.pill { vec2(cfg.rem() * 0.75 + 1.0, cfg.rem() * 0.25 + 1.0) } else { Vec2::ZERO };
-                            paint_galley(&painter, &g, d.rect.min + pad, &dxf, theme::with_alpha(Color32::WHITE, text_alpha * a), atlas);
+                            paint_galley(&painter, &g, d.rect.min + pad, &dxf, theme::with_alpha(theme::text(), text_alpha * a), atlas);
                         }
                     }
                 }
@@ -386,7 +386,7 @@ impl View {
             let names = &lyrics.songwriters;
             let text = if names.len() > 1 { format!("Written by {} & {}", names[..names.len() - 1].join(", "), names[names.len() - 1]) } else { format!("Written by {}", names[0]) };
             let font = theme::regular((cfg.size * 0.4).max(12.0));
-            let h = ui.ctx().fonts_mut(|fv| fv.layout(text.clone(), font.clone(), Color32::WHITE, width - cfg.size * 0.5).size().y);
+            let h = ui.ctx().fonts_mut(|fv| fv.layout(text.clone(), font.clone(), theme::text(), width - cfg.size * 0.5).size().y);
             blocks.push(Block {
                 line: None,
                 start: 0.0,
