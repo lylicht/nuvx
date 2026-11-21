@@ -108,16 +108,32 @@ internal class CrossfadeTransitionPlanner(
 
     private fun planAutoTransition(player: ExoPlayer) {
         plannedTransition = null
-        if (versionSwapActive()) {
+        val swappingVersion = versionSwapActive()
+        val inParty = ListenTogether.state.value.inParty
+        val bitPerfect = BitPerfectOutput.status.value.active
+        val duration = player.duration
+        if (shouldClearSmartTransitionMarker(
+                smartFadeEnabled = AppSettings.smartFadeEnabled.value,
+                versionSwapActive = swappingVersion,
+                inListenTogetherParty = inParty,
+                bitPerfectActive = bitPerfect,
+                hasNext = player.hasNextMediaItem(),
+                repeatingOne = player.repeatMode == Player.REPEAT_MODE_ONE,
+                durationAvailable = duration != C.TIME_UNSET && duration > 0L,
+            )
+        ) {
+            AppSettings.smartTransitionWindow.value = null
+        }
+        if (swappingVersion) {
             AppSettings.smartTransitionWindow.value = null
             return
         }
-        if (ListenTogether.state.value.inParty) {
+        if (inParty) {
             AppSettings.smartTransitionWindow.value = null
             AppSettings.smartMixInProgress.value = false
             return
         }
-        if (BitPerfectOutput.status.value.active) {
+        if (bitPerfect) {
             AppSettings.smartTransitionWindow.value = null
             return
         }
@@ -126,7 +142,6 @@ internal class CrossfadeTransitionPlanner(
             return
         }
 
-        val duration = player.duration
         if (duration == C.TIME_UNSET || duration <= 0L) {
             AppSettings.smartTransitionWindow.value = null
             return
@@ -339,3 +354,20 @@ internal class CrossfadeTransitionPlanner(
         )
     }
 }
+
+internal fun shouldClearSmartTransitionMarker(
+    smartFadeEnabled: Boolean,
+    versionSwapActive: Boolean,
+    inListenTogetherParty: Boolean,
+    bitPerfectActive: Boolean,
+    hasNext: Boolean,
+    repeatingOne: Boolean,
+    durationAvailable: Boolean,
+): Boolean =
+    !smartFadeEnabled ||
+        versionSwapActive ||
+        inListenTogetherParty ||
+        bitPerfectActive ||
+        !hasNext ||
+        repeatingOne ||
+        !durationAvailable
