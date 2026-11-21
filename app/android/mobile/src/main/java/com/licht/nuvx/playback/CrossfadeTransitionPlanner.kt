@@ -76,30 +76,64 @@ internal class CrossfadeTransitionPlanner(
         plannedTransition?.takeIf { it.first == mediaId }?.second
 
     private fun refreshMarkerWhilePaused(player: ExoPlayer) {
-        if (!AppSettings.smartFadeEnabled.value) return
+        if (!AppSettings.smartFadeEnabled.value) {
+            AppSettings.smartTransitionWindow.value = null
+            return
+        }
         val now = SystemClock.elapsedRealtime()
         val step = if (AppSettings.mixViewOpen.value) IDLE_STEP_MS else PAUSED_MARKER_STEP_MS
         if (now - pausedMarkerAt < step) return
         pausedMarkerAt = now
-        if (versionSwapActive() || ListenTogether.state.value.inParty) return
-        if (!player.hasNextMediaItem() || player.repeatMode == Player.REPEAT_MODE_ONE) return
-        val item = player.currentMediaItem ?: return
+        if (versionSwapActive() || ListenTogether.state.value.inParty) {
+            AppSettings.smartTransitionWindow.value = null
+            return
+        }
+        if (!player.hasNextMediaItem() || player.repeatMode == Player.REPEAT_MODE_ONE) {
+            AppSettings.smartTransitionWindow.value = null
+            return
+        }
+        val item = player.currentMediaItem ?: run {
+            AppSettings.smartTransitionWindow.value = null
+            return
+        }
         val duration = player.duration.takeIf { it != C.TIME_UNSET && it > 0L }
             ?: trackInfoResolver.queuedDurationMs(item).takeIf { it > 0L }
             ?: (analysisFor(item).duration * 1000).roundToLong().takeIf { it > 0L }
-            ?: return
+            ?: run {
+                AppSettings.smartTransitionWindow.value = null
+                return
+            }
         considerSmartTransition(duration, markerOnly = true)
     }
 
     private fun planAutoTransition(player: ExoPlayer) {
         plannedTransition = null
-        if (versionSwapActive()) return
-        if (ListenTogether.state.value.inParty) {
+        val swappingVersion = versionSwapActive()
+        val inParty = ListenTogether.state.value.inParty
+        val bitPerfect = BitPerfectOutput.status.value.active
+        val duration = player.duration
+        if (shouldClearSmartTransitionMarker(
+                smartFadeEnabled = AppSettings.smartFadeEnabled.value,
+                versionSwapActive = swappingVersion,
+                inListenTogetherParty = inParty,
+                bitPerfectActive = bitPerfect,
+                hasNext = player.hasNextMediaItem(),
+                repeatingOne = player.repeatMode == Player.REPEAT_MODE_ONE,
+                durationAvailable = duration != C.TIME_UNSET && duration > 0L,
+            )
+        ) {
+            AppSettings.smartTransitionWindow.value = null
+        }
+        if (swappingVersion) {
+            AppSettings.smartTransitionWindow.value = null
+            return
+        }
+        if (inParty) {
             AppSettings.smartTransitionWindow.value = null
             AppSettings.smartMixInProgress.value = false
             return
         }
-        if (BitPerfectOutput.status.value.active) {
+        if (bitPerfect) {
             AppSettings.smartTransitionWindow.value = null
             return
         }
@@ -108,8 +142,10 @@ internal class CrossfadeTransitionPlanner(
             return
         }
 
-        val duration = player.duration
-        if (duration == C.TIME_UNSET || duration <= 0L) return
+        if (duration == C.TIME_UNSET || duration <= 0L) {
+            AppSettings.smartTransitionWindow.value = null
+            return
+        }
 
         if (player.repeatMode == Player.REPEAT_MODE_ONE) {
             if (AppSettings.smartFadeEnabled.value) requestAnalysisAround(player, duration)
@@ -122,9 +158,15 @@ internal class CrossfadeTransitionPlanner(
             return
         }
 
-        if (configuredFadeMs() <= 0L) return
+        if (configuredFadeMs() <= 0L) {
+            AppSettings.smartTransitionWindow.value = null
+            return
+        }
         val fade = fadeFor(duration)
-        if (fade <= 0L) return
+        if (fade <= 0L) {
+            AppSettings.smartTransitionWindow.value = null
+            return
+        }
 
         player.currentMediaItem?.mediaId?.let { plannedTransition = it to duration - fade }
         val remaining = duration - player.currentPosition
@@ -141,9 +183,15 @@ internal class CrossfadeTransitionPlanner(
 
     private fun considerSmartTransition(duration: Long, markerOnly: Boolean = false) {
         val player = active()
-        val currentItem = player.currentMediaItem ?: return
+        val currentItem = player.currentMediaItem ?: run {
+            AppSettings.smartTransitionWindow.value = null
+            return
+        }
         val nextIndex = player.nextMediaItemIndex
-        if (nextIndex == C.INDEX_UNSET) return
+        if (nextIndex == C.INDEX_UNSET) {
+            AppSettings.smartTransitionWindow.value = null
+            return
+        }
         val nextItem = player.getMediaItemAt(nextIndex)
         if (currentItem.isVideoOrigin || nextItem.isVideoOrigin) {
             AppSettings.smartTransitionWindow.value = null
@@ -312,3 +360,20 @@ internal class CrossfadeTransitionPlanner(
         )
     }
 }
+
+internal fun shouldClearSmartTransitionMarker(
+    smartFadeEnabled: Boolean,
+    versionSwapActive: Boolean,
+    inListenTogetherParty: Boolean,
+    bitPerfectActive: Boolean,
+    hasNext: Boolean,
+    repeatingOne: Boolean,
+    durationAvailable: Boolean,
+): Boolean =
+    !smartFadeEnabled ||
+        versionSwapActive ||
+        inListenTogetherParty ||
+        bitPerfectActive ||
+        !hasNext ||
+        repeatingOne ||
+        !durationAvailable
