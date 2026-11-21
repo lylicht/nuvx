@@ -80,6 +80,10 @@ The public site exposes [`robots.txt`](https://www.nuvx.lol/robots.txt), which p
 
 See [CONTRIBUTORS.md](CONTRIBUTORS.md) for project and software contributors.
 
+## Support
+
+If nuvx is useful to you, you can support ongoing development and maintenance through [Ko-fi](https://ko-fi.com/lylicht) or [Patreon](https://www.patreon.com/lylicht).
+
 ## How the counters work
 
 - **GitHub downloads** totals installers and portable app packages across public GitHub releases. Updates and repeat downloads count too. Web visits and extension downloads from the web player are separate. [Download count](https://nuvx-listen.lylicht.workers.dev/api/stats/downloads)
