@@ -30,3 +30,18 @@ plugins {
     id("org.jetbrains.kotlin.plugin.serialization") version "2.4.21" apply false
     id("org.jetbrains.compose") version "1.12.2" apply false
 }
+
+allprojects {
+    configurations.configureEach {
+        resolutionStrategy.force(
+            "org.apache.commons:commons-lang3:3.18.0",
+            "org.apache.httpcomponents:httpclient:4.5.14",
+            "org.apache.httpcomponents:httpmime:4.5.14",
+            "org.bouncycastle:bcpkix-jdk18on:1.87",
+            "org.bouncycastle:bcprov-jdk18on:1.87",
+            "org.bouncycastle:bcutil-jdk18on:1.87",
+            "org.bitbucket.b_c:jose4j:0.9.6",
+            "org.jdom:jdom2:2.0.6.1",
+        )
+    }
+}
