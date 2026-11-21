@@ -35,14 +35,14 @@ class SmartTransitionMarkerPolicyTest {
 
     @Test
     fun markerIsClearedWhenPlanningIsBlockedOrUnavailable() {
-        val invalidations = listOf<(Boolean) -> Boolean>(
-            { shouldClearSmartTransitionMarker(true, true, false, false, true, false, true) },
-            { shouldClearSmartTransitionMarker(true, false, true, false, true, false, true) },
-            { shouldClearSmartTransitionMarker(true, false, false, true, true, false, true) },
-            { shouldClearSmartTransitionMarker(true, false, false, false, false, false, true) },
-            { shouldClearSmartTransitionMarker(true, false, false, false, true, true, true) },
-            { shouldClearSmartTransitionMarker(true, false, false, false, true, false, false) },
+        val invalidations = listOf(
+            shouldClearSmartTransitionMarker(true, true, false, false, true, false, true),
+            shouldClearSmartTransitionMarker(true, false, true, false, true, false, true),
+            shouldClearSmartTransitionMarker(true, false, false, true, true, false, true),
+            shouldClearSmartTransitionMarker(true, false, false, false, false, false, true),
+            shouldClearSmartTransitionMarker(true, false, false, false, true, true, true),
+            shouldClearSmartTransitionMarker(true, false, false, false, true, false, false),
         )
-        invalidations.forEach { assertTrue(it(true)) }
+        invalidations.forEach { assertTrue(it) }
     }
 }
