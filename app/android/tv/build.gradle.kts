@@ -1,12 +1,22 @@
 import java.util.Properties
 import java.io.FileInputStream
+import com.android.build.api.dsl.ApplicationExtension
+import com.android.build.api.variant.ApplicationAndroidComponentsExtension
+import org.gradle.api.artifacts.dsl.DependencyHandler
 
 plugins {
-    id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
     id("org.jetbrains.kotlin.plugin.serialization")
 }
+
+apply(plugin = "com.android.application")
+
+fun DependencyHandler.implementation(dependency: Any) = add("implementation", dependency)
+fun DependencyHandler.compileOnly(dependency: Any) = add("compileOnly", dependency)
+fun DependencyHandler.debugImplementation(dependency: Any) = add("debugImplementation", dependency)
+fun DependencyHandler.testImplementation(dependency: Any) = add("testImplementation", dependency)
+fun DependencyHandler.androidTestImplementation(dependency: Any) = add("androidTestImplementation", dependency)
 
 val signing = Properties().apply {
     val file = rootProject.file("keystore.properties")
@@ -42,7 +52,7 @@ val androidVersionCode = providers.gradleProperty("nuvx.androidVersionCode")
 val androidVersionName = providers.gradleProperty("nuvx.androidVersionName")
     .getOrElse(rootProject.extra["nuvxVersionName"] as String)
 
-android {
+extensions.configure<ApplicationExtension> {
     namespace = "com.licht.nuvx"
     compileSdk = 37
 
@@ -198,6 +208,7 @@ val newPipeExtractorStripped = tasks.register<org.gradle.api.tasks.bundling.Jar>
 dependencies {
     implementation(project(":shared"))
     implementation(project(":sharedUi"))
+    compileOnly("org.checkerframework:checker-qual:3.43.0")
 
     val composeBom = platform("androidx.compose:compose-bom:2026.09.00")
     implementation(composeBom)
@@ -285,7 +296,7 @@ dependencies {
 val verifyDevInstall = tasks.register("verifyDevInstall") {
     group = "install"
     description = "Pre-verifies the installed dev build on every connected device."
-    val adb = androidComponents.sdkComponents.adb
+    val adb = extensions.getByType<ApplicationAndroidComponentsExtension>().sdkComponents.adb
     doLast {
         val adbPath = adb.get().asFile.absolutePath
         val serials = ProcessBuilder(adbPath, "devices").start()

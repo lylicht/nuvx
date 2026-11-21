@@ -1,10 +1,16 @@
 import java.util.Properties
+import com.android.build.api.dsl.ApplicationExtension
+import org.gradle.api.artifacts.dsl.DependencyHandler
+import org.gradle.api.plugins.BasePluginExtension
 
 plugins {
-    id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
 }
+
+apply(plugin = "com.android.application")
+
+fun DependencyHandler.implementation(dependency: Any) = add("implementation", dependency)
 
 val signing = Properties().apply {
     val file = rootProject.file("keystore.properties")
@@ -17,7 +23,7 @@ val androidVersionCode = providers.gradleProperty("nuvx.androidVersionCode")
 val androidVersionName = providers.gradleProperty("nuvx.androidVersionName")
     .getOrElse(rootProject.extra["nuvxVersionName"] as String)
 
-android {
+extensions.configure<ApplicationExtension> {
     namespace = "com.licht.nuvx.wear"
     compileSdk = 37
 
@@ -114,7 +120,7 @@ kotlin {
     }
 }
 
-base.archivesName.set("NuvxWear")
+extensions.getByType<BasePluginExtension>().archivesName.set("NuvxWear")
 
 dependencies {
     implementation("androidx.wear.compose:compose-material3:1.7.1")
@@ -127,6 +133,7 @@ dependencies {
 
     implementation("androidx.media3:media3-exoplayer:1.11.1")
     implementation("androidx.media3:media3-session:1.11.1")
+    implementation("com.google.guava:guava:33.7.2-android")
 
     implementation("com.google.android.gms:play-services-wearable:20.0.1")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.11.0")
