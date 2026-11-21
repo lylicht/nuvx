@@ -48,23 +48,7 @@ class CrossfadeController(
 ) {
     private val trackInfoResolver = CrossfadeTrackInfoResolver(active)
 
-    private enum class Phase {
-        IDLE,
-
-        ARMING,
-
-        FADING,
-
-        SLEEP_FADE,
-
-        BAILING,
-
-        LOOP_ARMING,
-
-        LOOP_RUNNING,
-    }
-
-    private var phase = Phase.IDLE
+    private var phase = CrossfadePhase.IDLE
 
     private var outgoing: ExoPlayer? = null
 
@@ -111,11 +95,11 @@ class CrossfadeController(
             incoming = null
             handedOff = false
             Log.d(TAG, "sleep timer due: fading out over ${fade}ms instead of transitioning")
-            phase = Phase.SLEEP_FADE
+            phase = CrossfadePhase.SLEEP_FADE
         },
         onFinish = {
             outgoing = null
-            phase = Phase.IDLE
+            phase = CrossfadePhase.IDLE
         },
     )
 
@@ -156,10 +140,10 @@ class CrossfadeController(
     private val speedController = CrossfadeSpeedController(
         scope = scope,
         active = active,
-        isIdle = { phase == Phase.IDLE },
+        isIdle = { phase == CrossfadePhase.IDLE },
     )
 
-    fun isTransitioning(): Boolean = phase != Phase.IDLE
+    fun isTransitioning(): Boolean = CrossfadeLifecycle.isTransitioning(phase)
 
     fun applyPlaybackSpeed(speed: Float) {
         if (isTransitioning()) return
@@ -173,8 +157,8 @@ class CrossfadeController(
 
     private val listener = CrossfadePlayerListener(
         readAhead = readAhead,
-        isArming = { phase == Phase.ARMING },
-        isFading = { phase == Phase.FADING },
+        isArming = { phase == CrossfadePhase.ARMING },
+        isFading = { phase == CrossfadePhase.FADING },
         handedOff = { handedOff },
         incoming = { incoming },
         bail = ::bail,
@@ -185,8 +169,8 @@ class CrossfadeController(
     private fun ranOutBeforeHandoff() {
         if (handedOff) return
         when (phase) {
-            Phase.ARMING, Phase.LOOP_ARMING, Phase.LOOP_RUNNING -> bail()
-            Phase.FADING -> {
+            CrossfadePhase.ARMING, CrossfadePhase.LOOP_ARMING, CrossfadePhase.LOOP_RUNNING -> bail()
+            CrossfadePhase.FADING -> {
                 val out = outgoing ?: return bail()
                 val into = incoming ?: return bail()
                 Log.d(TAG, "outgoing ran on into the next track before the handoff")
@@ -203,17 +187,7 @@ class CrossfadeController(
         tickerJob = scope.launch {
             while (isActive) {
                 tick()
-                delay(
-                    when (phase) {
-                        Phase.IDLE -> IDLE_STEP_MS
-                        Phase.ARMING -> ARM_STEP_MS
-                        Phase.FADING -> FADE_STEP_MS
-                        Phase.SLEEP_FADE -> FADE_STEP_MS
-                        Phase.BAILING -> BAIL_STEP_MS
-                        Phase.LOOP_ARMING -> ARM_STEP_MS
-                        Phase.LOOP_RUNNING -> LOOP_STEP_MS
-                    },
-                )
+                delay(CrossfadeLifecycle.tickIntervalMs(phase))
             }
         }
     }
@@ -236,15 +210,15 @@ class CrossfadeController(
     }
 
     fun onSkipRequested() {
-        if (phase != Phase.IDLE) bail()
+        if (CrossfadeLifecycle.shouldBailOnSkip(phase)) bail()
     }
 
     private fun tick() {
-        if (phase == Phase.FADING || phase == Phase.BAILING) {
+        if (phase == CrossfadePhase.FADING || phase == CrossfadePhase.BAILING) {
             // Only the session owner holds audio focus; the other player must follow its focus state too.
             val owner = if (handedOff) incoming else outgoing
             val held = owner?.playbackSuppressionReason?.let(::heldByTransientFocusLoss) == true
-            if (held && phase == Phase.FADING) bail()
+            if (held && phase == CrossfadePhase.FADING) bail()
             if (handedOff) {
                 outgoing?.playWhenReady = !held && (incoming?.playWhenReady ?: true)
             } else {
@@ -256,16 +230,16 @@ class CrossfadeController(
         automixDetail.publish()
         mixPresentation.expirePreview()
 
-        if (speedController.isEasing && phase == Phase.IDLE) speedController.driveEase()
+        if (speedController.isEasing && phase == CrossfadePhase.IDLE) speedController.driveEase()
 
         when (phase) {
-            Phase.IDLE -> transitionPlanner.considerAutoTransition()
-            Phase.ARMING -> driveArming()
-            Phase.FADING -> driveFade()
-            Phase.SLEEP_FADE -> sleepFade.drive()
-            Phase.BAILING -> driveBail()
-            Phase.LOOP_ARMING -> loopMix.driveArming(armDeadline)
-            Phase.LOOP_RUNNING -> loopMix.driveMix()
+            CrossfadePhase.IDLE -> transitionPlanner.considerAutoTransition()
+            CrossfadePhase.ARMING -> driveArming()
+            CrossfadePhase.FADING -> driveFade()
+            CrossfadePhase.SLEEP_FADE -> sleepFade.drive()
+            CrossfadePhase.BAILING -> driveBail()
+            CrossfadePhase.LOOP_ARMING -> loopMix.driveArming(armDeadline)
+            CrossfadePhase.LOOP_RUNNING -> loopMix.driveMix()
         }
     }
 
@@ -375,7 +349,7 @@ class CrossfadeController(
             }
         }
 
-        phase = Phase.ARMING
+        phase = CrossfadePhase.ARMING
         return true
     }
 
@@ -427,7 +401,7 @@ class CrossfadeController(
         AppSettings.smartMixInProgress.value = isRealMix()
         if (isRealMix()) mixPresentation.publishView(out, into)
         AppSettings.smartTransitionWindow.value = null
-        phase = Phase.FADING
+        phase = CrossfadePhase.FADING
     }
 
     private fun handOff(out: ExoPlayer, into: ExoPlayer) {
@@ -530,7 +504,7 @@ class CrossfadeController(
         currentRender = { render },
         updateRender = { render = it },
         renderFor = { plan, advanced -> this.renderFor(plan, advanced) },
-        isIdle = { phase == Phase.IDLE },
+        isIdle = { phase == CrossfadePhase.IDLE },
         fadeEndTimeMs = { fadeEndMs },
         configuredFadeMs = { fadeMs },
         currentMediaRatio = { mediaRatio },
@@ -571,10 +545,10 @@ class CrossfadeController(
         onBlendHeadroom = onBlendHeadroom,
         onMixPositionJump = onMixPositionJump,
         planner = loopPlanner,
-        isArming = { phase == Phase.LOOP_ARMING },
-        isRunning = { phase == Phase.LOOP_RUNNING },
-        markArming = { phase = Phase.LOOP_ARMING },
-        markRunning = { phase = Phase.LOOP_RUNNING },
+        isArming = { phase == CrossfadePhase.LOOP_ARMING },
+        isRunning = { phase == CrossfadePhase.LOOP_RUNNING },
+        markArming = { phase = CrossfadePhase.LOOP_ARMING },
+        markRunning = { phase = CrossfadePhase.LOOP_RUNNING },
         activateSmartFade = { smartFadeActive = true },
         outgoing = { outgoing },
         setOutgoing = { outgoing = it },
@@ -597,7 +571,7 @@ class CrossfadeController(
         requestAnalysis = requestAnalysis,
         versionSwapActive = versionSwapActive,
         nextStreamReady = nextStreamReady,
-        isIdle = { phase == Phase.IDLE },
+        isIdle = { phase == CrossfadePhase.IDLE },
         configuredFadeMs = ::configuredFadeMs,
         renderFor = ::renderFor,
         begin = { start ->
@@ -633,7 +607,7 @@ class CrossfadeController(
         active = active,
         loopSession = { loopMix.session },
         outgoing = { outgoing },
-        loopArming = { phase == Phase.LOOP_ARMING },
+        loopArming = { phase == CrossfadePhase.LOOP_ARMING },
         loopPlanner = loopPlanner,
         lastSmartPlan = { transitionPlanner.lastSmartPlan },
         lastSmartPlanStartMs = { transitionPlanner.lastSmartPlanStartMs },
@@ -644,8 +618,8 @@ class CrossfadeController(
     fun loopPositionMs(): Long? = loopMix.loopPositionMs()
 
     private fun bail() {
-        if (phase == Phase.IDLE || phase == Phase.BAILING) return
-        if (phase == Phase.LOOP_ARMING || phase == Phase.LOOP_RUNNING) {
+        if (phase == CrossfadePhase.IDLE || phase == CrossfadePhase.BAILING) return
+        if (phase == CrossfadePhase.LOOP_ARMING || phase == CrossfadePhase.LOOP_RUNNING) {
             loopMix.bail("interrupted", settle = false)
             return
         }
@@ -653,7 +627,7 @@ class CrossfadeController(
         AppSettings.smartMixInProgress.value = false
         AppSettings.smartMixBlend.value = null
         mixPresentation.clear()
-        if (!handedOff && phase != Phase.FADING) {
+        if (!handedOff && phase != CrossfadePhase.FADING) {
             finish()
             return
         }
@@ -661,14 +635,14 @@ class CrossfadeController(
         if (handedOff) incoming?.volume = 1f else outgoing?.volume = 1f
         bailFromGain = leavingOnBail()?.volume ?: 0f
         bailStartedAt = SystemClock.elapsedRealtime()
-        phase = Phase.BAILING
+        phase = CrossfadePhase.BAILING
     }
 
     private fun leavingOnBail(): ExoPlayer? = if (handedOff) outgoing else incoming
 
     private fun finish() {
-        val wasTransitioning = phase != Phase.IDLE
-        if (phase != Phase.IDLE) {
+        val wasTransitioning = phase != CrossfadePhase.IDLE
+        if (phase != CrossfadePhase.IDLE) {
             Log.d(TAG, "finish from $phase")
             settledAt = SystemClock.elapsedRealtime()
         }
@@ -710,7 +684,7 @@ class CrossfadeController(
         speedController.clearOutgoingRamp()
         outgoingAnalysis = TrackAnalysis()
         incomingAnalysis = TrackAnalysis()
-        phase = Phase.IDLE
+        phase = CrossfadePhase.IDLE
         if (wasTransitioning) onSettled()
     }
 
@@ -751,17 +725,9 @@ class CrossfadeController(
 
         const val HANDOFF_GUARD_MS = 400L
 
-        const val IDLE_STEP_MS = 250L
-
-        const val ARM_STEP_MS = 40L
-        const val FADE_STEP_MS = 30L
-
-        const val HALF_TICK_NANOS = FADE_STEP_MS * 500_000L
+        const val HALF_TICK_NANOS = CrossfadeLifecycle.FADE_STEP_MS * 500_000L
 
         const val MAX_EXTRAPOLATION_NANOS = 600_000_000L
-        const val BAIL_STEP_MS = 15L
-
-        const val LOOP_STEP_MS = 20L
 
     }
 }
