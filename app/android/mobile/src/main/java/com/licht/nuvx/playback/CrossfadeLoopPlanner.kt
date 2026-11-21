@@ -135,7 +135,7 @@ internal class CrossfadeLoopPlanner(
             } catch (cancelled: CancellationException) {
                 lyricRequests.cancelled(id)
                 throw cancelled
-            } catch (failure: Throwable) {
+            } catch (failure: Exception) {
                 lyricRequests.unavailable(id, SystemClock.elapsedRealtime())
                 Log.w(TAG, "loop mix lyrics lookup failed for $id", failure)
             }
