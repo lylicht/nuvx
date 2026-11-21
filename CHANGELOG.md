@@ -6,6 +6,8 @@ Every nuvx release, newest first. Downloads and checksums are on each version's 
 
 ## Unreleased
 
+- **Desktop Light Theme lyrics:** made lyric text readable. Thanks @vantom0101 for reporting #349.
+- **Playback reliability:** clear stale Smart Fade markers, retry unavailable Loop Mix lyrics, preserve cancellation, and test crossfade phase policies. Thanks @vantom0101 for #341 and #343–#345.
 - **Desktop tray controls:** added Previous, Play / Pause, Next, and mini-player access. Thanks @golmamad3123 for suggesting this in #336.
 - **Desktop Light Theme player bar:** improved visibility and title contrast. Thanks @0xsynix for reporting #351.
 - Update InnerTubeX to v0.12.0 across Android and Apple builds.
