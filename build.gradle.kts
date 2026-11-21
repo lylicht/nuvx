@@ -1,4 +1,8 @@
 buildscript {
+    dependencies {
+        classpath("com.android.tools.build:gradle:9.5.2")
+    }
+
     configurations.classpath {
         // shortcut: force AGP 9.5.2's vulnerable plugin transitives; remove when a stable AGP release updates them.
         resolutionStrategy.force(
@@ -21,8 +25,6 @@ extra["nuvxVersionName"] = providers.gradleProperty("nuvx.nightlyBaseName").getO
 extra["nuvxBetaSuffix"] = providers.gradleProperty("nuvx.nightlySuffix").getOrElse("")
 
 plugins {
-    id("com.android.application") version "9.5.2" apply false
-    id("com.android.library") version "9.5.2" apply false
     id("org.jetbrains.kotlin.android") version "2.4.21" apply false
     id("org.jetbrains.kotlin.multiplatform") version "2.4.21" apply false
     id("org.jetbrains.kotlin.jvm") version "2.4.21" apply false
