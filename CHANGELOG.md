@@ -6,6 +6,7 @@ Every nuvx release, newest first. Downloads and checksums are on each version's 
 
 ## Unreleased
 
+- **Desktop tray controls:** added Previous, Play / Pause, Next, and mini-player access. Thanks @golmamad3123 for suggesting this in #336.
 - **Desktop Light Theme player bar:** improved visibility and title contrast. Thanks @0xsynix for reporting #351.
 - Update InnerTubeX to v0.12.0 across Android and Apple builds.
 - **Desktop backup export and import** (Settings → Your data → Backup): saves your playlists as `nuvx-backup-<date>.json`, the same
