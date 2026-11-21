@@ -6,6 +6,7 @@ Every nuvx release, newest first. Downloads and checksums are on each version's 
 
 ## Unreleased
 
+- **Build security:** use patched Guava for Android Gradle Plugin and declare Media3's compile-only annotations explicitly. Thanks @vantom0101 for flagging the remaining Dependabot alert.
 - **Desktop Light Theme lyrics:** made lyric text readable. Thanks @vantom0101 for reporting #349.
 - **Playback reliability:** clear stale Smart Fade markers, retry unavailable Loop Mix lyrics, preserve cancellation, and test crossfade phase policies. Thanks @vantom0101 for #341 and #343–#345.
 - **Desktop tray controls:** added Previous, Play / Pause, Next, and mini-player access. Thanks @golmamad3123 for suggesting this in #336.
