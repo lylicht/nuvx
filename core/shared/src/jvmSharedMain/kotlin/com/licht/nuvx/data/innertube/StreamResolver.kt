@@ -474,7 +474,7 @@ object StreamResolver {
 
     suspend fun signatureTimestamp(videoId: String): Int? {
         cachedSignatureTimestamp?.let { return it }
-        return runCatching {
+        return runCatchingExceptCancellation {
             jsPlayerManager { YoutubeJavaScriptPlayerManager.getSignatureTimestamp(videoId) }
         }
             .onFailure { TrackLog.w(TAG, "no signature timestamp: ${it.message}") }
@@ -718,3 +718,17 @@ object StreamResolver {
         recent[videoId] = Resolved(url, MonotonicClock.nowMs())
     }
 }
+
+
+/**
+ * Like runCatching, but never turns coroutine cancellation into an ordinary failure.
+ * Use for suspend operations whose non-cancellation failures are intentionally optional.
+ */
+internal suspend fun <T> runCatchingExceptCancellation(block: suspend () -> T): Result<T> =
+    try {
+        Result.success(block())
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Throwable) {
+        Result.failure(e)
+    }
