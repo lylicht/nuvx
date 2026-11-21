@@ -214,6 +214,13 @@ impl App {
         }
         match crate::tray::take().into_iter().next() {
             Some(crate::tray::Cmd::Show) => self.show_window(ctx),
+            Some(crate::tray::Cmd::Mini) => {
+                self.show_window(ctx);
+                self.mini.request(true);
+            }
+            Some(crate::tray::Cmd::Previous) => self.prev(),
+            Some(crate::tray::Cmd::Toggle) => self.toggle(),
+            Some(crate::tray::Cmd::Next) => self.next(),
             Some(crate::tray::Cmd::Quit) => {
                 self.tray = None;
                 self.quit(ctx);
@@ -255,3 +262,4 @@ impl App {
         });
     }
 }
+
