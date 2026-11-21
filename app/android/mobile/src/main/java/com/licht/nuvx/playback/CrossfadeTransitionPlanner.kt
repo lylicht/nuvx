@@ -183,9 +183,15 @@ internal class CrossfadeTransitionPlanner(
 
     private fun considerSmartTransition(duration: Long, markerOnly: Boolean = false) {
         val player = active()
-        val currentItem = player.currentMediaItem ?: return
+        val currentItem = player.currentMediaItem ?: run {
+            AppSettings.smartTransitionWindow.value = null
+            return
+        }
         val nextIndex = player.nextMediaItemIndex
-        if (nextIndex == C.INDEX_UNSET) return
+        if (nextIndex == C.INDEX_UNSET) {
+            AppSettings.smartTransitionWindow.value = null
+            return
+        }
         val nextItem = player.getMediaItemAt(nextIndex)
         if (currentItem.isVideoOrigin || nextItem.isVideoOrigin) {
             AppSettings.smartTransitionWindow.value = null
