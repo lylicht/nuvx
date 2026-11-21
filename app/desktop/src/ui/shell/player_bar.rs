@@ -3,6 +3,9 @@ use super::*;
 pub fn player_bar(app: &mut App, ui: &mut Ui, now: f64) {
     let full = ui.max_rect();
     let ctx = ui.ctx().clone();
+    if theme::light() {
+        ui.painter().rect_filled(full, 0.0, theme::surface_fill());
+    }
     ui.painter().hline(full.x_range(), full.bottom() - 0.5, egui::Stroke::new(1.0, theme::glass(0.08)));
     let cy = full.center().y;
 
@@ -150,7 +153,7 @@ pub fn player_bar(app: &mut App, ui: &mut Ui, now: f64) {
     const R: f32 = 4.0;
     let base = base_color(app);
     let (fill, edge) = if theme::light() {
-        (theme::lerp_color(base, Color32::BLACK, 0.055), Color32::from_black_alpha(26))
+        (theme::surface_fill(), Color32::from_black_alpha(26))
     } else {
         (theme::lerp_color(base, Color32::WHITE, 0.08), Color32::from_white_alpha(28))
     };
@@ -319,3 +322,4 @@ fn account(app: &mut App, ui: &mut Ui, r: Rect) {
 pub fn unmute_id() -> egui::Id {
     egui::Id::unique("unmute")
 }
+
