@@ -6,6 +6,10 @@ use tray_icon::{MouseButton, MouseButtonState, TrayIcon, TrayIconBuilder, TrayIc
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Cmd {
     Show,
+    Mini,
+    Previous,
+    Toggle,
+    Next,
     Quit,
 }
 
@@ -28,6 +32,10 @@ impl Tray {
             }));
             MenuEvent::set_event_handler(Some(move |e: MenuEvent| match e.id.as_ref() {
                 "show" => push(Cmd::Show, &wake),
+                "mini" => push(Cmd::Mini, &wake),
+                "previous" => push(Cmd::Previous, &wake),
+                "play-pause" => push(Cmd::Toggle, &wake),
+                "next" => push(Cmd::Next, &wake),
                 "quit" => push(Cmd::Quit, &wake),
                 _ => {}
             }));
@@ -53,6 +61,10 @@ impl Drop for Tray {
 
 fn build(png: image::RgbaImage) -> anyhow::Result<TrayIcon> {
     let menu = Menu::with_items(&[
+        &MenuItem::with_id("previous", "Previous track", true, None),
+        &MenuItem::with_id("play-pause", "Play / Pause", true, None),
+        &MenuItem::with_id("next", "Next track", true, None),
+        &MenuItem::with_id("mini", "Open mini player", true, None),
         &MenuItem::with_id("show", "Show nuvx", true, None),
         &MenuItem::with_id("quit", "Quit", true, None),
     ])?;
@@ -123,3 +135,4 @@ fn push(cmd: Cmd, wake: &impl Fn()) {
 pub fn take() -> Vec<Cmd> {
     std::mem::take(&mut *PENDING.lock().unwrap())
 }
+
