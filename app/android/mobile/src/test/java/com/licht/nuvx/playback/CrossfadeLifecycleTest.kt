@@ -7,7 +7,7 @@ import org.junit.Test
 class CrossfadeLifecycleTest {
     @Test
     fun idleIsTheOnlyNonTransitioningPhase() {
-        CrossfadePhase.entries.forEach { phase ->
+        CrossfadePhase.values().forEach { phase ->
             assertEquals(phase != CrossfadePhase.IDLE, CrossfadeLifecycle.isTransitioning(phase))
         }
         assertFalse(CrossfadeLifecycle.isTransitioning(CrossfadePhase.IDLE))
