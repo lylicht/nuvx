@@ -1,4 +1,5 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import com.android.build.api.dsl.LibraryExtension
 
 val cmp = "1.12.2"
 
@@ -13,11 +14,12 @@ val skikoHost = run {
 
 plugins {
     id("org.jetbrains.kotlin.multiplatform")
-    id("com.android.library")
     id("org.jetbrains.compose")
     id("org.jetbrains.kotlin.plugin.compose")
     id("org.jetbrains.kotlin.plugin.serialization")
 }
+
+apply(plugin = "com.android.library")
 
 kotlin {
     androidTarget {
@@ -79,7 +81,7 @@ kotlin {
     }
 }
 
-android {
+extensions.configure<LibraryExtension> {
     namespace = "com.licht.nuvx.sharedui"
     compileSdk = 37
     defaultConfig {

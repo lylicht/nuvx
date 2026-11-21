@@ -1,13 +1,29 @@
 import java.util.Properties
 import java.security.MessageDigest
 import java.io.FileInputStream
+import com.android.build.api.dsl.ApplicationExtension
+import com.android.build.api.variant.ApplicationAndroidComponentsExtension
+import org.gradle.api.artifacts.dsl.DependencyHandler
+import org.gradle.api.artifacts.ModuleDependency
 
 plugins {
-    id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
     id("org.jetbrains.kotlin.plugin.serialization")
 }
+
+apply(plugin = "com.android.application")
+
+fun DependencyHandler.implementation(dependency: Any) = add("implementation", dependency)
+fun DependencyHandler.implementation(dependency: Any, configure: ModuleDependency.() -> Unit) {
+    (add("implementation", dependency) as ModuleDependency).configure()
+}
+fun DependencyHandler.api(dependency: Any) = add("api", dependency)
+fun DependencyHandler.compileOnly(dependency: Any) = add("compileOnly", dependency)
+fun DependencyHandler.debugImplementation(dependency: Any) = add("debugImplementation", dependency)
+fun DependencyHandler.runtimeOnly(dependency: Any) = add("runtimeOnly", dependency)
+fun DependencyHandler.testImplementation(dependency: Any) = add("testImplementation", dependency)
+fun DependencyHandler.androidTestImplementation(dependency: Any) = add("androidTestImplementation", dependency)
 
 val signing = Properties().apply {
     val file = rootProject.file("keystore.properties")
@@ -49,7 +65,7 @@ val androidVersionCode = providers.gradleProperty("nuvx.androidVersionCode")
 val androidVersionName = providers.gradleProperty("nuvx.androidVersionName")
     .getOrElse(rootProject.extra["nuvxVersionName"] as String)
 
-android {
+extensions.configure<ApplicationExtension> {
     namespace = "com.licht.nuvx"
     compileSdk = 37
 
@@ -191,6 +207,7 @@ val newPipeExtractorStripped = tasks.register<org.gradle.api.tasks.bundling.Jar>
 dependencies {
     implementation(project(":shared"))
     implementation(project(":sharedUi"))
+    compileOnly("org.checkerframework:checker-qual:3.43.0")
 
     val composeBom = platform("androidx.compose:compose-bom:2026.09.00")
     implementation(composeBom)
@@ -281,7 +298,7 @@ dependencies {
 val verifyDevInstall = tasks.register("verifyDevInstall") {
     group = "install"
     description = "Pre-verifies the installed dev build on every connected device."
-    val adb = androidComponents.sdkComponents.adb
+    val adb = extensions.getByType<ApplicationAndroidComponentsExtension>().sdkComponents.adb
     doLast {
         val adbPath = adb.get().asFile.absolutePath
         val serials = ProcessBuilder(adbPath, "devices").start()
@@ -329,15 +346,17 @@ abstract class BundleWearApk : DefaultTask() {
 }
 
 if (providers.gradleProperty("nuvx.bundleWear").orNull != "false" && findProject(":wearos") != null) {
-    androidComponents.onVariants { variant ->
-        val flavor = variant.productFlavors.firstOrNull { it.first == "env" }?.second ?: return@onVariants
-        val type = variant.buildType ?: return@onVariants
-        if (type != "debug" && type != "release") return@onVariants
-        val cap = "${flavor.replaceFirstChar { it.uppercase() }}${type.replaceFirstChar { it.uppercase() }}"
-        val bundle = tasks.register<BundleWearApk>("bundleWearApk$cap") {
-            dependsOn(":wearos:assemble$cap")
-            apks.from(rootProject.layout.projectDirectory.dir("app/android/wearos/build/outputs/apk/$flavor/$type"))
+    extensions.configure<ApplicationAndroidComponentsExtension> {
+        onVariants { variant ->
+            val flavor = variant.productFlavors.firstOrNull { it.first == "env" }?.second ?: return@onVariants
+            val type = variant.buildType ?: return@onVariants
+            if (type != "debug" && type != "release") return@onVariants
+            val cap = "${flavor.replaceFirstChar { it.uppercase() }}${type.replaceFirstChar { it.uppercase() }}"
+            val bundle = tasks.register<BundleWearApk>("bundleWearApk$cap") {
+                dependsOn(":wearos:assemble$cap")
+                apks.from(rootProject.layout.projectDirectory.dir("app/android/wearos/build/outputs/apk/$flavor/$type"))
+            }
+            variant.sources.assets?.addGeneratedSourceDirectory(bundle, BundleWearApk::outputDir)
         }
-        variant.sources.assets?.addGeneratedSourceDirectory(bundle, BundleWearApk::outputDir)
     }
 }

@@ -1,10 +1,12 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import com.android.build.api.dsl.LibraryExtension
 
 plugins {
     id("org.jetbrains.kotlin.multiplatform")
-    id("com.android.library")
     id("org.jetbrains.kotlin.plugin.serialization")
 }
+
+apply(plugin = "com.android.library")
 
 kotlin {
     androidTarget {
@@ -54,7 +56,7 @@ kotlin {
     }
 }
 
-android {
+extensions.configure<LibraryExtension> {
     namespace = "com.licht.nuvx.shared"
     compileSdk = 37
 }
