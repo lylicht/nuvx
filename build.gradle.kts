@@ -1,12 +1,14 @@
 buildscript {
     dependencies {
-        classpath("com.android.tools.build:gradle:9.5.2")
+        classpath("com.android.tools.build:gradle:9.5.2") {
+            exclude(group = "com.google.guava", module = "guava")
+        }
+        classpath("com.google.guava:guava:33.7.2-jre")
     }
 
     configurations.classpath {
-        // shortcut: force AGP 9.5.2's vulnerable plugin transitives; remove when a stable AGP release updates them.
+        // shortcut: force AGP 9.5.2's other vulnerable transitives; remove when a stable AGP release updates them.
         resolutionStrategy.force(
-            "com.google.guava:guava:33.7.2-jre",
             "org.apache.commons:commons-lang3:3.18.0",
             "org.apache.httpcomponents:httpclient:4.5.14",
             "org.apache.httpcomponents:httpmime:4.5.14",
