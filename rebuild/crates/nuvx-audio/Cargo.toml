@@ -1,0 +1,12 @@
+[package]
+name = "nuvx-audio"
+description = "nuvx audio engine: decode with Symphonia, play with CPAL (spec 02)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+symphonia = { version = "=0.6.1", features = ["all"] }
+cpal = "=0.18.2"
+rubato = "=5.1.0"
+ringbuf = "=0.6.0"
