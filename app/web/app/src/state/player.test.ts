@@ -181,6 +181,7 @@ describe('player behavior at queue and media boundaries', () => {
       shuffle: true,
       repeat: 'one',
       autoplay: false,
+      worship: false,
       volume: 0.4,
       muted: true,
       crossfadeSec: 6,
