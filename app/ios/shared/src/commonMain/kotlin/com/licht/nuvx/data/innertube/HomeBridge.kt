@@ -1,6 +1,8 @@
 package com.licht.nuvx.data.innertube
 
 import com.licht.nuvx.data.DebugLog
+import com.licht.nuvx.data.WorshipFilter
+import com.licht.nuvx.data.settings.PlatformSettings
 
 import com.licht.nuvx.data.model.HomeFeed
 import com.licht.nuvx.data.model.HomeShelf
@@ -128,9 +130,10 @@ object HomeBridge {
             val token = InnertubeParser.continuationToken(primary)
             fun emit(complete: Boolean) {
                 Innertube.checkSession(generation)
-                val shelves = parts.flatten().distinctBy { it.title.lowercase() }
-                if (complete) check(shelves.isNotEmpty()) { "No results from YouTube Music" }
-                publish(HomeFeed(shelves, token), complete)
+                val merged = parts.flatten().distinctBy { it.title.lowercase() }
+                if (complete) check(merged.isNotEmpty()) { "No results from YouTube Music" }
+                val worship = PlatformSettings.getBoolean("worship_mode", false)
+                publish(HomeFeed(WorshipFilter.filterShelves(merged, worship), token), complete)
             }
             emit(false)
             repeat(extras.size) { count ->
