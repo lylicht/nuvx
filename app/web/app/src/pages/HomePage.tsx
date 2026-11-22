@@ -4,6 +4,8 @@ import { Shelves, TrackShelf } from '@/components/music/ShelfView';
 import { LoadError, LoadMoreError, NeedsExtension } from '@/components/music/States';
 import { useHome, useLibrary, useYouTubeReady } from '@/data/music/queries';
 import type { Track } from '@/data/music/types';
+import { filterShelves, filterTracks } from '@/data/music/worship';
+import { usePlayer } from '@/state/player';
 import { HomeSkeleton } from '@/skeletons/PageSkeletons';
 import { ShelfSkeleton } from '@/skeletons/ShelfSkeleton';
 
@@ -21,7 +23,8 @@ function useRecentlyPlayed(): Track[] {
 export default function HomePage() {
   const { missing } = useYouTubeReady();
   const home = useHome();
-  const recent = useRecentlyPlayed();
+  const worship = usePlayer((s) => s.worship);
+  const recent = filterTracks(useRecentlyPlayed(), worship);
   const sentinel = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -55,9 +58,12 @@ export default function HomePage() {
   }
   if (!home.data) return <HomeSkeleton />;
 
-  const shelves = home.data.pages
-    .flatMap((page) => page.data)
-    .filter((shelf) => !(recent.length > 0 && shelf.title.trim().toLowerCase() === RECENT_TITLE.toLowerCase()));
+  const shelves = filterShelves(
+    home.data.pages
+      .flatMap((page) => page.data)
+      .filter((shelf) => !(recent.length > 0 && shelf.title.trim().toLowerCase() === RECENT_TITLE.toLowerCase())),
+    worship,
+  );
   return (
     <>
       <PageHeader title="Home" />
@@ -68,4 +74,4 @@ export default function HomePage() {
       {home.isFetchNextPageError && <LoadMoreError onRetry={() => void home.fetchNextPage()} />}
     </>
   );
-}
+              }
