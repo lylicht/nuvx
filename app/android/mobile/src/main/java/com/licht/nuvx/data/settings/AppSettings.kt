@@ -237,7 +237,8 @@ object AppSettings {
 
     val squareVideoThumbnails = homeFeedSettings.squareVideoThumbnails
 
-    val worshipMode = homeFeedSettings.worshipMode
+    val hideExplicit = homeFeedSettings.hideExplicit
+    val focusedFeed = homeFeedSettings.focusedFeed
 
     val smartVersionAlignment = appearanceSettings.smartVersionAlignment
 
@@ -682,7 +683,9 @@ object AppSettings {
 
     fun setHideHomeMoods(value: Boolean) = homeFeedSettings.setHideHomeMoods(value)
 
-    fun setWorshipMode(value: Boolean) = homeFeedSettings.setWorshipMode(value)
+    fun setHideExplicit(value: Boolean) = homeFeedSettings.setHideExplicit(value)
+
+    fun setFocusedFeed(value: Boolean) = homeFeedSettings.setFocusedFeed(value)
 
     fun setSquareVideoThumbnails(value: Boolean) = homeFeedSettings.setSquareVideoThumbnails(value)
 
@@ -975,5 +978,3 @@ object AppSettings {
 
     private const val KEY_LAST_VERSION_CODE = "last_version_code"
 }
-
-
