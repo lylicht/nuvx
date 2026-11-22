@@ -87,7 +87,7 @@ pub(super) fn home(app: &mut App, ui: &mut Ui, now: f64) {
         && let Some(h) = &mut app.home
     {
         h.picks_loading = true;
-        app.backend.request(crate::backend::Req::MoreQuickPicks(seed));
+        app.backend.request(crate::backend::Req::MoreQuickPicks { seed, worship: app.worship });
     }
     if loading_more {
         widgets::skeleton(ui, now, 1, CARD);
