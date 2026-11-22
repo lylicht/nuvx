@@ -1,11 +1,13 @@
 package com.licht.nuvx.playback
 
+import com.licht.nuvx.data.WorshipFilter
 import com.licht.nuvx.data.YtMusicRepository
 import com.licht.nuvx.data.listentogether.ListenTogether
 import com.licht.nuvx.data.model.SearchFilter
 import com.licht.nuvx.data.model.SearchResult
 import com.licht.nuvx.data.model.QueueTier
 import com.licht.nuvx.data.model.Song
+import com.licht.nuvx.data.settings.AppSettings
 import com.licht.nuvx.data.sources.SourceRegistry
 import com.licht.nuvx.data.sources.TrackMatcher
 import com.licht.nuvx.playback.QueueCoordinator.asQueueEntry
@@ -57,7 +59,11 @@ suspend fun loadAutoplayTracks(
 ): Result<List<Song>> {
     val seed = youtubeSeedFor(seedSong) ?: return Result.success(emptyList())
     val videos = seedSong.isVideo && seed == seedSong.videoId && !MusicOnlyPlayback.isActive()
-    val related = YtMusicRepository.radio(seed, preferVideo = videos).getOrElse { return Result.failure(it) }
+    var related = YtMusicRepository.radio(seed, preferVideo = videos).getOrElse { return Result.failure(it) }
+    if (AppSettings.worshipMode.value) {
+        related = WorshipFilter.filterSongs(related, worshipOnly = true)
+        if (related.isEmpty()) related = worshipSearch(seedSong)
+    }
     val extra = QueueBuilder.extend(existing, related, limit, preferVideos = videos)
     if (extra.isEmpty()) return Result.success(emptyList())
 
@@ -69,4 +75,18 @@ suspend fun loadAutoplayTracks(
             playbackSourceId = seedSong.playbackSourceId,
         ).asQueueEntry(QueueTier.AUTOPLAY)
     })
+}
+
+/**
+ * Worship mode fallback: when the radio mix seeded by [seedSong] has no worship
+ * items (YouTube blends the account's music history into it), rebuild the queue
+ * from a worship search instead.
+ */
+private suspend fun worshipSearch(seedSong: Song): List<Song> {
+    val query = WorshipFilter.fallbackQuery(seedSong.title, seedSong.artist)
+    val results = YtMusicRepository.search(query, SearchFilter.SONGS).getOrNull() ?: return emptyList()
+    return WorshipFilter.filterSongs(
+        results.filterIsInstance<SearchResult.Track>().map { it.song },
+        worshipOnly = true,
+    )
 }
