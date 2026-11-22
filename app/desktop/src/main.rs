@@ -253,4 +253,4 @@ fn data_dir() -> std::path::PathBuf {
         return dir.join("data");
     }
     directories::ProjectDirs::from("", "", "nuvx").expect("no home directory").data_dir().to_path_buf()
-                                                                                  }
+}
