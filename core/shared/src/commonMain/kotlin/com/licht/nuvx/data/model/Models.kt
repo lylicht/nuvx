@@ -223,6 +223,7 @@ data class ShelfItem(
     val videoId: String?,
     val browseId: String?,
     val isVideo: Boolean = false,
+    val isExplicit: Boolean? = null,
 )
 
 enum class ShelfLayout {
