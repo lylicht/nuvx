@@ -4,12 +4,14 @@ import android.app.Application
 import android.util.Log
 import com.licht.nuvx.data.AppleArtistPhotos
 import com.licht.nuvx.data.TopPicks
+import com.licht.nuvx.data.WorshipFilter
 import com.licht.nuvx.data.YtMusicRepository
 import com.licht.nuvx.data.model.ArtistRef
 import com.licht.nuvx.data.model.HomeShelf
 import com.licht.nuvx.data.model.TopPick
 import com.licht.nuvx.data.model.UiState
 import com.licht.nuvx.data.model.withoutRepeatsOf
+import com.licht.nuvx.data.settings.AppSettings
 import com.licht.nuvx.data.stats.ListeningStats
 import com.licht.nuvx.data.stats.ReplayPeriod
 import java.io.File
@@ -212,7 +214,8 @@ internal class MainHomeFeed(
     private fun isCurrentHomeLoad(identity: String?, generation: Long) =
         identity == listenerKey() && generation == homeLoadGeneration.get()
 
-    private fun publishHomeShelves(shelves: List<HomeShelf>, prepend: Boolean = false) {
+    private fun publishHomeShelves(rawShelves: List<HomeShelf>, prepend: Boolean = false) {
+        val shelves = WorshipFilter.filterShelves(rawShelves, AppSettings.worshipMode.value)
         val existing = (_home.value as? UiState.Success)?.data.orEmpty()
         if (prepend) {
             val replacing = shelves.map { it.title.lowercase(Locale.ROOT) }.toSet()
@@ -234,7 +237,8 @@ internal class MainHomeFeed(
             if (identity != listenerKey()) return@onSuccess
             homeContinuation = feed.continuation
             homeSeenTitles.clear()
-            val shelves = feed.shelves.withoutRepeatsOf(emptyList())
+            val shelves = WorshipFilter.filterShelves(feed.shelves, AppSettings.worshipMode.value)
+                .withoutRepeatsOf(emptyList())
                 .filter { homeSeenTitles.add(it.title.lowercase(Locale.ROOT)) }
             if (shelves.isNotEmpty()) _home.value = UiState.Success(shelves)
         }
