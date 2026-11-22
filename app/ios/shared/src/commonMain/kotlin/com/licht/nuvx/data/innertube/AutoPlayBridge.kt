@@ -1,6 +1,6 @@
 package com.licht.nuvx.data.innertube
 
-import com.licht.nuvx.data.WorshipFilter
+import com.licht.nuvx.data.ContentFilter
 import com.licht.nuvx.data.model.SearchFilter
 import com.licht.nuvx.data.model.SearchResult
 import com.licht.nuvx.data.model.Song
@@ -27,17 +27,23 @@ object AutoPlayBridge {
     }
 
     /**
-     * Worship mode fallback: when the radio mix seeded by [videoId] has no
-     * worship items (YouTube blends the account's music history into it),
-     * rebuild the queue from a worship search instead.
+     * On-topic fallback: when the radio mix seeded by [videoId] has nothing
+     * that matches the user's taste profile (YouTube blends the account's
+     * wider history into it), rebuild the queue from a search for more like
+     * the seed instead.
      */
-    private suspend fun worshipSearch(videoId: String, all: List<Song>): List<Song> {
+    private suspend fun onTopicSearch(
+        videoId: String,
+        all: List<Song>,
+        hideExplicit: Boolean,
+        profile: ContentFilter.TasteProfile,
+    ): List<Song> {
         val seed = all.firstOrNull { it.videoId == videoId }
-        val query = WorshipFilter.fallbackQuery(seed?.title, seed?.artist)
+        val query = ContentFilter.fallbackQuery(seed?.title, seed?.artist) ?: return emptyList()
         val results = InnertubeParser.parseSearchPage(Innertube.search(query, SearchFilter.SONGS.params))
-        return WorshipFilter.filterSongs(
+        return ContentFilter.filterSongs(
             results.filterIsInstance<SearchResult.Track>().map { it.song },
-            worshipOnly = true,
+            hideExplicit = hideExplicit, focused = true, profile = profile,
         )
     }
 
@@ -49,10 +55,16 @@ object AutoPlayBridge {
                 val response = Innertube.next(videoId)
                 val all = InnertubeParser.parseWatchQueue(response)
                     .filterNot { it.isVideo }
+                val hideExplicit = PlatformSettings.getBoolean("hide_explicit", false)
+                val focused = PlatformSettings.getBoolean("focused_feed", false)
                 var songs = all
-                if (PlatformSettings.getBoolean("worship_mode", false)) {
-                    songs = WorshipFilter.filterSongs(all, worshipOnly = true)
-                    if (songs.isEmpty()) songs = worshipSearch(videoId, all)
+                if (hideExplicit || focused) {
+                    val seed = all.firstOrNull { it.videoId == videoId }
+                    val profile =
+                        if (focused) TasteProfileBridge.profile(seed?.title, seed?.artist)
+                        else ContentFilter.EMPTY_PROFILE
+                    songs = ContentFilter.filterSongs(all, hideExplicit, focused, profile)
+                    if (focused && songs.isEmpty()) songs = onTopicSearch(videoId, all, hideExplicit, profile)
                 }
                 Innertube.checkSession(generation)
                 callback.onResult(
