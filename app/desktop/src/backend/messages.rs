@@ -8,7 +8,7 @@ use crate::ytm;
 pub enum Req {
     Home(Option<String>),
     HomeMore(String),
-    MoreQuickPicks(String),
+    MoreQuickPicks { seed: String, worship: bool },
     Explore(Vec<String>),
     Moods,
     Mood { browse_id: String, params: Option<String> },
@@ -42,7 +42,7 @@ pub enum Req {
     Video { id: String, audio_id: String, height: u32 },
     VideoOf { generation: u64, track: Track },
     ArtistSignature { key: String, endpoint: String, name: String },
-    Radio { seed: String, song_of: Option<Track> },
+    Radio { seed: String, song_of: Option<Track>, worship: bool },
     PlayCollection { target: Target },
     Play { video_id: String, generation: u64, at: std::time::Duration, report: bool, start_paused: bool, song_of: Option<Track>, song: Option<Track>, track: Option<Track> },
     Prefetch { video_id: String, song_of: Option<Track>, track: Option<Track> },
@@ -65,7 +65,7 @@ impl Req {
     pub(super) fn name(&self) -> &'static str {
         match self {
             Req::Home(_) | Req::HomeMore(_) => "Loading home",
-            Req::MoreQuickPicks(_) => "Loading more picks",
+            Req::MoreQuickPicks { .. } => "Loading more picks",
             Req::Explore(_) => "Loading explore",
             Req::Moods => "Loading moods",
             Req::Mood { .. } => "Loading the mood",
@@ -271,4 +271,4 @@ impl Resp {
     pub(super) fn ended(id: String, load: u64) -> Self {
         Resp::CollectionMore { id, load, tracks: Vec::new(), set_ids: Vec::new(), more: false }
     }
-}
+                }
