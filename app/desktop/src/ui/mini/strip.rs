@@ -11,7 +11,7 @@ pub fn strip(app: &mut App, ui: &mut Ui, now: f64) {
     let ctx = ui.ctx().clone();
     let r = ctx.content_rect();
     if titlebar::drag_strip(ui, r, "mini").double_clicked() {
-        app.actions.push(Action::Mini(false));
+        leave(app, &ctx);
     }
     ui.painter().rect_filled(r, theme::thumb_radius() + 1.0, theme::panel(0.62));
 
@@ -56,7 +56,8 @@ pub fn strip(app: &mut App, ui: &mut Ui, now: f64) {
     let focused = ctx.memory(|m| m.focused()).is_some_and(|f| ["close", "full", "pin", "corner"].iter().any(|k| btn_id(k) == f));
     let over = ctx.input(|i| i.pointer.hover_pos()).is_some_and(|p| r.contains(p));
     let reveal = theme::anim_bool(&ctx, "mini-btns", over || focused, 0.15);
-    let count = if titlebar::custom() { 4.0 } else { 3.0 };
+    let closable = titlebar::custom() || app.mini.in_window;
+    let count = if closable { 4.0 } else { 3.0 };
     let backdrop = Rect::from_min_max(pos2(r.right() - 6.0 - 30.0 * count - 2.0, r.top() + 2.0), pos2(r.right() - 2.0, r.top() + 38.0));
     let pill = theme::lerp_color(super::super::shell::base_color(app), if theme::light() { Color32::WHITE } else { Color32::BLACK }, 0.55);
     ui.painter().rect_filled(backdrop, 9.0, pill.gamma_multiply(reveal));
@@ -83,14 +84,15 @@ pub fn strip(app: &mut App, ui: &mut Ui, now: f64) {
         }
         resp.clicked() && (reveal > 0.5 || resp.has_focus())
     };
-    if titlebar::custom() && top_btn(ui, icon::X, "close", "Close", true, false, None) {
+    if closable && top_btn(ui, icon::X, "close", "Close", true, false, None) {
         match CLOSE {
+            _ if app.mini.in_window => app.mini.window = false,
             CloseButton::LikeFullWindow => ctx.send_viewport_cmd(ViewportCommand::Close),
             CloseButton::Expand => app.actions.push(Action::Mini(false)),
         }
     }
     if top_btn(ui, icon::MAXIMIZE_2, "full", "Full window (Ctrl+M)", false, false, None) {
-        app.actions.push(Action::Mini(false));
+        leave(app, &ctx);
     }
     let pinned = app.mini.pinned;
     if top_btn(ui, if pinned { icon::PIN } else { icon::PIN_OFF }, "pin", if pinned { "Stop keeping on top" } else { "Keep on top" }, false, pinned, None) {
@@ -225,6 +227,17 @@ pub fn strip(app: &mut App, ui: &mut Ui, now: f64) {
     }
 
     seek_line(app, ui, r, track.as_ref());
+}
+
+/// Back to the full window: closes the separate mini player window, or grows the main window back.
+fn leave(app: &mut App, ctx: &egui::Context) {
+    if app.mini.in_window {
+        app.mini.window = false;
+        ctx.send_viewport_cmd_to(egui::ViewportId::ROOT, ViewportCommand::Minimized(false));
+        ctx.send_viewport_cmd_to(egui::ViewportId::ROOT, ViewportCommand::Focus);
+    } else {
+        app.actions.push(Action::Mini(false));
+    }
 }
 
 /// Covers the strip with a small screen and its four corners; clicking one snaps the mini player there.

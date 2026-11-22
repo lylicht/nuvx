@@ -9,7 +9,8 @@ Every nuvx release, newest first. Downloads and checksums are on each version's 
 - **Desktop recap cards in Library**: this month, last month, this year, last year and all time, with minutes, plays,
   top song and top artist, like Android's Replay cards. Plays are counted on this computer only; click a card to play
   that period's most played songs.
-- **Desktop mini player button and corner snapping**: a mini player button next to the favourite star in the player bar,
+- **Desktop mini player window and corner snapping**: a mini player button next to the favourite star in the player bar
+  opens the mini player in its own small window beside the main one (it keeps working with the main window minimized),
   and the mini player snaps to any corner of the screen (Settings → Window → Mini player corner, or the corner button on
   the mini player itself).
 - **Android pop-ups are opaque**: menus and player pop-ups no longer show the page through them.

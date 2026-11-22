@@ -71,6 +71,9 @@ impl eframe::App for App {
             self.set_mini(ctx, on, now);
         }
         self.mini.tick(ctx, now);
+        if self.mini.window {
+            self.mini_window(ctx, now);
+        }
         self.tray_window(ctx);
         self.window_hidden = self.tray.is_some() || ctx.input(|i| i.viewport().minimized == Some(true));
         self.tick_sleep(ctx, now);
@@ -410,3 +413,33 @@ impl eframe::App for App {
     }
 }
 
+
+impl App {
+    /// The mini player in its own small window (the player bar's mini player button), next to the main window.
+    /// Its corner and keep-on-top follow the mini player settings; changing them moves it right away.
+    fn mini_window(&mut self, ctx: &egui::Context, now: f64) {
+        let ppp = ctx.input(|i| i.viewport().native_pixels_per_point).unwrap_or(1.0);
+        let mut b = egui::ViewportBuilder::default()
+            .with_title("nuvx mini player")
+            .with_inner_size(mini::SIZE)
+            .with_resizable(false)
+            .with_decorations(false)
+            .with_transparent(true)
+            .with_window_level(if self.mini.pinned { egui::WindowLevel::AlwaysOnTop } else { egui::WindowLevel::Normal });
+        if let Some(p) = self.mini.window_pos(ppp) {
+            b = b.with_position(p);
+        }
+        ctx.show_viewport_immediate(egui::ViewportId::from_hash_of("nuvx-mini-window"), b, |ctx, _| {
+            egui::CentralPanel::default().frame(egui::Frame::NONE).show(ctx, |ui| {
+                let r = ui.ctx().content_rect();
+                ui.painter().rect_filled(r, theme::thumb_radius() + 1.0, shell::base_color(self));
+                self.mini.in_window = true;
+                mini::strip(self, ui, now);
+                self.mini.in_window = false;
+            });
+            if ctx.input(|i| i.viewport().close_requested()) {
+                self.mini.window = false;
+            }
+        });
+    }
+}

@@ -288,11 +288,14 @@ pub fn player_bar(app: &mut App, ui: &mut Ui, now: f64) {
 
     let m = Rect::from_center_size(pos2(mini_x, cy - 2.0), Vec2::splat(24.0));
     let m = ui.interact(m, ui.scope_id().with("bar-mini"), Sense::click());
-    let m = named(m, "Mini player").on_hover_text("Mini player (Ctrl+M)").on_hover_cursor(egui::CursorIcon::PointingHand);
+    let open = app.mini.window;
+    let m = named(m, if open { "Close mini player" } else { "Mini player" })
+        .on_hover_text(if open { "Close the mini player window" } else { "Open the mini player in its own window" })
+        .on_hover_cursor(egui::CursorIcon::PointingHand);
     let mh = theme::anim_bool(&ctx, m.id.with("h"), m.hovered(), 0.15);
-    glyphs::draw(ui, m.rect.center(), 15.0, glyphs::MINI_PLAYER, ink(mh));
+    glyphs::draw(ui, m.rect.center(), 15.0, glyphs::MINI_PLAYER, if open { accent } else { ink(mh) });
     if m.clicked() {
-        app.actions.push(Action::Mini(true));
+        app.mini.window = !open;
     }
 
     if total > 0.0

@@ -176,6 +176,10 @@ pub struct Mini {
     pub corner: Corner,
     /// The corner picker is open on the mini player.
     pub picking_corner: bool,
+    /// The mini player is open in its own window, beside the main one.
+    pub window: bool,
+    /// The strip being drawn right now is the one in that window.
+    pub in_window: bool,
 }
 
 impl Mini {
@@ -194,6 +198,8 @@ impl Mini {
             restored_max: None,
             corner: get("mini_corner").and_then(|k| Corner::from_key(&k)).unwrap_or(Corner::BottomRight),
             picking_corner: false,
+            window: false,
+            in_window: false,
         }
     }
 
@@ -292,6 +298,13 @@ impl Mini {
         let target = corner_place(area, frame, here.scale, here.zoom, corner, here.w);
         ctx.send_viewport_cmd(ViewportCommand::OuterPosition(pos2(target.x, target.y) / ctx.pixels_per_point()));
         self.place = Some(target);
+    }
+
+    /// Where the separate mini player window goes for the chosen corner, in points of a screen with [ppp].
+    pub fn window_pos(&self, ppp: f32) -> Option<Pos2> {
+        let area = (self.screens.work_area)()?;
+        let p = corner_place(area, Vec2::ZERO, ppp, 1.0, self.corner, SIZE.x);
+        Some(pos2(p.x, p.y) / ppp)
     }
 
     pub fn set_pinned(&mut self, ctx: &egui::Context, on: bool) {
