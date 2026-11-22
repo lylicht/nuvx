@@ -50,12 +50,20 @@ extension SettingsView {
                 isOn: $hideHomeMoods
             )
         }
-        rows.row("Worship Mode", "worship", "quran", "islamic", "prayer", "feed", "home", "autoplay", "explicit") {
+        rows.row("Hide Explicit Content", "explicit", "nsfw", "hide", "block", "feed", "home", "autoplay") {
+            SettingsToggleLine(
+                glyph: .filter,
+                title: "Hide Explicit Content",
+                subtitle: "Removes tracks marked explicit from Home and autoplay",
+                isOn: $hideExplicit
+            )
+        }
+        rows.row("Keep Recommendations On-Topic", "topic", "focus", "taste", "similar", "feed", "home", "autoplay") {
             SettingsToggleLine(
                 glyph: .genres,
-                title: "Worship Mode",
-                subtitle: "Keeps Home and autoplay on Quran and Islamic content and blocks explicit tracks",
-                isOn: $worshipMode
+                title: "Keep Recommendations On-Topic",
+                subtitle: "Filters Home and autoplay to the artists and topics in your recent plays",
+                isOn: $focusedFeed
             )
         }
     }
