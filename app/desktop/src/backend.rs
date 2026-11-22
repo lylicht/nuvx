@@ -52,6 +52,7 @@ pub struct Backend {
     atmos: Arc<std::sync::atomic::AtomicBool>,
     reverted: Arc<std::sync::Mutex<std::collections::HashSet<String>>>,
     songs: Arc<std::sync::Mutex<std::collections::HashMap<String, SongCell>>>,
+    taste: std::sync::Mutex<Option<(std::time::Instant, crate::content_filter::TasteProfile)>>,
 }
 
 impl Backend {
@@ -78,7 +79,7 @@ impl Backend {
         {
             log::warn!("proxy relay: {e:#}");
         }
-        let backend = Self { rt: Arc::new(rt), api, tx, audio, wake, prefetched: Default::default(), current: Default::default(), data_dir, lyrics, translate, jsc, premium: Arc::new(tokio::sync::Mutex::new(Err(None))), hq: Default::default(), hires: Default::default(), jiosaavn_enabled: Default::default(), radiojavan_enabled: Default::default(), atmos: Default::default(), reverted: Default::default(), songs: Default::default() };
+        let backend = Self { rt: Arc::new(rt), api, tx, audio, wake, prefetched: Default::default(), current: Default::default(), data_dir, lyrics, translate, jsc, premium: Arc::new(tokio::sync::Mutex::new(Err(None))), hq: Default::default(), hires: Default::default(), jiosaavn_enabled: Default::default(), radiojavan_enabled: Default::default(), atmos: Default::default(), reverted: Default::default(), songs: Default::default(), taste: std::sync::Mutex::new(None) };
         backend.keep_signed_in();
         Ok(backend)
     }
@@ -560,4 +561,4 @@ mod explore_tests {
         assert!(saved_playlist_visible(&item("SE", "Auto playlist • 2 episodes")));
         assert!(saved_playlist_visible(&item("PLcustom", "Playlist")));
     }
-}
+            }
