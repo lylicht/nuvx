@@ -284,6 +284,7 @@ impl eframe::App for App {
         storage.set_string("repeat", repeat.into());
         let b = |v: bool| if v { "1" } else { "0" }.to_owned();
         storage.set_string("autoplay", b(self.autoplay));
+        storage.set_string("worship_mode", b(self.worship));
         storage.set_string("recent_searches", serde_json::to_string(&self.recent_searches).unwrap_or_default());
         storage.set_string("jam_name", self.jam.name.clone());
         let cache = self.logged_in.then(|| AccountCache {
@@ -408,4 +409,3 @@ impl eframe::App for App {
         }
     }
 }
-
