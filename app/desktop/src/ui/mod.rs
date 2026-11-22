@@ -270,7 +270,8 @@ pub struct App {
     play_retry: Option<(std::time::Instant, u64)>,
     recoveries: u32,
     autoplay: bool,
-    worship: bool,
+    hide_explicit: bool,
+    focused_feed: bool,
     norm_target: Option<i32>,
     sleep: sleep_timer::SleepTimer,
     sleep_cut: u32,
@@ -457,4 +458,4 @@ fn updatable() -> bool {
 
 pub fn fmt_time(secs: u32) -> String {
     format!("{}:{:02}", secs / 60, secs % 60)
-    }
+}
