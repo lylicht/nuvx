@@ -1,10 +1,28 @@
-import { extendStation } from '@/playback/queue/builder';
+import { artistLine, extendStation } from '@/playback/queue/builder';
 import { asEntry, type QueueEntry, type QueueSource } from '@/playback/queue/timeline';
 import { trackLog } from '@/playback/trackLog';
+import { fallbackQuery, keepTrack } from '@/data/music/worship';
+import type { MusicItem, Track } from '@/data/music/types';
 import type { RepeatMode } from '@/state/playerSettings';
+
+// Local copy of components/music/play.ts's toTrack, kept here to avoid a state/player import cycle.
+function itemToTrack(item: MusicItem): Track {
+  return {
+    videoId: item.id,
+    title: item.title,
+    artists: item.artists,
+    album: item.album,
+    durationSec: item.durationSec,
+    explicit: item.explicit,
+    thumbnail: item.thumbnail,
+    index: null,
+    plays: null,
+  };
+}
 
 interface PlayerAutoplayState {
   autoplay: boolean;
+  worship: boolean;
   repeat: RepeatMode;
   queue: QueueEntry[];
   index: number;
@@ -47,7 +65,18 @@ export class PlayerAutoplayController {
     this.refilling ??= (async () => {
       try {
         const { fetchRadio } = await import('@/data/music/api');
-        const { candidates, seedIsVideo } = await fetchRadio(seed.videoId);
+        let { candidates, seedIsVideo } = await fetchRadio(seed.videoId);
+        if (this.getState().worship) {
+          candidates = candidates.filter((c) => keepTrack(c.track.explicit, true, c.track.title, artistLine(c.track)));
+          if (!candidates.length) {
+            // YouTube blended the account's music history into the radio; rebuild from a worship search.
+            const { fetchSearch } = await import('@/data/music/api');
+            const results = await fetchSearch(fallbackQuery(seed.title, artistLine(seed)));
+            candidates = results.songs
+              .filter((item) => keepTrack(item.explicit, true, item.title, item.artists.map((a) => a.name).join(', ')))
+              .map((item) => ({ track: itemToTrack(item), isVideo: false }));
+          }
+        }
         const current = this.getState();
         const extra = extendStation(
           current.queue.map((e) => e.track),
