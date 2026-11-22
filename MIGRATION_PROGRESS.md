@@ -25,10 +25,12 @@ generic master prompt do not apply.
 
 | 2026-11-22 | Lyrics word model: Android's, chosen by the owner; nuvx-core implements it and the desktop karaoke groups words by it | core/contracts/lyrics-words.json: Android LyricWordsContractTest (8 cases, unchanged code), nuvx-core 29/29, desktop 267/267 |
 
+| 2026-11-22 | nuvx-ffi moved into `core/shared` (phone and TV get it); Android's lyrics word builder runs in nuvx-core | core/shared JVM tests 157/157 through Rust; phone unit tests (only the pre-existing locale failures); RustCoreDeviceTest on the emulator incl. words; phone and TV debug + minified release APKs build with 4 ABIs |
+
 ## Measured, not moved (and why)
 
-- Lyrics parsing on Android: gaps and word model now agree with nuvx-core. Android still runs its Kotlin parsers
-  because they live in `core/shared`, which does not load nuvx-ffi yet (only the phone app module does).
+- Lyrics line parsers on Android (LRC, TTML): gaps and words agree with nuvx-core and words already run in Rust;
+  the parsers still differ in other details (credit lines, alignment markers, repeated stamps) and need a contract.
 - Stream recovery: only two numbers are shared; Android's skip reasons are tied to Media3 error codes (glue).
 
 ## Known regressions
@@ -50,5 +52,5 @@ See `docs/rust-migration/BLOCKERS.csv`. New: none.
 
 ## Next executable action
 
-06b: wire Android TV and Wear to nuvx-ffi; 06c: expose the same exports through `app/ios/native-core`
+Lyrics line-parser contract (LRC, TTML), then Android calls the Rust parsers; 06c: expose the same exports through `app/ios/native-core`
 (UniFFI, verified by the Apple builds workflow); then backup format (contract `core/contracts/backup-v1.json`).

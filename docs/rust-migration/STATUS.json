@@ -5,7 +5,7 @@
   "branch": "main",
   "head_sha": null,
   "current_task": "06",
-  "next_action": "Load nuvx-ffi from core/shared (Android target) so the shared lyrics parsers can call nuvx-core; then 06c iOS exports via native-core (Apple CI); backup format through nuvx-ffi.",
+  "next_action": "Contract for the LRC and TTML line parsers (credit lines, alignment markers, repeated stamps), then Android calls the Rust parsers; 06c iOS exports via native-core (Apple CI); backup format through nuvx-ffi.",
   "tasks": [
     {
       "id": "00",
@@ -145,6 +145,12 @@
           "evidence": "core/contracts/lyrics-words.json: Android LyricWordsContractTest 1/1 (8 cases), nuvx-core 29/29, desktop 267/267; desktop grouping not visually checked"
         },
         {
+          "id": "06a6",
+          "what": "Android lyrics word builder (wordsFromRuns, 6 providers) runs in nuvx-core via nuvx-ffi; core_api_version 2",
+          "state": "PASS",
+          "evidence": "core/shared jvmTest 157/157 through the host Rust library (incl. LyricWordsContractTest); RustCoreDeviceTest on the x86_64 emulator calls wordsFromRuns"
+        },
+        {
           "id": "06a-r8",
           "what": "minified release build calling the Rust core at runtime (JNA + UniFFI keep rules)",
           "state": "NOT_VERIFIED",
@@ -158,9 +164,9 @@
         },
         {
           "id": "06b",
-          "what": "Android TV and Wear use nuvx-ffi",
-          "state": "TODO",
-          "evidence": ""
+          "what": "Android TV uses nuvx-ffi (moved into core/shared); Wear does not use core/shared and has nothing to call yet",
+          "state": "PASS",
+          "evidence": "tv-dev-tv-debug and tv-prod-tv-release (R8) APKs carry libnuvx_ffi.so for 4 ABIs; consumer ProGuard rules in core/shared; TV runtime not exercised"
         },
         {
           "id": "06c",

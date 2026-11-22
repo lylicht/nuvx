@@ -11,7 +11,7 @@ uniffi::setup_scaffolding!();
 /// Bumped when an export changes shape or meaning, so the app can tell which library it loaded.
 #[uniffi::export]
 pub fn core_api_version() -> u32 {
-    1
+    2
 }
 
 /// Volume normalization gain in millibels. See `nuvx_core::loudness::norm_gain_mb`.
@@ -62,4 +62,60 @@ pub fn compare_release_order(
     nuvx_core::release::compare_release_order(
         &a_version, &a_tag, &a_time, &b_version, &b_tag, &b_time,
     ) as i32
+}
+
+/// One timed run of a lyric line: start and end in ms and the raw text, spaces included.
+#[derive(uniffi::Record)]
+pub struct CoreRun {
+    pub start_ms: i64,
+    pub end_ms: i64,
+    pub raw: String,
+}
+
+/// A syllable of a word: its time and its UTF-16 range in the word's text.
+#[derive(uniffi::Record)]
+pub struct CoreSyllable {
+    pub start_ms: i64,
+    pub end_ms: i64,
+    pub start_char: i32,
+    pub end_char: i32,
+}
+
+#[derive(uniffi::Record)]
+pub struct CoreWord {
+    pub start_ms: i64,
+    pub end_ms: i64,
+    pub text: String,
+    pub syllables: Vec<CoreSyllable>,
+}
+
+fn ms(v: i64) -> i32 {
+    v.clamp(i32::MIN.into(), i32::MAX.into()) as i32
+}
+
+/// Android's word model for a line's runs. See `nuvx_core::lyrics::words::words_from_runs`.
+#[uniffi::export]
+pub fn words_from_runs(runs: Vec<CoreRun>, explicit_spacing: bool) -> Vec<CoreWord> {
+    let runs: Vec<(i32, i32, &str)> = runs
+        .iter()
+        .map(|r| (ms(r.start_ms), ms(r.end_ms), r.raw.as_str()))
+        .collect();
+    nuvx_core::lyrics::words::words_from_runs(&runs, explicit_spacing)
+        .into_iter()
+        .map(|w| CoreWord {
+            start_ms: w.start.into(),
+            end_ms: w.end.into(),
+            text: w.text,
+            syllables: w
+                .syllables
+                .into_iter()
+                .map(|s| CoreSyllable {
+                    start_ms: s.start.into(),
+                    end_ms: s.end.into(),
+                    start_char: s.start_char as i32,
+                    end_char: s.end_char as i32,
+                })
+                .collect(),
+        })
+        .collect()
 }

@@ -5,8 +5,6 @@ import com.android.build.api.dsl.ApplicationExtension
 import com.android.build.api.variant.ApplicationAndroidComponentsExtension
 import org.gradle.api.artifacts.dsl.DependencyHandler
 import org.gradle.api.artifacts.ModuleDependency
-import org.gradle.process.ExecOperations
-import javax.inject.Inject
 
 plugins {
     id("org.jetbrains.kotlin.android")
@@ -292,8 +290,7 @@ dependencies {
     implementation("org.conscrypt:conscrypt-android:2.9.0")
     implementation("org.bouncycastle:bcpkix-jdk18on:1.87")
 
-    // UniFFI's Kotlin bindings for nuvx-core load the Rust library through JNA (the jar carries host natives for unit tests).
-    implementation("net.java.dev.jna:jna:5.17.0@aar")
+    // nuvx-core's bindings (from :shared) load Rust through JNA; the jar carries host natives for unit tests.
     testImplementation("net.java.dev.jna:jna:5.17.0")
     testImplementation("junit:junit:4.13.2")
     testImplementation("com.squareup.okhttp3:mockwebserver:5.5.1")
@@ -368,77 +365,9 @@ if (providers.gradleProperty("nuvx.bundleWear").orNull != "false" && findProject
     }
 }
 
-// nuvx-core reaches Android through core/rust/nuvx-ffi (UniFFI): cargo-ndk builds one .so per ABI, uniffi-bindgen
-// writes the Kotlin bindings from that .so, and unit tests load a host build of the same crate.
-abstract class NuvxFfiTask : DefaultTask() {
-    @get:Inject
-    abstract val exec: ExecOperations
-
-    @get:Internal
-    abstract val crateDir: DirectoryProperty
-
-    @get:Input
-    abstract val command: ListProperty<String>
-
-    @get:Input
-    @get:Optional
-    abstract val ndkHome: Property<String>
-
-    @get:OutputDirectory
-    abstract val outputDir: DirectoryProperty
-
-    init {
-        outputs.upToDateWhen { false } // cargo is incremental; it decides what to rebuild
-    }
-
-    @TaskAction
-    fun run() {
-        val out = outputDir.get().asFile
-        out.deleteRecursively()
-        out.mkdirs()
-        exec.exec {
-            workingDir = crateDir.get().asFile
-            commandLine(command.get().map { it.replace("{out}", out.path) })
-            ndkHome.orNull?.let { environment("ANDROID_NDK_HOME", it) }
-        }
-    }
-}
-
-val nuvxFfiDir = rootProject.layout.projectDirectory.dir("core/rust/nuvx-ffi")
-val androidNdkDir = extensions.getByType<ApplicationAndroidComponentsExtension>().sdkComponents.ndkDirectory
-val nuvxFfiAndroid = tasks.register<NuvxFfiTask>("cargoBuildNuvxFfi") {
-    crateDir.set(nuvxFfiDir)
-    ndkHome.set(androidNdkDir.map { it.asFile.path })
-    command.set(
-        listOf("cargo", "ndk", "-t", "arm64-v8a", "-t", "armeabi-v7a", "-t", "x86", "-t", "x86_64", "-o", "{out}") +
-            listOf("build", "--release", "--locked"),
-    )
-    outputDir.set(layout.buildDirectory.dir("rust/jniLibs"))
-}
-val nuvxFfiKotlin = tasks.register<NuvxFfiTask>("generateNuvxFfiKotlin") {
-    crateDir.set(nuvxFfiDir)
-    val so = nuvxFfiAndroid.flatMap { it.outputDir.file("arm64-v8a/libnuvx_ffi.so") }
-    inputs.files(nuvxFfiAndroid)
-    command.set(
-        so.map {
-            listOf("cargo", "run", "--release", "--locked", "--features", "uniffi/cli", "--bin", "uniffi-bindgen", "--") +
-                listOf("generate", "--library", it.asFile.path, "--language", "kotlin", "--no-format", "--out-dir", "{out}")
-        },
-    )
-    outputDir.set(layout.buildDirectory.dir("generated/uniffi/kotlin"))
-}
-val nuvxFfiHost = tasks.register<Exec>("cargoBuildNuvxFfiHost") {
-    workingDir = nuvxFfiDir.asFile
-    commandLine("cargo", "build", "--release", "--locked")
-}
-extensions.configure<ApplicationAndroidComponentsExtension> {
-    onVariants { variant ->
-        variant.sources.jniLibs?.addGeneratedSourceDirectory(nuvxFfiAndroid, NuvxFfiTask::outputDir)
-        variant.sources.java?.addGeneratedSourceDirectory(nuvxFfiKotlin, NuvxFfiTask::outputDir)
-    }
-}
+// nuvx-core comes through :shared (core/rust/nuvx-ffi via UniFFI); unit tests load its host build.
 tasks.withType<Test>().configureEach {
-    dependsOn(nuvxFfiHost)
-    systemProperty("jna.library.path", nuvxFfiDir.dir("target/release").asFile.path)
+    dependsOn(":shared:cargoBuildNuvxFfiHost")
+    systemProperty("jna.library.path", rootProject.file("core/rust/nuvx-ffi/target/release").path)
     jvmArgs("--enable-native-access=ALL-UNNAMED")
 }

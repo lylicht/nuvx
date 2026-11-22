@@ -10,8 +10,8 @@ they include some UI code. Treat them as relative sizes, not exact figures.
 |---|---|---|
 | Desktop (Rust) | yes | direct dependency |
 | iOS | **yes, indirectly** | `app/ios/native-core` depends on nuvx-core and already exports to Swift through UniFFI 0.32. A new export there needs no new build setup. |
-| Android phone | **yes** (2026-11-22) | `core/rust/nuvx-ffi` (UniFFI → Kotlin over JNA), built by Gradle with cargo-ndk. First export: loudness gain. |
-| Android TV, Wear | no | Same crate; not wired yet. |
+| Android phone, TV | **yes** (2026-11-22) | `core/rust/nuvx-ffi` (UniFFI → Kotlin over JNA), built by `core/shared`'s Gradle with cargo-ndk, so every app on `core/shared` gets it. Exports: loudness gain, update rules, lyrics word model. |
+| Wear | no | Does not use `core/shared`; nothing shared to call yet. |
 | Web | **no** | No WASM. Needs wasm-bindgen; `"type": "module"` loader caveat in `RUST_ANYTHING_EVALUATION.md`. |
 
 Web is the remaining gate: until it has WASM, every port below helps desktop, iOS and the phone only.
@@ -49,7 +49,9 @@ from 4 s, gap at the sung end incl. background vocals, no gap at song end, LRC b
 **Word model: decided 2026-11-22, Android's.** Pinned in `core/contracts/lyrics-words.json` (8 cases); Android's
 `wordsFromRuns` passes unchanged (`LyricWordsContractTest`), `nuvx_core::lyrics::words` implements it, and the desktop
 karaoke groups words with the same join rule (CJK/kana/Thai never join; touching runs join only when the line uses
-spaces). Next for lyrics: Android calls the Rust parsers once `core/shared` loads nuvx-ffi (today only the phone app does).
+spaces). Android's `wordsFromRuns` (used by six lyrics providers) now runs in nuvx-core through nuvx-ffi. Next for lyrics: the
+line parsers themselves (LRC, TTML), which still differ in details outside gaps and words (credit lines, alignment
+markers, repeated stamps) and need their own contract before Android switches.
 
 ## Leave native (glue, not duplicated logic)
 

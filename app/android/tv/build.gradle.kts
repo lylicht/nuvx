@@ -164,6 +164,8 @@ extensions.configure<ApplicationExtension> {
     }
     packaging {
         jniLibs.useLegacyPackaging = true
+        // JNA (nuvx-core bindings from :shared) ships natives for ABIs nuvx never built.
+        jniLibs.excludes += setOf("lib/armeabi/**", "lib/mips/**", "lib/mips64/**")
         resources {
             excludes += "META-INF/versions/9/OSGI-INF/MANIFEST.MF"
             merges += setOf("META-INF/LICENSE.md", "META-INF/LICENSE.txt", "META-INF/NOTICE.md")
