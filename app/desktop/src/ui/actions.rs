@@ -52,7 +52,7 @@ impl App {
                 self.play_list(vec![t.clone()], 0);
                 if !self.radio_pending {
                     self.radio_pending = true;
-                    self.backend.request(Req::Radio { song_of: self.song_of(&t), seed: t.id });
+                    self.backend.request(Req::Radio { song_of: self.song_of(&t), seed: t.id, worship: self.worship });
                 }
             }
             Action::Open(Target::Album(id)) => self.go(Page::Album(id)),
@@ -363,4 +363,4 @@ mod share_tests {
         assert_eq!(share_url(&Target::Album("MPRE123".into())), "https://music.youtube.com/browse/MPRE123");
         assert_eq!(share_url(&Target::Artist("UC123".into())), "https://music.youtube.com/channel/UC123");
     }
-}
+                              }
