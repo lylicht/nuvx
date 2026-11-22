@@ -229,6 +229,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     fun addSuggestedSong(browseId: String, song: Song) =
         playlistController.addSuggestedSong(browseId, song)
 
+    fun restorePlaylistVersion(playlist: UserPlaylist, index: Int): Boolean =
+        playlistController.restoreVersion(playlist, index)
+
     fun renamePlaylist(playlist: UserPlaylist, title: String): (() -> Unit)? =
         playlistController.renamePlaylist(playlist, title)
 
