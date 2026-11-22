@@ -237,6 +237,8 @@ object AppSettings {
 
     val squareVideoThumbnails = homeFeedSettings.squareVideoThumbnails
 
+    val worshipMode = homeFeedSettings.worshipMode
+
     val smartVersionAlignment = appearanceSettings.smartVersionAlignment
 
     val reduceDynamicBlur = appearanceSettings.reduceDynamicBlur
@@ -680,6 +682,8 @@ object AppSettings {
 
     fun setHideHomeMoods(value: Boolean) = homeFeedSettings.setHideHomeMoods(value)
 
+    fun setWorshipMode(value: Boolean) = homeFeedSettings.setWorshipMode(value)
+
     fun setSquareVideoThumbnails(value: Boolean) = homeFeedSettings.setSquareVideoThumbnails(value)
 
     fun setSmartVersionAlignment(value: Boolean) = appearanceSettings.setSmartVersionAlignment(value)
@@ -971,6 +975,5 @@ object AppSettings {
 
     private const val KEY_LAST_VERSION_CODE = "last_version_code"
 }
-
 
 
