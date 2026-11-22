@@ -4,7 +4,7 @@ import android.app.Application
 import android.util.Log
 import com.licht.nuvx.data.AppleArtistPhotos
 import com.licht.nuvx.data.TopPicks
-import com.licht.nuvx.data.WorshipFilter
+import com.licht.nuvx.data.ContentFilter
 import com.licht.nuvx.data.YtMusicRepository
 import com.licht.nuvx.data.model.ArtistRef
 import com.licht.nuvx.data.model.HomeShelf
@@ -35,6 +35,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 
+private const val TASTE_PROFILE_TTL_MS = 30 * 60 * 1000L
+
 internal class MainHomeFeed(
     private val scope: CoroutineScope,
     private val application: Application,
@@ -60,6 +62,23 @@ internal class MainHomeFeed(
     private val _homeRecentlyPlayedLoading = MutableStateFlow(false)
     val homeRecentlyPlayedLoading: StateFlow<Boolean> = _homeRecentlyPlayedLoading.asStateFlow()
     private val homeLoadGeneration = AtomicLong(0L)
+
+    @Volatile
+    private var tasteProfile: ContentFilter.TasteProfile = ContentFilter.EMPTY_PROFILE
+    private var tasteProfileLoadedAt = 0L
+
+    /**
+     * Refreshes the cached taste profile for "Keep recommendations on-topic"
+     * from this month's listening stats. Runs at most once per TTL; failures
+     * keep the previous profile, and empty stats disable topical filtering.
+     */
+    private suspend fun refreshTasteProfile(force: Boolean = false) {
+        if (!AppSettings.focusedFeed.value) return
+        val now = System.currentTimeMillis()
+        if (!force && now - tasteProfileLoadedAt < TASTE_PROFILE_TTL_MS) return
+        tasteProfile = ListeningStats.tasteProfile()
+        tasteProfileLoadedAt = now
+    }
 
     private val _topPicks = MutableStateFlow<List<TopPick>?>(null)
     val topPicks: StateFlow<List<TopPick>?> = _topPicks.asStateFlow()
@@ -90,6 +109,7 @@ internal class MainHomeFeed(
         _homePendingShelves.value = 1 + YtMusicRepository.HOME_SUPPLEMENT_BROWSE_IDS.size
         loadTopPicks(identity, rebuild = false)
         scope.launch {
+            refreshTasteProfile(force = true)
             launch {
                 try {
                     YtMusicRepository.home()
@@ -215,7 +235,12 @@ internal class MainHomeFeed(
         identity == listenerKey() && generation == homeLoadGeneration.get()
 
     private fun publishHomeShelves(rawShelves: List<HomeShelf>, prepend: Boolean = false) {
-        val shelves = WorshipFilter.filterShelves(rawShelves, AppSettings.worshipMode.value)
+        val shelves = ContentFilter.filterShelves(
+            rawShelves,
+            AppSettings.hideExplicit.value,
+            AppSettings.focusedFeed.value,
+            tasteProfile,
+        )
         val existing = (_home.value as? UiState.Success)?.data.orEmpty()
         if (prepend) {
             val replacing = shelves.map { it.title.lowercase(Locale.ROOT) }.toSet()
@@ -231,13 +256,19 @@ internal class MainHomeFeed(
     }
 
     suspend fun refreshHome(identity: String?) = coroutineScope {
+        refreshTasteProfile()
         val recent = if (signedIn.value) async { YtMusicRepository.homeRecentlyPlayed() } else null
         if (topPicksJob?.isActive != true) loadTopPicks(identity, rebuild = false)
         YtMusicRepository.home().onSuccess { feed ->
             if (identity != listenerKey()) return@onSuccess
             homeContinuation = feed.continuation
             homeSeenTitles.clear()
-            val shelves = WorshipFilter.filterShelves(feed.shelves, AppSettings.worshipMode.value)
+            val shelves = ContentFilter.filterShelves(
+                feed.shelves,
+                AppSettings.hideExplicit.value,
+                AppSettings.focusedFeed.value,
+                tasteProfile,
+            )
                 .withoutRepeatsOf(emptyList())
                 .filter { homeSeenTitles.add(it.title.lowercase(Locale.ROOT)) }
             if (shelves.isNotEmpty()) _home.value = UiState.Success(shelves)
@@ -256,7 +287,13 @@ internal class MainHomeFeed(
             YtMusicRepository.moreHome(token).onSuccess { feed ->
                 if (identity == listenerKey()) {
                     val existing = (_home.value as? UiState.Success)?.data ?: emptyList()
-                    val added = feed.shelves.withoutRepeatsOf(existing)
+                    val added = ContentFilter.filterShelves(
+                        feed.shelves,
+                        AppSettings.hideExplicit.value,
+                        AppSettings.focusedFeed.value,
+                        tasteProfile,
+                    )
+                        .withoutRepeatsOf(existing)
                         .filter { homeSeenTitles.add(it.title.lowercase(Locale.ROOT)) }
                     homeContinuation = feed.continuation.takeIf { added.isNotEmpty() }
                     if (added.isNotEmpty()) _home.value = UiState.Success(existing + added)
