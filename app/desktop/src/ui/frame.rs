@@ -76,6 +76,7 @@ impl eframe::App for App {
         self.tick_sleep(ctx, now);
         self.sync_discord();
         self.sync_lastfm();
+        self.record_listening();
         self.sync_server_queue(ctx, now);
         self.tick_updates(ctx, now);
         let np = widgets::NowPlaying {

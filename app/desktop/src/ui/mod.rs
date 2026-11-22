@@ -209,6 +209,8 @@ pub struct App {
     lastfm_busy: Arc<AtomicBool>,
     lastfm_result: Arc<std::sync::Mutex<Option<Result<String, String>>>>,
     scrobble: Option<(u64, bool)>,
+    /// The playback generation last counted in the listening recap.
+    listened: Option<u64>,
     resume_at: Option<Duration>,
     resume_counts: bool,
     listened_at: u64,
