@@ -50,6 +50,14 @@ extension SettingsView {
                 isOn: $hideHomeMoods
             )
         }
+        rows.row("Worship Mode", "worship", "quran", "islamic", "prayer", "feed", "home", "autoplay", "explicit") {
+            SettingsToggleLine(
+                glyph: .genres,
+                title: "Worship Mode",
+                subtitle: "Keeps Home and autoplay on Quran and Islamic content and blocks explicit tracks",
+                isOn: $worshipMode
+            )
+        }
     }
 
     func buildYourDataRows(_ rows: inout SettingsRows) {
