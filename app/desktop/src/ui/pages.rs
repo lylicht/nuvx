@@ -76,7 +76,7 @@ pub fn page(app: &mut App, ui: &mut Ui, now: f64) {
                 && let Some(token) = h.continuation.clone()
             {
                 h.loading_more = Some(now);
-                app.backend.request(crate::backend::Req::HomeMore(token));
+                app.backend.request(crate::backend::Req::HomeMore { token, hide_explicit: app.hide_explicit, focused: app.focused_feed });
             }
         }
     }
@@ -335,4 +335,3 @@ pub(super) fn toggle(ui: &mut Ui, on: &mut bool, name: &str) -> egui::Response {
     ui.painter().circle_filled(knob, 9.0, theme::with_alpha(knob_c, fade));
     resp
 }
-
