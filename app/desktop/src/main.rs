@@ -13,6 +13,7 @@ mod art;
 mod audio;
 mod backend;
 mod bidi;
+mod worship;
 mod deeplink;
 mod discord;
 mod dash;
@@ -252,4 +253,4 @@ fn data_dir() -> std::path::PathBuf {
         return dir.join("data");
     }
     directories::ProjectDirs::from("", "", "nuvx").expect("no home directory").data_dir().to_path_buf()
-}
+                                                                                  }
