@@ -57,6 +57,22 @@ object ListeningStats {
 
     private val ready: Boolean get() = this::directory.isInitialized
 
+    /**
+     * Taste profile for "Keep recommendations on-topic", from this month's
+     * listening stats. Empty stats yield an empty profile, which disables
+     * topical filtering. [extra] title/artist pairs (e.g. the autoplay seed)
+     * are merged in.
+     */
+    suspend fun tasteProfile(extra: List<Pair<String, String?>> = emptyList()): com.licht.nuvx.data.ContentFilter.TasteProfile {
+        val stats = runCatching { summary(ReplayPeriod.THIS_MONTH) }.getOrNull()
+        val plays = extra.toMutableList()
+        if (stats != null) {
+            stats.songs.take(50).forEach { plays += it.song.title to it.song.artist }
+            stats.artists.take(20).forEach { plays += "" to it.title }
+        }
+        return com.licht.nuvx.data.ContentFilter.buildProfile(plays)
+    }
+
     fun record(song: Song, playedMs: Long, countsAsPlay: Boolean) {
         if (!ready) return
         if (playedMs <= 0 && !countsAsPlay) return
