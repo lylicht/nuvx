@@ -19,7 +19,8 @@ internal fun ContentPreferenceSettingsGroup(
     hideHomeMoods: Boolean,
     squareVideoThumbnails: Boolean,
     classicSearch: Boolean,
-    worshipMode: Boolean,
+    hideExplicit: Boolean,
+    focusedFeed: Boolean,
 ) {
     SearchableSettingsGroup(search, header = stringResource(R.string.content_preferences)) {
         val preferMusicOnlyTitle = stringResource(R.string.prefer_music_only)
@@ -66,18 +67,32 @@ internal fun ContentPreferenceSettingsGroup(
                 onClick = { AppSettings.setCreatePlaylistsLocally(!createPlaylistsLocally) },
             )
         }
-        row("Worship mode", "worship", "quran", "islamic", "prayer", "feed", "home", "autoplay", "explicit") {
+        row("Hide explicit content", "explicit", "nsfw", "hide", "block", "feed", "home", "autoplay") {
             SettingsRow(
-                icon = SfIcons.Star,
-                title = "Worship mode",
-                subtitle = "Keeps Home and autoplay on Quran and Islamic content and blocks explicit tracks.",
+                icon = SfIcons.VisibilityOff,
+                title = "Hide explicit content",
+                subtitle = "Removes tracks marked explicit from Home and autoplay.",
                 trailing = {
                     IosSwitch(
-                        checked = worshipMode,
-                        onCheckedChange = AppSettings::setWorshipMode,
+                        checked = hideExplicit,
+                        onCheckedChange = AppSettings::setHideExplicit,
                     )
                 },
-                onClick = { AppSettings.setWorshipMode(!worshipMode) },
+                onClick = { AppSettings.setHideExplicit(!hideExplicit) },
+            )
+        }
+        row("Keep recommendations on-topic", "topic", "focus", "taste", "similar", "feed", "home", "autoplay") {
+            SettingsRow(
+                icon = SfIcons.Star,
+                title = "Keep recommendations on-topic",
+                subtitle = "Filters Home and autoplay to the artists and topics in your recent plays.",
+                trailing = {
+                    IosSwitch(
+                        checked = focusedFeed,
+                        onCheckedChange = AppSettings::setFocusedFeed,
+                    )
+                },
+                onClick = { AppSettings.setFocusedFeed(!focusedFeed) },
             )
         }
         val hideRecentsTitle = stringResource(R.string.hide_recents)
