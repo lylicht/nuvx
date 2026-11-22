@@ -17,7 +17,8 @@ export interface PlayerSettings {
   shuffle: boolean;
   repeat: RepeatMode;
   autoplay: boolean;
-  worship: boolean;
+  hideExplicit: boolean;
+  focusedFeed: boolean;
   volume: number;
   muted: boolean;
   crossfadeSec: number;
@@ -32,7 +33,8 @@ const DEFAULT_SETTINGS: PlayerSettings = {
   shuffle: false,
   repeat: 'off',
   autoplay: true,
-  worship: false,
+  hideExplicit: false,
+  focusedFeed: false,
   volume: 1,
   muted: false,
   crossfadeSec: 0,
@@ -49,7 +51,8 @@ export function loadPlayerSettings(): PlayerSettings {
       shuffle: typeof saved.shuffle === 'boolean' ? saved.shuffle : DEFAULT_SETTINGS.shuffle,
       repeat: saved.repeat === 'all' || saved.repeat === 'one' || saved.repeat === 'off' ? saved.repeat : DEFAULT_SETTINGS.repeat,
       autoplay: typeof saved.autoplay === 'boolean' ? saved.autoplay : DEFAULT_SETTINGS.autoplay,
-      worship: typeof saved.worship === 'boolean' ? saved.worship : DEFAULT_SETTINGS.worship,
+      hideExplicit: typeof saved.hideExplicit === 'boolean' ? saved.hideExplicit : DEFAULT_SETTINGS.hideExplicit,
+      focusedFeed: typeof saved.focusedFeed === 'boolean' ? saved.focusedFeed : DEFAULT_SETTINGS.focusedFeed,
       volume: typeof saved.volume === 'number' && Number.isFinite(saved.volume) && saved.volume >= 0 && saved.volume <= 1
         ? saved.volume : DEFAULT_SETTINGS.volume,
       muted: typeof saved.muted === 'boolean' ? saved.muted : DEFAULT_SETTINGS.muted,
@@ -68,11 +71,11 @@ export function loadPlayerSettings(): PlayerSettings {
 }
 
 export function savePlayerSettings(state: PlayerSettings, onSaveError: (error: string | null) => void) {
-  const { shuffle, repeat, autoplay, worship, volume, muted, crossfadeSec, automix, automixBars, showNerdStats, loudnessTarget } = state;
+  const { shuffle, repeat, autoplay, hideExplicit, focusedFeed, volume, muted, crossfadeSec, automix, automixBars, showNerdStats, loudnessTarget } = state;
   try {
     localStorage.setItem(
       SETTINGS_KEY,
-      JSON.stringify({ shuffle, repeat, autoplay, worship, volume, muted, crossfadeSec, automix, automixBars, showNerdStats, loudnessTarget }),
+      JSON.stringify({ shuffle, repeat, autoplay, hideExplicit, focusedFeed, volume, muted, crossfadeSec, automix, automixBars, showNerdStats, loudnessTarget }),
     );
     onSaveError(null);
   } catch (error) {
