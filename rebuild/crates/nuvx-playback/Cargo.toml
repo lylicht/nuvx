@@ -1,0 +1,8 @@
+[package]
+name = "nuvx-playback"
+description = "nuvx queue and playback rules (spec 02): no audio, no UI"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
