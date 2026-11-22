@@ -264,6 +264,15 @@ fn settings_window(app: &mut App, ui: &mut Ui) {
                 }
             });
         }
+        divider(ui);
+        setting_row(ui, "Mini player corner", Some("Also on the mini player's corner button."), |ui| {
+            for c in super::mini::Corner::ALL.into_iter().rev() {
+                if widgets::chip(ui, c.name(), app.mini.corner == c).clicked() {
+                    let ctx = ui.ctx().clone();
+                    app.mini.snap(&ctx, c);
+                }
+            }
+        });
         if super::titlebar::custom() {
             divider(ui);
             setting_row(ui, "Window buttons", Some("Close, minimize and maximize: at the top right as on Windows, or as macOS's coloured buttons at the top left."), |ui| {

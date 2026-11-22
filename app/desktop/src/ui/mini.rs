@@ -69,11 +69,56 @@ impl Place {
     }
 }
 
-fn corner_place(area: Rect, frame: Vec2, scale: f32, zoom: f32) -> Place {
-    let outer = (SIZE + frame) * scale * zoom;
-    let p = area.max - outer - Vec2::splat(MARGIN * scale);
-    let p = p.max(area.min);
-    Place { x: p.x.round(), y: p.y.round(), w: SIZE.x, h: SIZE.y, scale, zoom }
+/// Which corner of the screen the mini player snaps to (Settings → Window, or the corner button on the mini player).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Corner {
+    TopLeft,
+    TopRight,
+    BottomLeft,
+    BottomRight,
+}
+
+impl Corner {
+    pub const ALL: [Corner; 4] = [Corner::TopLeft, Corner::TopRight, Corner::BottomLeft, Corner::BottomRight];
+
+    pub fn name(self) -> &'static str {
+        match self {
+            Corner::TopLeft => "Top left",
+            Corner::TopRight => "Top right",
+            Corner::BottomLeft => "Bottom left",
+            Corner::BottomRight => "Bottom right",
+        }
+    }
+
+    fn key(self) -> &'static str {
+        match self {
+            Corner::TopLeft => "tl",
+            Corner::TopRight => "tr",
+            Corner::BottomLeft => "bl",
+            Corner::BottomRight => "br",
+        }
+    }
+
+    fn from_key(k: &str) -> Option<Corner> {
+        Corner::ALL.into_iter().find(|c| c.key() == k)
+    }
+
+    fn right(self) -> bool {
+        matches!(self, Corner::TopRight | Corner::BottomRight)
+    }
+
+    fn bottom(self) -> bool {
+        matches!(self, Corner::BottomLeft | Corner::BottomRight)
+    }
+}
+
+fn corner_place(area: Rect, frame: Vec2, scale: f32, zoom: f32, corner: Corner, w: f32) -> Place {
+    let outer = (vec2(w, SIZE.y) + frame) * scale * zoom;
+    let m = MARGIN * scale;
+    let x = if corner.right() { area.max.x - outer.x - m } else { area.min.x + m };
+    let y = if corner.bottom() { area.max.y - outer.y - m } else { area.min.y + m };
+    let p = pos2(x, y).max(area.min);
+    Place { x: p.x.round(), y: p.y.round(), w, h: SIZE.y, scale, zoom }
 }
 
 fn centered(area: Rect, size: Vec2, frame: Vec2, scale: f32, zoom: f32) -> Place {
@@ -128,6 +173,9 @@ pub struct Mini {
     limits_scale: Option<f32>,
     screens: Screens,
     restored_max: Option<Place>,
+    pub corner: Corner,
+    /// The corner picker is open on the mini player.
+    pub picking_corner: bool,
 }
 
 impl Mini {
@@ -144,11 +192,14 @@ impl Mini {
             limits_scale: None,
             screens: SYSTEM,
             restored_max: None,
+            corner: get("mini_corner").and_then(|k| Corner::from_key(&k)).unwrap_or(Corner::BottomRight),
+            picking_corner: false,
         }
     }
 
     pub fn save(&self, storage: &mut dyn eframe::Storage) {
         storage.set_string("mini_pinned", if self.pinned { "1" } else { "0" }.into());
+        storage.set_string("mini_corner", self.corner.key().into());
         if let Some(p) = &self.place {
             storage.set_string("mini_window", serde_json::to_string(p).unwrap_or_default());
         }
@@ -221,6 +272,26 @@ impl Mini {
         }
         self.switch = Some(Switch { to_mini, step, since: now, from: ctx.content_rect().size() });
         ctx.request_repaint();
+    }
+
+    /// Snaps the mini player to [corner] now if it is showing, and opens it there from now on.
+    pub fn snap(&mut self, ctx: &egui::Context, corner: Corner) {
+        self.corner = corner;
+        self.picking_corner = false;
+        if !self.showing() {
+            // The next mini player opens in the new corner instead of where it was last left.
+            self.place = None;
+            return;
+        }
+        let Some(here) = Place::current(ctx) else { return };
+        let frame = ctx.input(|i| {
+            let vp = i.viewport();
+            vp.outer_rect.zip(vp.inner_rect).map_or(Vec2::ZERO, |(o, i)| o.size() - i.size())
+        });
+        let area = (self.screens.work_area)().unwrap_or_else(|| here.rect_px(frame));
+        let target = corner_place(area, frame, here.scale, here.zoom, corner, here.w);
+        ctx.send_viewport_cmd(ViewportCommand::OuterPosition(pos2(target.x, target.y) / ctx.pixels_per_point()));
+        self.place = Some(target);
     }
 
     pub fn set_pinned(&mut self, ctx: &egui::Context, on: bool) {
@@ -317,7 +388,7 @@ impl Mini {
                     let area = (self.screens.work_area)()
                         .or_else(|| here.map(|h| h.rect_px(frame)))
                         .unwrap_or(Rect::from_min_size(Pos2::ZERO, SIZE * scale));
-                    corner_place(area, frame, scale, ctx.zoom_factor())
+                    corner_place(area, frame, scale, ctx.zoom_factor(), self.corner, SIZE.x)
                 }
             };
             ctx.send_viewport_cmd(ViewportCommand::WindowLevel(if self.pinned { WindowLevel::AlwaysOnTop } else { WindowLevel::Normal }));
@@ -386,18 +457,38 @@ mod tests {
     #[test]
     fn first_place_is_the_work_areas_corner() {
         let area = Rect::from_min_max(pos2(0.0, 0.0), pos2(2560.0, 1400.0));
-        let p = corner_place(area, Vec2::ZERO, 1.0, 1.0);
+        let br = Corner::BottomRight;
+        let p = corner_place(area, Vec2::ZERO, 1.0, 1.0, br, SIZE.x);
         assert_eq!((p.x, p.y, p.w, p.h), (2560.0 - 400.0 - 16.0, 1400.0 - 112.0 - 16.0, SIZE.x, SIZE.y));
-        let p = corner_place(area, vec2(0.0, 0.0), 1.5, 1.0);
+        let p = corner_place(area, vec2(0.0, 0.0), 1.5, 1.0, br, SIZE.x);
         assert_eq!((p.x, p.y, p.w), (2560.0 - 600.0 - 24.0, 1400.0 - 168.0 - 24.0, SIZE.x));
         let left = Rect::from_min_max(pos2(-1920.0, 100.0), pos2(0.0, 1140.0));
-        let p = corner_place(left, vec2(2.0, 2.0), 1.0, 1.0);
+        let p = corner_place(left, vec2(2.0, 2.0), 1.0, 1.0, br, SIZE.x);
         assert_eq!((p.x, p.y), (-402.0 - 16.0, 1140.0 - 114.0 - 16.0));
         let tiny = Rect::from_min_max(pos2(10.0, 20.0), pos2(200.0, 50.0));
-        let p = corner_place(tiny, Vec2::ZERO, 1.0, 1.0);
+        let p = corner_place(tiny, Vec2::ZERO, 1.0, 1.0, br, SIZE.x);
         assert_eq!((p.x, p.y), (10.0, 20.0));
-        let p = corner_place(area, Vec2::ZERO, 1.0, 2.0);
+        let p = corner_place(area, Vec2::ZERO, 1.0, 2.0, br, SIZE.x);
         assert_eq!((p.x, p.y, p.zoom), (2560.0 - 800.0 - 16.0, 1400.0 - 224.0 - 16.0, 2.0));
+    }
+
+    #[test]
+    fn every_corner_keeps_the_margin_and_the_width() {
+        let area = Rect::from_min_max(pos2(0.0, 40.0), pos2(1920.0, 1040.0));
+        let at = |c| {
+            let p = corner_place(area, Vec2::ZERO, 1.0, 1.0, c, 500.0);
+            (p.x, p.y, p.w)
+        };
+        assert_eq!(at(Corner::TopLeft), (16.0, 56.0, 500.0));
+        assert_eq!(at(Corner::TopRight), (1920.0 - 500.0 - 16.0, 56.0, 500.0));
+        assert_eq!(at(Corner::BottomLeft), (16.0, 1040.0 - 112.0 - 16.0, 500.0));
+        assert_eq!(at(Corner::BottomRight), (1920.0 - 500.0 - 16.0, 1040.0 - 112.0 - 16.0, 500.0));
+        for c in Corner::ALL {
+            assert_eq!(Corner::from_key(c.key()), Some(c));
+        }
+        let m = Mini::load(|k| (k == "mini_corner").then(|| "tl".to_owned()));
+        assert_eq!(m.corner, Corner::TopLeft);
+        assert_eq!(Mini::load(|_| None).corner, Corner::BottomRight);
     }
 
     #[test]
