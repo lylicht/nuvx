@@ -229,6 +229,7 @@ fun SettingsScreen(
     val hideHomeVideos by AppSettings.hideHomeVideos.collectAsStateWithLifecycle()
     val hideTopPicks by AppSettings.hideTopPicks.collectAsStateWithLifecycle()
     val hideHomeMoods by AppSettings.hideHomeMoods.collectAsStateWithLifecycle()
+    val worshipMode by AppSettings.worshipMode.collectAsStateWithLifecycle()
     val smartVersionAlignment by AppSettings.smartVersionAlignment.collectAsStateWithLifecycle()
     val filterNonMusicAudio by AppSettings.filterNonMusicAudio.collectAsStateWithLifecycle()
     val localMusicFolderUri by AppSettings.localMusicFolderUri.collectAsStateWithLifecycle()
@@ -549,6 +550,7 @@ fun SettingsScreen(
                 hideHomeMoods = hideHomeMoods,
                 squareVideoThumbnails = squareVideoThumbnails,
                 classicSearch = classicSearch,
+                worshipMode = worshipMode,
             )
         }
 
