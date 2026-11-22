@@ -13,7 +13,7 @@ impl App {
         }
         self.home = Some(HomeState {
             chips,
-            shelves: page.shelves,
+            shelves: crate::worship::filter_shelves(page.shelves, self.worship),
             continuation: page.continuation,
             loading_more: None,
             picks_loading: false,
@@ -211,4 +211,4 @@ mod account_block_tests {
         assert!(account_block("This video is only available to Music Premium members", true).is_some());
         assert!(account_block("decode: end of stream", false).is_none());
     }
-}
+    }
