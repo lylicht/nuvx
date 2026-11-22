@@ -12,6 +12,10 @@ pub(super) fn settings_playback(app: &mut App, ui: &mut Ui) {
             toggle(ui, &mut app.autoplay, "Autoplay");
         });
         divider(ui);
+        setting_row(ui, "Worship mode", Some("Keep Home and autoplay on Quran and Islamic content; block explicit tracks."), |ui| {
+            toggle(ui, &mut app.worship, "Worship mode");
+        });
+        divider(ui);
         setting_row(ui, "Loudness target", Some("Level songs are brought to: lower is quieter, -14 matches YouTube Music."), |ui| {
             let label = app.norm_target.map_or("Off".to_string(), |t| format!("{t} LUFS"));
             let btn = dropdown_button(ui, &label, 150.0, "Loudness target");
@@ -299,4 +303,4 @@ fn seconds_slider(ui: &mut Ui, v: &mut u32, range: std::ops::RangeInclusive<u32>
     ui.painter().circle_filled(knob + vec2(0.0, 1.0), 7.0 + h, theme::shade(0.25));
     ui.painter().circle_filled(knob, 7.0 + h, Color32::WHITE);
     resp
-}
+                }
