@@ -63,8 +63,19 @@ async fn topical_fallback(
     ) else {
         return Ok(Vec::new());
     };
-    let mut tracks = super::search_songs(api, &query, auth).await?;
-    tracks.retain(|t| crate::content_filter::keep(false, hide_explicit, true, &t.title, &t.artist_line(), profile));
+    // Search results carry no parsed explicit flag on Track, so read the badge
+    // off the raw renderer JSON: with hide-explicit on, those tracks must not
+    // come back through the fallback either.
+    let items = super::search::search_as(api, &query, super::Filter::Songs, auth).await?;
+    let mut tracks = Vec::new();
+    for item in &items {
+        let renderer = &item["musicResponsiveListItemRenderer"];
+        let explicit = has_explicit_badge(renderer);
+        let Some(track) = list_item(renderer) else { continue };
+        if crate::content_filter::keep(explicit, hide_explicit, true, &track.title, &track.artist_line(), profile) {
+            tracks.push(track);
+        }
+    }
     Ok(tracks)
 }
 
