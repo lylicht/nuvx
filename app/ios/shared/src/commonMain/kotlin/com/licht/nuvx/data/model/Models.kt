@@ -146,6 +146,7 @@ data class ShelfItem(
     val videoId: String? = null,
     val browseId: String? = null,
     val isVideo: Boolean = false,
+    val isExplicit: Boolean? = null,
 )
 
 @Serializable
