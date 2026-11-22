@@ -1,7 +1,7 @@
 import { artistLine, extendStation } from '@/playback/queue/builder';
 import { asEntry, type QueueEntry, type QueueSource } from '@/playback/queue/timeline';
 import { trackLog } from '@/playback/trackLog';
-import { fallbackQuery, keepTrack } from '@/data/music/worship';
+import { buildProfile, EMPTY_PROFILE, fallbackQuery, keepTrack, type TasteProfile } from '@/data/music/contentFilter';
 import type { MusicItem, Track } from '@/data/music/types';
 import type { RepeatMode } from '@/state/playerSettings';
 
@@ -22,7 +22,8 @@ function itemToTrack(item: MusicItem): Track {
 
 interface PlayerAutoplayState {
   autoplay: boolean;
-  worship: boolean;
+  hideExplicit: boolean;
+  focusedFeed: boolean;
   repeat: RepeatMode;
   queue: QueueEntry[];
   index: number;
@@ -30,6 +31,22 @@ interface PlayerAutoplayState {
 }
 
 const MAX_QUEUED_AUTOPLAY = 10;
+const RECENT_PROFILE_LIMIT = 50;
+
+// Recent plays from the user's YouTube Music history, for the topical taste
+// profile. Empty when unavailable, which leaves the profile anchored on the
+// seed track alone.
+async function recentPlays(): Promise<{ title: string; artist: string }[]> {
+  try {
+    const { fetchLibrary } = await import('@/data/music/api');
+    const page = await fetchLibrary('recent');
+    return page.data.tracks
+      .slice(0, RECENT_PROFILE_LIMIT)
+      .map((t) => ({ title: t.title, artist: t.artists.map((a) => a.name).join(', ') }));
+  } catch {
+    return [];
+  }
+}
 const EMPTY_RETRY_MS = 15_000;
 
 export class PlayerAutoplayController {
@@ -66,15 +83,23 @@ export class PlayerAutoplayController {
       try {
         const { fetchRadio } = await import('@/data/music/api');
         let { candidates, seedIsVideo } = await fetchRadio(seed.videoId);
-        if (this.getState().worship) {
-          candidates = candidates.filter((c) => keepTrack(c.track.explicit, true, c.track.title, artistLine(c.track)));
-          if (!candidates.length) {
-            // YouTube blended the account's music history into the radio; rebuild from a worship search.
-            const { fetchSearch } = await import('@/data/music/api');
-            const results = await fetchSearch(fallbackQuery(seed.title, artistLine(seed)));
-            candidates = results.songs
-              .filter((item) => keepTrack(item.explicit, true, item.title, item.artists.map((a) => a.name).join(', ')))
-              .map((item) => ({ track: itemToTrack(item), isVideo: false }));
+        const { hideExplicit, focusedFeed } = this.getState();
+        if (hideExplicit || focusedFeed) {
+          const profile: TasteProfile = focusedFeed
+            ? buildProfile([{ title: seed.title, artist: artistLine(seed) }, ...(await recentPlays())])
+            : EMPTY_PROFILE;
+          candidates = candidates.filter((c) =>
+            keepTrack(c.track.explicit, hideExplicit, focusedFeed, c.track.title, artistLine(c.track), profile));
+          if (focusedFeed && !candidates.length) {
+            // YouTube blended the account's wider history into the radio; rebuild from a search for more like the seed.
+            const query = fallbackQuery(seed.title, artistLine(seed));
+            if (query) {
+              const { fetchSearch } = await import('@/data/music/api');
+              const results = await fetchSearch(query);
+              candidates = results.songs
+                .filter((item) => keepTrack(item.explicit, hideExplicit, true, item.title, item.artists.map((a) => a.name).join(', '), profile))
+                .map((item) => ({ track: itemToTrack(item), isVideo: false }));
+            }
           }
         }
         const current = this.getState();
@@ -115,4 +140,4 @@ export class PlayerAutoplayController {
     trackLog.i('AutoPlay is on but nothing is queued; asking for the radio again', queue[index]?.track.videoId ?? null);
     void this.refill(true, true);
   }
-}
+        }
