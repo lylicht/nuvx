@@ -113,6 +113,7 @@ impl App {
             play_retry: None,
             recoveries: 0,
             autoplay: get("autoplay").is_none_or(|v| v == "1"),
+            worship: get("worship_mode").is_some_and(|v| v == "1"),
             lib_list: get("lib_list").is_some_and(|v| v == "1"),
             sleep: Default::default(),
             sleep_cut: 0,
@@ -346,4 +347,4 @@ impl App {
         app.set_crossfade();
         app
     }
-}
+            }
