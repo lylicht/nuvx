@@ -13,7 +13,7 @@ impl App {
         }
         self.home = Some(HomeState {
             chips,
-            shelves: crate::worship::filter_shelves(page.shelves, self.worship),
+            shelves: page.shelves,
             continuation: page.continuation,
             loading_more: None,
             picks_loading: false,
@@ -160,7 +160,7 @@ impl App {
         }
         self.home = None;
         self.home_loading = true;
-        self.backend.request(Req::Home(None));
+        self.backend.request(Req::Home { params: None, hide_explicit: self.hide_explicit, focused: self.focused_feed });
         if v {
             self.request_library();
             self.request_liked(false);
