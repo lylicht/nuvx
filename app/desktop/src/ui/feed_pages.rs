@@ -87,7 +87,7 @@ pub(super) fn home(app: &mut App, ui: &mut Ui, now: f64) {
         && let Some(h) = &mut app.home
     {
         h.picks_loading = true;
-        app.backend.request(crate::backend::Req::MoreQuickPicks { seed, worship: app.worship });
+        app.backend.request(crate::backend::Req::MoreQuickPicks { seed, hide_explicit: app.hide_explicit, focused: app.focused_feed });
     }
     if loading_more {
         widgets::skeleton(ui, now, 1, CARD);
@@ -183,4 +183,4 @@ pub(super) fn mood(app: &mut App, ui: &mut Ui, browse_id: &str, params: Option<&
             }
         }
     }
-}
+                    }
