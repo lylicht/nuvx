@@ -121,6 +121,18 @@
           "evidence": "LoudnessGainTest 4/4 on the JVM through the host-built Rust library (contract core/contracts/loudness-gain.json); RustCoreDeviceTest 1/1 on the x86_64 emulator via am instrument; nuvx-core 27 tests + clippy -D warnings; desktop norm tests pass; 16 KB ELF alignment checked; full Android unit suite 1437 run, the only 17 failures are LocaleStringsTest from 3 untranslated strings already on main (3d6aaf69)"
         },
         {
+          "id": "06a2",
+          "what": "Android update rules (release_is_newer, is_old_build, compare_release_order) through nuvx-ffi; Kotlin copies removed",
+          "state": "PASS",
+          "evidence": "AppUpdateCheckerTest 26/26 through Rust on the JVM; nuvx-core release test with 11 shared cases (new: build without build time); desktop update tests 7/7"
+        },
+        {
+          "id": "06a3",
+          "what": "stream recovery rules",
+          "state": "RETAINED_WITH_EVIDENCE",
+          "evidence": "only retry count and delay are shared; skip reasons depend on Media3 error codes (platform glue); an FFI call would add risk without removing logic"
+        },
+        {
           "id": "06a-r8",
           "what": "minified release build calling the Rust core at runtime (JNA + UniFFI keep rules)",
           "state": "NOT_VERIFIED",
