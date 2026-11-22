@@ -35,8 +35,10 @@ InnerTubeX is Kotlin Multiplatform with Android, JVM desktop and iOS targets onl
 |---|---|---|
 | Android | JNI from the Rust app into the bundled Kotlin library | planned |
 | iOS | its KMP framework through a thin Swift bridge | planned |
-| Windows, Linux, macOS | only by embedding a JVM (~50–100 MB, slower start) | **open: owner decision** |
-| Web | not possible (no JS/WASM target; browsers cannot call YouTube directly) | **open: owner decision** |
+| Windows, Linux, macOS | the desktop app bundles a Java runtime and calls InnerTubeX through JNI | decided (owner): accepts ~50–100 MB and a slower start |
+| Web | an owner-run relay server runs InnerTubeX and serves the web app | decided (owner): needs a JVM-capable host the owner controls (a Cloudflare Worker cannot run it; e.g. the existing Oracle server) |
+
+The bundled runtime's size and start-up time are measured in step 8 and reported before release.
 
 ## R3. UI framework: Dioxus 0.7 with the webview renderer, DOM on the web (2026-11-22, Claude)
 
