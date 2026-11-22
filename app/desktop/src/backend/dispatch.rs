@@ -1,16 +1,52 @@
 use super::*;
 
 impl Backend {
+    /// Taste profile for "Keep recommendations on-topic", from the account's
+    /// YouTube Music history, cached for 30 minutes. Fetch failures and a
+    /// signed-out session yield an empty profile, which disables topical
+    /// filtering instead of breaking the feed.
+    pub(super) async fn taste_profile(&self, focused: bool) -> crate::content_filter::TasteProfile {
+        const TTL: std::time::Duration = std::time::Duration::from_secs(30 * 60);
+        if !focused {
+            return crate::content_filter::TasteProfile::default();
+        }
+        {
+            let cached = self.taste.lock().unwrap();
+            if let Some((at, profile)) = &*cached
+                && at.elapsed() < TTL
+            {
+                return profile.clone();
+            }
+        }
+        let profile = match ytm::history(&self.api).await {
+            Ok(tracks) => crate::content_filter::TasteProfile::from_tracks(&tracks),
+            Err(_) => crate::content_filter::TasteProfile::default(),
+        };
+        *self.taste.lock().unwrap() = Some((std::time::Instant::now(), profile.clone()));
+        profile
+    }
+
     pub(super) async fn handle(&self, req: Req) -> Option<Resp> {
         let api = &*self.api;
         let me = self.is_logged_in();
         let (what, quiet) = (req.name(), req.quiet());
         let res: anyhow::Result<Option<Resp>> = async {
             Ok(Some(match req {
-                Req::Home(params) => Resp::Home(ytm::home(api, params.as_deref(), me).await?),
-                Req::HomeMore(token) => Resp::HomeMore(ytm::home_more(api, &token, me).await?),
-                Req::MoreQuickPicks { seed, worship } => {
-                    let tracks = ytm::radio(api, &seed, me, 0, worship).await?;
+                Req::Home { params, hide_explicit, focused } => {
+                    let profile = self.taste_profile(focused).await;
+                    let mut page = ytm::home(api, params.as_deref(), me).await?;
+                    page.shelves = crate::content_filter::filter_shelves(page.shelves, hide_explicit, focused, &profile);
+                    Resp::Home(page)
+                }
+                Req::HomeMore { token, hide_explicit, focused } => {
+                    let profile = self.taste_profile(focused).await;
+                    let mut page = ytm::home_more(api, &token, me).await?;
+                    page.shelves = crate::content_filter::filter_shelves(page.shelves, hide_explicit, focused, &profile);
+                    Resp::HomeMore(page)
+                }
+                Req::MoreQuickPicks { seed, hide_explicit, focused } => {
+                    let profile = self.taste_profile(focused).await;
+                    let tracks = ytm::radio(api, &seed, me, 0, hide_explicit, focused, &profile).await?;
                     Resp::QuickPicksMore { seed, tracks }
                 }
                 Req::Explore(preferred_artists) => self.explore(&preferred_artists, me).await?,
@@ -170,10 +206,11 @@ impl Backend {
                     });
                     Resp::ArtistSignature { key, signature }
                 }
-                Req::Radio { seed, song_of, worship } => {
+                Req::Radio { seed, song_of, hide_explicit, focused } => {
                     let song = self.song_version(&seed, song_of.as_ref(), PREFETCH_SONG_WAIT).await;
                     let from = song.as_ref().map_or(&seed, |s| &s.id);
-                    let mut tracks = ytm::radio(api, from, false, 50, worship).await?;
+                    let profile = self.taste_profile(focused).await;
+                    let mut tracks = ytm::radio(api, from, false, 50, hide_explicit, focused, &profile).await?;
                     tracks.retain(|t| t.id != *from);
                     Resp::Radio { seed, tracks }
                 }
