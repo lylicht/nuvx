@@ -6,6 +6,9 @@ Every nuvx release, newest first. Downloads and checksums are on each version's 
 
 ## Unreleased
 
+- **Earlier versions of nuvx playlists** (Android): every change to a nuvx playlist keeps the state before it (the last 10).
+  Playlist menu → Earlier versions lists them with their time and song count; tap one to put it back, and Undo returns
+  to the state you had.
 - **Build security:** use patched Guava for Android Gradle Plugin and Wear OS, and declare Media3's compile-only annotations explicitly. Thanks @vantom0101 for flagging the remaining Dependabot alert.
 - **Desktop Light Theme lyrics:** made lyric text readable. Thanks @vantom0101 for reporting #349.
 - **Playback reliability:** clear stale Smart Fade markers, retry unavailable Loop Mix lyrics, preserve cancellation, and test crossfade phase policies. Thanks @vantom0101 for #341 and #343–#345.
