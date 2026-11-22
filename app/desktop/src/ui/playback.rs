@@ -395,7 +395,7 @@ impl App {
             && let Some(t) = self.current().filter(|t| !crate::radio::is_station(&t.id)).cloned()
         {
             self.radio_pending = true;
-            self.backend.request(Req::Radio { song_of: self.song_of(&t), seed: t.id });
+            self.backend.request(Req::Radio { song_of: self.song_of(&t), seed: t.id, worship: self.worship });
         }
     }
 
@@ -509,4 +509,4 @@ impl App {
 
 fn unix_now() -> u64 {
     std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map_or(0, |d| d.as_secs())
-}
+                            }
