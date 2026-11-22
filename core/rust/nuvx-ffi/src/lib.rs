@@ -11,7 +11,7 @@ uniffi::setup_scaffolding!();
 /// Bumped when an export changes shape or meaning, so the app can tell which library it loaded.
 #[uniffi::export]
 pub fn core_api_version() -> u32 {
-    2
+    3
 }
 
 /// Volume normalization gain in millibels. See `nuvx_core::loudness::norm_gain_mb`.
@@ -100,7 +100,24 @@ pub fn words_from_runs(runs: Vec<CoreRun>, explicit_spacing: bool) -> Vec<CoreWo
         .iter()
         .map(|r| (ms(r.start_ms), ms(r.end_ms), r.raw.as_str()))
         .collect();
-    nuvx_core::lyrics::words::words_from_runs(&runs, explicit_spacing)
+    core_words(nuvx_core::lyrics::words::words_from_runs(
+        &runs,
+        explicit_spacing,
+    ))
+}
+
+/// A parsed lyric line: an empty `text` is an instrumental gap; `right` puts it on the right side.
+#[derive(uniffi::Record)]
+pub struct CoreLine {
+    pub start_ms: i64,
+    pub text: String,
+    pub right: bool,
+    pub words: Vec<CoreWord>,
+    pub background: Vec<CoreWord>,
+}
+
+fn core_words(words: Vec<nuvx_core::lyrics::words::Word>) -> Vec<CoreWord> {
+    words
         .into_iter()
         .map(|w| CoreWord {
             start_ms: w.start.into(),
@@ -116,6 +133,23 @@ pub fn words_from_runs(runs: Vec<CoreRun>, explicit_spacing: bool) -> Vec<CoreWo
                     end_char: s.end_char as i32,
                 })
                 .collect(),
+        })
+        .collect()
+}
+
+/// Lines of a line-synced (optionally word-timed) LRC file, by core/contracts/lyrics-lrc.json.
+/// See `nuvx_core::lyrics::lrc::parse_lrc`.
+#[uniffi::export]
+pub fn parse_lrc_lines(lrc: String) -> Vec<CoreLine> {
+    use nuvx_core::lyrics::words::line_words;
+    nuvx_core::lyrics::lrc::parse_lrc(&lrc, 0)
+        .into_iter()
+        .map(|l| CoreLine {
+            start_ms: l.start.into(),
+            right: l.agent.as_deref() == Some("v2"),
+            words: core_words(line_words(&l, false)),
+            background: core_words(line_words(&l, true)),
+            text: l.text,
         })
         .collect()
 }

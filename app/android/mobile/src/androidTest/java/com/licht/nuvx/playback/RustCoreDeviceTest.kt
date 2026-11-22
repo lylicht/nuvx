@@ -15,7 +15,7 @@ import org.junit.runner.RunWith
 class RustCoreDeviceTest {
     @Test
     fun loadsTheRustCoreAndAgreesWithTheSharedCases() {
-        assertEquals(2u, coreApiVersion())
+        assertEquals(3u, coreApiVersion())
         assertEquals(-300, loudnessGainMb(loudnessDb = 3.0, targetLufs = -14))
         assertEquals(300, loudnessGainMb(loudnessDb = -12.0, targetLufs = -10))
         assertEquals(-1500, loudnessGainMb(loudnessDb = 20.0, targetLufs = -20))

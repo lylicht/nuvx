@@ -5,7 +5,7 @@
   "branch": "main",
   "head_sha": null,
   "current_task": "06",
-  "next_action": "Contract for the LRC and TTML line parsers (credit lines, alignment markers, repeated stamps), then Android calls the Rust parsers; 06c iOS exports via native-core (Apple CI); backup format through nuvx-ffi.",
+  "next_action": "Compare Android TtmlLyrics and EnhancedLrc with nuvx-core (TTML, enhanced LRC), pin a contract, switch Android; 06c iOS exports via native-core (Apple CI); backup format through nuvx-ffi.",
   "tasks": [
     {
       "id": "00",
@@ -149,6 +149,12 @@
           "what": "Android lyrics word builder (wordsFromRuns, 6 providers) runs in nuvx-core via nuvx-ffi; core_api_version 2",
           "state": "PASS",
           "evidence": "core/shared jvmTest 157/157 through the host Rust library (incl. LyricWordsContractTest); RustCoreDeviceTest on the x86_64 emulator calls wordsFromRuns"
+        },
+        {
+          "id": "06a7",
+          "what": "LRC parsing unified: Android LrcLib.parseLrc (+ KuGou, Megalobiz, Musixmatch, SimpMusic, embedded) calls nuvx-core; owner decisions: repeated stamps at every time, credit lines hidden, last word ends at its start; desktop fixes: offset in ms, <R> right-aligns",
+          "state": "PASS",
+          "evidence": "core/contracts/lyrics-lrc.json: nuvx-core 32/32, core/shared jvmTest 158/158, desktop 267/267, RustCoreDeviceTest (core_api_version 3) on the emulator"
         },
         {
           "id": "06a-r8",

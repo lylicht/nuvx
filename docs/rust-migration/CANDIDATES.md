@@ -49,9 +49,11 @@ from 4 s, gap at the sung end incl. background vocals, no gap at song end, LRC b
 **Word model: decided 2026-11-22, Android's.** Pinned in `core/contracts/lyrics-words.json` (8 cases); Android's
 `wordsFromRuns` passes unchanged (`LyricWordsContractTest`), `nuvx_core::lyrics::words` implements it, and the desktop
 karaoke groups words with the same join rule (CJK/kana/Thai never join; touching runs join only when the line uses
-spaces). Android's `wordsFromRuns` (used by six lyrics providers) now runs in nuvx-core through nuvx-ffi. Next for lyrics: the
-line parsers themselves (LRC, TTML), which still differ in details outside gaps and words (credit lines, alignment
-markers, repeated stamps) and need their own contract before Android switches.
+spaces). Android's `wordsFromRuns` (used by six lyrics providers) now runs in nuvx-core through nuvx-ffi. **LRC parser: one for every app since 2026-11-22.** Owner decisions pinned in `core/contracts/lyrics-lrc.json`
+(repeated stamps shown at each time, credit lines hidden, last word ends where it starts); Android's `LrcLib.parseLrc`
+(also used by KuGou, Megalobiz, Musixmatch, SimpMusic and embedded lyrics) now calls nuvx-core. Two desktop bugs were
+fixed on the way (offset read as seconds, `<R>` shown as text). Next for lyrics: TTML and enhanced LRC on Android
+(`TtmlLyrics`, `EnhancedLrc`) need the same comparison.
 
 ## Leave native (glue, not duplicated logic)
 

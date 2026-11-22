@@ -112,6 +112,17 @@ pub fn words_from_runs(runs: &[(i32, i32, &str)], explicit_spacing: bool) -> Vec
     words
 }
 
+/// A line's sung words (`background` false) or background-vocal words (`background` true), from its timed parts.
+pub fn line_words(line: &super::model::Line, background: bool) -> Vec<Word> {
+    let runs: Vec<(i32, i32, &str)> = line
+        .parts
+        .iter()
+        .filter(|p| p.bg == background)
+        .map(|p| (p.start, p.start + p.dur, p.text.as_str()))
+        .collect();
+    words_from_runs(&runs, false)
+}
+
 #[cfg(test)]
 mod tests {
     #[test]

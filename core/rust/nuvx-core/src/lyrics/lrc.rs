@@ -103,8 +103,10 @@ pub fn parse_lrc(text: &str, song_ms: i32) -> Vec<Line> {
         if ls.is_empty() {
             continue;
         }
-        let times: Vec<i32> = ls.iter().map(|(_, t)| lrc_time(t)).collect();
-        let (c, u) = (*times.iter().min().unwrap(), *times.iter().max().unwrap());
+        let mut times: Vec<i32> = ls.iter().map(|(_, t)| lrc_time(t)).collect();
+        times.sort_unstable();
+        times.dedup();
+        let c = times[0];
         let g = remove_ranges(a, &ls).trim().to_owned();
         // "<R>" puts a line on the right, like a second singer (Android's LrcLib does the same).
         let (g, right) = match g.strip_prefix("<R>") {
@@ -164,15 +166,26 @@ pub fn parse_lrc(text: &str, song_ms: i32) -> Vec<Line> {
         if is_credit_line(&plain) {
             continue;
         }
-        lines.push(Line {
-            start: c,
-            dur: u - c,
-            text: b.trim().to_owned(),
-            parts,
-            agent: right.then(|| "v2".to_owned()),
-            ..Default::default()
-        });
+        // A line with several timestamps is sung at each of them (core/contracts/lyrics-lrc.json).
+        for &t in &times {
+            let shift = t - c;
+            lines.push(Line {
+                start: t,
+                dur: 0,
+                text: b.trim().to_owned(),
+                parts: parts
+                    .iter()
+                    .map(|p| Part {
+                        start: p.start + shift,
+                        ..p.clone()
+                    })
+                    .collect(),
+                agent: right.then(|| "v2".to_owned()),
+                ..Default::default()
+            });
+        }
     }
+    lines.sort_by_key(|l| l.start);
     let n = lines.len();
     for l in 0..n {
         if l + 1 < n {
@@ -186,8 +199,8 @@ pub fn parse_lrc(text: &str, song_ms: i32) -> Vec<Line> {
                 for f in &a.parts {
                     c = c.max(f.start);
                 }
-                let last = a.parts.last_mut().unwrap();
-                last.dur = (next_start - last.start).max(0);
+                // The last word has no end stamp: it ends where it starts, like Android (lights up at once).
+                a.parts.last_mut().unwrap().dur = 0;
                 a.dur = (c - a.start).max(0);
             }
         } else {
@@ -195,12 +208,6 @@ pub fn parse_lrc(text: &str, song_ms: i32) -> Vec<Line> {
             let i = song_ms - a.start;
             if a.dur == 0 && i > 0 {
                 a.dur = i;
-            }
-            if let Some(last) = a.parts.last_mut() {
-                let u = song_ms - last.start;
-                if u > 0 {
-                    last.dur = u;
-                }
             }
         }
     }
@@ -355,5 +362,33 @@ mod lrc_marker_tests {
         assert_eq!(l[0].agent.as_deref(), Some("v2"));
         assert!(l[0].parts.is_empty());
         assert_eq!(l[1].agent, None);
+    }
+}
+
+#[cfg(test)]
+mod lrc_contract_tests {
+    #[test]
+    fn agrees_with_the_shared_lrc_cases() {
+        let doc: serde_json::Value =
+            serde_json::from_str(include_str!("../../../../contracts/lyrics-lrc.json")).unwrap();
+        for c in doc["cases"].as_array().unwrap() {
+            // Song length 0, as Android passes it.
+            let got: Vec<serde_json::Value> = super::parse_lrc(c["lrc"].as_str().unwrap(), 0)
+                .iter()
+                .map(|l| {
+                    let words: Vec<serde_json::Value> = super::super::words::line_words(l, false)
+                        .into_iter()
+                        .map(|w| serde_json::json!([w.text, w.start, w.end]))
+                        .collect();
+                    let align = if l.agent.as_deref() == Some("v2") {
+                        "end"
+                    } else {
+                        "start"
+                    };
+                    serde_json::json!([l.start, l.text, align, words])
+                })
+                .collect();
+            assert_eq!(&serde_json::Value::Array(got), &c["lines"], "{}", c["name"]);
+        }
     }
 }

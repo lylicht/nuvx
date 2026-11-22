@@ -27,10 +27,12 @@ generic master prompt do not apply.
 
 | 2026-11-22 | nuvx-ffi moved into `core/shared` (phone and TV get it); Android's lyrics word builder runs in nuvx-core | core/shared JVM tests 157/157 through Rust; phone unit tests (only the pre-existing locale failures); RustCoreDeviceTest on the emulator incl. words; phone and TV debug + minified release APKs build with 4 ABIs |
 
+| 2026-11-22 | LRC: one parser for every app (nuvx-core); owner decisions on repeated stamps, credit lines, last word; desktop offset and `<R>` bugs fixed | core/contracts/lyrics-lrc.json: nuvx-core 32/32, core/shared 158/158 (incl. LyricLrcContractTest and provider tests), desktop 267/267, RustCoreDeviceTest on the emulator |
+
 ## Measured, not moved (and why)
 
-- Lyrics line parsers on Android (LRC, TTML): gaps and words agree with nuvx-core and words already run in Rust;
-  the parsers still differ in other details (credit lines, alignment markers, repeated stamps) and need a contract.
+- Android's TTML and enhanced-LRC parsers (`TtmlLyrics`, `EnhancedLrc`): gaps and words agree with nuvx-core, the rest
+  is not compared yet.
 - Stream recovery: only two numbers are shared; Android's skip reasons are tied to Media3 error codes (glue).
 
 ## Known regressions
@@ -52,5 +54,5 @@ See `docs/rust-migration/BLOCKERS.csv`. New: none.
 
 ## Next executable action
 
-Lyrics line-parser contract (LRC, TTML), then Android calls the Rust parsers; 06c: expose the same exports through `app/ios/native-core`
+TTML and enhanced-LRC comparison and contract, then Android calls the Rust parsers; 06c: expose the same exports through `app/ios/native-core`
 (UniFFI, verified by the Apple builds workflow); then backup format (contract `core/contracts/backup-v1.json`).

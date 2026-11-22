@@ -1,0 +1,11 @@
+{
+  "about": "How a line-synced (optionally word-timed) LRC file becomes lyric lines. Owner decisions 2026-11-22: a line with several timestamps is shown at every one; credit lines (lyricist, composer, ...) are hidden; a line's last word ends where it starts (it lights up at once). Also: \"<R>\" at the start of a line puts it on the right (align end); [offset:] is in milliseconds and a positive one shows lyrics sooner; gaps follow core/contracts/lyrics-gaps.json. nuvx-core::lyrics::lrc::parse_lrc (desktop) and Android's LrcLib.parseLrc (through nuvx-ffi) must agree. A line is [startMs, text, align, words]; a word is [text, startMs, endMs].",
+  "cases": [
+    { "name": "a line with two timestamps is shown at both", "lrc": "[00:01.00][00:20.00]chorus\n[00:05.00]verse", "lines": [[1000, "chorus", "start", []], [5000, "verse", "start", []], [20000, "chorus", "start", []]] },
+    { "name": "credit lines are hidden", "lrc": "[00:00.50]作词 : 野田洋次郎\n[00:01.00]Hello", "lines": [[1000, "Hello", "start", []]] },
+    { "name": "<R> puts a line on the right", "lrc": "[00:01.00]<R>right side\n[00:03.00]left", "lines": [[1000, "right side", "end", []], [3000, "left", "start", []]] },
+    { "name": "the offset is in milliseconds", "lrc": "[offset:+500]\n[00:01.00]one\n[00:02.00]two", "lines": [[500, "one", "start", []], [1500, "two", "start", []]] },
+    { "name": "word stamps make words; the last word ends where it starts", "lrc": "[00:01.00]<00:01.00>Hel<00:01.50>lo <00:02.00>world\n[00:04.00]next", "lines": [[1000, "Hello world", "start", [["Hello", 1000, 2000], ["world", 2000, 2000]]], [4000, "next", "start", []]] },
+    { "name": "lines are put in time order", "lrc": "[00:03.00]second\n[00:01.00]first", "lines": [[1000, "first", "start", []], [3000, "second", "start", []]] }
+  ]
+}
