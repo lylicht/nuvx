@@ -61,3 +61,19 @@ Re-evaluate if webview performance on Android fails the measured budget.
 Sources: Dioxus releases (https://github.com/DioxusLabs/dioxus/releases), dioxus 0.7.9 docs
 (https://docs.rs/crate/dioxus/latest), Slint 1.15 and 1.17 release notes (https://slint.dev/blog/slint-1.15-released,
 https://slint.dev/blog/slint-1.17-released), eframe docs (https://docs.rs/crate/eframe/latest).
+
+## R4. AutoMix models are downloadable, not bundled (2026-11-22, owner)
+
+The AutoMix analysis models (Beat This! beat tracker, about 22 MB, and the open-unmix vocals model, about 9 MB in
+ONNX form; MIT licensed) are not shipped inside the apps. Today they add about 31 MB to every Android and web build
+and about 44 MB to iOS.
+
+- Served from storage the owner controls (proposed: release assets on the nuvx GitHub repository, versioned with the
+  app), each with its MIT license text next to it.
+- The app pins each model's URL, byte size and SHA-256; a download is used only after its checksum matches. Partial
+  downloads resume; a mismatch deletes the file and reports the failure.
+- Downloaded on demand when the user turns AutoMix (or another feature needing a model) on, after showing the size;
+  stored in the app's data folder; removable from settings. Without the models, AutoMix is off and everything else
+  works.
+- The web app fetches the same files on demand and keeps them in browser storage.
+- Platform formats (for example Core ML on iOS) are separate downloads with their own pins.

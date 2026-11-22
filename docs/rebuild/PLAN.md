@@ -7,6 +7,7 @@ Rules for every step: R1 (spec and implementation separated), new code only unde
 |---|---|---|---|
 | 1 | Provenance audit (`docs/provenance/PROVENANCE.md`) | spec | done 2026-11-22 |
 | 2 | Decisions: process, YouTube Music access, UI framework (`DECISIONS.md`) | spec | done 2026-11-22 |
+| 2b | Feature inventory from nuvx and BitChord's multiplatform-rebase branch, BitChord backend excluded (`spec/00-features.md`); downloadable models (R4) | spec | done 2026-11-22 |
 | 3 | Spec: app shell (navigation, sidebar, themes, layout breakpoints) from the current apps' behaviour | spec | done 2026-11-22 (`spec/01-app-shell.md`) |
 | 4 | `rebuild/` Cargo workspace + Dioxus desktop shell built from spec 3 (window, navigation, theme), CI | implementation | next |
 | 5 | Spec: playback model (states, queue, shuffle, repeat, gapless, errors) as testable cases | spec | |
