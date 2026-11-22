@@ -21,7 +21,8 @@ struct SettingsView: View {
     @AppStorage("hide_home_videos") var hideHomeVideos = false
     @AppStorage("hide_top_picks") var hideTopPicks = false
     @AppStorage("hide_home_moods") var hideHomeMoods = false
-    @AppStorage("worship_mode") var worshipMode = false
+    @AppStorage("hide_explicit") var hideExplicit = false
+    @AppStorage("focused_feed") var focusedFeed = false
 
     @State var crossfade = Int(PlatformSettings.shared.getInt(key: "crossfade_seconds", default: 0))
     @AppStorage("dolby_atmos") var dolbyAtmos = true
