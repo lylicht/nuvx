@@ -1,6 +1,6 @@
 use super::*;
 
-pub async fn radio(api: &Api, video_id: &str, auth: bool, limit: usize) -> anyhow::Result<Vec<Track>> {
+pub async fn radio(api: &Api, video_id: &str, auth: bool, limit: usize, worship: bool) -> anyhow::Result<Vec<Track>> {
     let body = json!({
         "playlistId": format!("RDAMVM{video_id}"),
         "params": "wAEB8gECeAE%3D",
@@ -23,12 +23,45 @@ pub async fn radio(api: &Api, video_id: &str, auth: bool, limit: usize) -> anyho
         items.extend(more);
         token = next;
     }
-    Ok(radio_tracks(&items).cloned().collect())
+    let tracks: Vec<Track> = radio_tracks(&items)
+        .filter(|(t, _, explicit)| crate::worship::keep(*explicit, worship, &t.title, &t.artist_line()))
+        .map(|(t, _, _)| t.clone())
+        .collect();
+    if worship && tracks.is_empty() {
+        return worship_fallback(api, video_id, &items, auth).await;
+    }
+    Ok(tracks)
 }
 
-pub(super) fn radio_tracks(items: &[(Track, bool)]) -> impl Iterator<Item = &Track> {
-    let songs = items.iter().any(|(_, video)| !video);
-    items.iter().filter(move |(_, video)| !songs || !video).map(|(t, _)| t)
+/// Worship mode fallback: when the radio mix seeded by `video_id` has no worship
+/// items (YouTube blends the account's music history into it), rebuild the queue
+/// from a worship search instead.
+async fn worship_fallback(api: &Api, video_id: &str, items: &[(Track, bool, bool)], auth: bool) -> anyhow::Result<Vec<Track>> {
+    let seed = items.iter().map(|(t, _, _)| t).find(|t| t.id == video_id);
+    let query = crate::worship::fallback_query(
+        seed.map(|t| t.title.as_str()),
+        seed.map(|t| t.artist_line()).as_deref(),
+    );
+    let mut tracks = super::search_songs(api, &query, auth).await?;
+    tracks.retain(|t| crate::worship::is_worship(&t.title, &t.artist_line()));
+    Ok(tracks)
+}
+
+pub(super) fn radio_tracks(items: &[(Track, bool, bool)]) -> impl Iterator<Item = &(Track, bool, bool)> {
+    let songs = items.iter().any(|(_, video, _)| !video);
+    items.iter().filter(move |(_, video, _)| !songs || !video)
+}
+
+fn has_explicit_badge(r: &Value) -> bool {
+    fn find(v: &Value) -> bool {
+        match v {
+            Value::String(s) => s == "MUSIC_EXPLICIT_BADGE",
+            Value::Array(a) => a.iter().any(find),
+            Value::Object(o) => o.values().any(find),
+            _ => false,
+        }
+    }
+    find(&r["badges"]) || find(&r["subtitleBadges"])
 }
 
 pub async fn server_queue(api: &Api) -> anyhow::Result<Option<ServerQueue>> {
@@ -59,15 +92,15 @@ pub(super) fn parse_server_queue(v: &Value) -> Option<ServerQueue> {
     Some(ServerQueue { index: index?, tracks, watched_at })
 }
 
-fn panel_page(panel: &Value) -> (Vec<(Track, bool)>, Option<String>) {
+fn panel_page(panel: &Value) -> (Vec<(Track, bool, bool)>, Option<String>) {
     let tracks = arr(&panel["contents"])
         .iter()
         .filter_map(|i| {
             let wrapped = &i["playlistPanelVideoWrapperRenderer"]["primaryRenderer"]["playlistPanelVideoRenderer"];
             let r = if wrapped.is_null() { &i["playlistPanelVideoRenderer"] } else { wrapped };
-            Some((panel_item(r)?, is_video(r)))
+            Some((panel_item(r)?, is_video(r), has_explicit_badge(r)))
         })
         .collect();
     let token = panel["continuations"][0]["nextRadioContinuationData"]["continuation"].as_str().map(str::to_owned);
     (tracks, token)
-}
+                                         }
