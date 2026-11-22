@@ -68,7 +68,7 @@ mod tests {
         assert_eq!(t.language.as_deref(), Some("ja"));
         assert_eq!(t.songwriters, vec!["野田洋次郎"]);
         let l = &t.lines[0];
-        assert_eq!(l.text, "こんに ちは(yeah)");
+        assert_eq!(l.text, "こんに ちは");
         assert_eq!(l.parts.len(), 5);
         assert_eq!(l.parts[2], Part { start: 2000, dur: 0, text: " ".into(), bg: false });
         assert!(l.parts[4].bg && l.parts[4].start == 2500);

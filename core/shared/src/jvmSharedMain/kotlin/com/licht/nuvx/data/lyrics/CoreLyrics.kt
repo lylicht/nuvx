@@ -20,6 +20,7 @@ internal fun CoreLine.toLyricLine(): LyricLine {
         timeMs = startMs,
         text = text,
         words = words.map { it.toLyricWord() },
+        sungUntilMs = sungUntilMs,
         background = backing,
         alignment = if (right) LyricAlignment.End else LyricAlignment.Start,
     )

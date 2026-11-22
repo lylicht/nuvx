@@ -29,10 +29,12 @@ generic master prompt do not apply.
 
 | 2026-11-22 | LRC: one parser for every app (nuvx-core); owner decisions on repeated stamps, credit lines, last word; desktop offset and `<R>` bugs fixed | core/contracts/lyrics-lrc.json: nuvx-core 32/32, core/shared 158/158 (incl. LyricLrcContractTest and provider tests), desktop 267/267, RustCoreDeviceTest on the emulator |
 
+| 2026-11-22 | TTML: one parser for every app (nuvx-core); owner decisions on singer sides and CJK words; desktop sides from the core | core/contracts/lyrics-ttml.json (7 cases): nuvx-core 33/33, core/shared 159/159, Android lyrics tests (WordSyncTest, LrcRedTest, ...) 92/92 through Rust, desktop 267/267 |
+
 ## Measured, not moved (and why)
 
-- Android's TTML and enhanced-LRC parsers (`TtmlLyrics`, `EnhancedLrc`): gaps and words agree with nuvx-core, the rest
-  is not compared yet.
+- Android's enhanced-LRC parser (`EnhancedLrc`, word-timed LRC from some providers): gaps and words agree with
+  nuvx-core, the rest is not compared yet.
 - Stream recovery: only two numbers are shared; Android's skip reasons are tied to Media3 error codes (glue).
 
 ## Known regressions
@@ -46,7 +48,7 @@ added in 3d6aaf69 without translations).
 - Minified release build calling Rust at runtime (R8 build passes; runtime needs a signed release with playback).
 - ARM device run (emulator is x86_64; the owner's phone is off-limits for device tests).
 - iOS and web bridges (not built yet; iOS needs the Apple CI workflow).
-- Desktop karaoke grouping on screen: covered by the shared join-rule tests, not checked visually with CJK lyrics.
+- Desktop karaoke on screen: word grouping and the new singer sides are covered by shared tests, not checked visually.
 
 ## Blockers
 
@@ -54,5 +56,5 @@ See `docs/rust-migration/BLOCKERS.csv`. New: none.
 
 ## Next executable action
 
-TTML and enhanced-LRC comparison and contract, then Android calls the Rust parsers; 06c: expose the same exports through `app/ios/native-core`
+EnhancedLrc comparison and contract, then Android calls the Rust parser; 06c: expose the same exports through `app/ios/native-core`
 (UniFFI, verified by the Apple builds workflow); then backup format (contract `core/contracts/backup-v1.json`).

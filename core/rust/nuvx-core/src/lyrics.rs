@@ -5,6 +5,7 @@ pub mod credits;
 pub mod lrc;
 pub mod model;
 pub mod qrc;
+pub mod sides;
 pub mod timeline;
 pub mod ttml;
 pub mod words;

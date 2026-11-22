@@ -120,7 +120,7 @@ pub fn line_words(line: &super::model::Line, background: bool) -> Vec<Word> {
         .filter(|p| p.bg == background)
         .map(|p| (p.start, p.start + p.dur, p.text.as_str()))
         .collect();
-    words_from_runs(&runs, false)
+    words_from_runs(&runs, line.explicit_spacing)
 }
 
 #[cfg(test)]

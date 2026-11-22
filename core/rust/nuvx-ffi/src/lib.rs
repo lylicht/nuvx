@@ -11,7 +11,7 @@ uniffi::setup_scaffolding!();
 /// Bumped when an export changes shape or meaning, so the app can tell which library it loaded.
 #[uniffi::export]
 pub fn core_api_version() -> u32 {
-    3
+    4
 }
 
 /// Volume normalization gain in millibels. See `nuvx_core::loudness::norm_gain_mb`.
@@ -114,6 +114,20 @@ pub struct CoreLine {
     pub right: bool,
     pub words: Vec<CoreWord>,
     pub background: Vec<CoreWord>,
+    /// Until when a line without timed words is sung, if known.
+    pub sung_until_ms: Option<i64>,
+}
+
+fn core_line(l: nuvx_core::lyrics::model::Line, sung_until: Option<i32>) -> CoreLine {
+    use nuvx_core::lyrics::words::line_words;
+    CoreLine {
+        start_ms: l.start.into(),
+        right: l.right,
+        words: core_words(line_words(&l, false)),
+        background: core_words(line_words(&l, true)),
+        sung_until_ms: sung_until.map(Into::into),
+        text: l.text,
+    }
 }
 
 fn core_words(words: Vec<nuvx_core::lyrics::words::Word>) -> Vec<CoreWord> {
@@ -141,15 +155,22 @@ fn core_words(words: Vec<nuvx_core::lyrics::words::Word>) -> Vec<CoreWord> {
 /// See `nuvx_core::lyrics::lrc::parse_lrc`.
 #[uniffi::export]
 pub fn parse_lrc_lines(lrc: String) -> Vec<CoreLine> {
-    use nuvx_core::lyrics::words::line_words;
     nuvx_core::lyrics::lrc::parse_lrc(&lrc, 0)
         .into_iter()
-        .map(|l| CoreLine {
-            start_ms: l.start.into(),
-            right: l.agent.as_deref() == Some("v2"),
-            words: core_words(line_words(&l, false)),
-            background: core_words(line_words(&l, true)),
-            text: l.text,
+        .map(|l| core_line(l, None))
+        .collect()
+}
+
+/// Lines of a TTML document, by core/contracts/lyrics-ttml.json. See `nuvx_core::lyrics::ttml::parse_ttml`.
+#[uniffi::export]
+pub fn parse_ttml_lines(ttml: String) -> Vec<CoreLine> {
+    use nuvx_core::lyrics::ttml::{parse_ttml, sung_until};
+    parse_ttml(&ttml)
+        .lines
+        .into_iter()
+        .map(|l| {
+            let until = sung_until(&l);
+            core_line(l, until)
         })
         .collect()
 }

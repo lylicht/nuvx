@@ -52,8 +52,11 @@ karaoke groups words with the same join rule (CJK/kana/Thai never join; touching
 spaces). Android's `wordsFromRuns` (used by six lyrics providers) now runs in nuvx-core through nuvx-ffi. **LRC parser: one for every app since 2026-11-22.** Owner decisions pinned in `core/contracts/lyrics-lrc.json`
 (repeated stamps shown at each time, credit lines hidden, last word ends where it starts); Android's `LrcLib.parseLrc`
 (also used by KuGou, Megalobiz, Musixmatch, SimpMusic and embedded lyrics) now calls nuvx-core. Two desktop bugs were
-fixed on the way (offset read as seconds, `<R>` shown as text). Next for lyrics: TTML and enhanced LRC on Android
-(`TtmlLyrics`, `EnhancedLrc`) need the same comparison.
+fixed on the way (offset read as seconds, `<R>` shown as text). **TTML parser: one for every app since 2026-11-22.** Owner decisions pinned in `core/contracts/lyrics-ttml.json`
+(singer sides follow Android's alternating rule, CJK pieces stay separate words); Android's `TtmlLyrics.parse`
+(also used by BiniLyrics, Unison and provider TTML) now calls nuvx-core, and the desktop takes sides and word
+joining from the core. Desktop fixes on the way: inline translation/romanization spans no longer shown as lyrics,
+background vocals no longer in the line text. Next for lyrics: `EnhancedLrc` (word-timed LRC from other providers).
 
 ## Leave native (glue, not duplicated logic)
 

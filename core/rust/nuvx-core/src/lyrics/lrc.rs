@@ -180,7 +180,7 @@ pub fn parse_lrc(text: &str, song_ms: i32) -> Vec<Line> {
                         ..p.clone()
                     })
                     .collect(),
-                agent: right.then(|| "v2".to_owned()),
+                right,
                 ..Default::default()
             });
         }
@@ -359,9 +359,9 @@ mod lrc_marker_tests {
     fn right_marker_aligns_the_line_and_is_not_shown() {
         let l = super::parse_lrc("[00:01.00]<R>right side\n[00:03.00]left", 10_000);
         assert_eq!(l[0].text, "right side");
-        assert_eq!(l[0].agent.as_deref(), Some("v2"));
+        assert!(l[0].right);
         assert!(l[0].parts.is_empty());
-        assert_eq!(l[1].agent, None);
+        assert!(!l[1].right);
     }
 }
 
@@ -380,11 +380,7 @@ mod lrc_contract_tests {
                         .into_iter()
                         .map(|w| serde_json::json!([w.text, w.start, w.end]))
                         .collect();
-                    let align = if l.agent.as_deref() == Some("v2") {
-                        "end"
-                    } else {
-                        "start"
-                    };
+                    let align = if l.right { "end" } else { "start" };
                     serde_json::json!([l.start, l.text, align, words])
                 })
                 .collect();

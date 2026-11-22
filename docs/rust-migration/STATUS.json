@@ -5,7 +5,7 @@
   "branch": "main",
   "head_sha": null,
   "current_task": "06",
-  "next_action": "Compare Android TtmlLyrics and EnhancedLrc with nuvx-core (TTML, enhanced LRC), pin a contract, switch Android; 06c iOS exports via native-core (Apple CI); backup format through nuvx-ffi.",
+  "next_action": "Compare Android EnhancedLrc with nuvx-core parse_lrc (word-timed LRC from providers), pin a contract, switch Android; 06c iOS exports via native-core (Apple CI); backup format through nuvx-ffi.",
   "tasks": [
     {
       "id": "00",
@@ -155,6 +155,12 @@
           "what": "LRC parsing unified: Android LrcLib.parseLrc (+ KuGou, Megalobiz, Musixmatch, SimpMusic, embedded) calls nuvx-core; owner decisions: repeated stamps at every time, credit lines hidden, last word ends at its start; desktop fixes: offset in ms, <R> right-aligns",
           "state": "PASS",
           "evidence": "core/contracts/lyrics-lrc.json: nuvx-core 32/32, core/shared jvmTest 158/158, desktop 267/267, RustCoreDeviceTest (core_api_version 3) on the emulator"
+        },
+        {
+          "id": "06a8",
+          "what": "TTML parsing unified: Android TtmlLyrics.parse (+ BiniLyrics, Unison, provider TTML) calls nuvx-core; owner decisions: Android's singer-side rule, CJK pieces separate; desktop takes sides (Line.right) and explicit spacing from the core; desktop fixes: inline translations/romanizations skipped, background vocals out of line text",
+          "state": "PASS",
+          "evidence": "core/contracts/lyrics-ttml.json (7 cases): nuvx-core 33/33, core/shared jvmTest 159/159, Android lyrics unit tests 92/92 through Rust, desktop 267/267; desktop rendering not checked visually"
         },
         {
           "id": "06a-r8",

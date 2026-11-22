@@ -83,14 +83,15 @@ pub(super) fn text_size(fonts: &mut FontsView<'_>, s: &str, font: &FontId) -> Ve
     fonts.layout_no_wrap(s.to_owned(), font.clone(), Color32::WHITE).size()
 }
 
-pub(super) fn flow(fonts: &mut FontsView<'_>, toks: Vec<Tok>, font: &FontId, max_w: f32, line_h: f32, align: Align, rtl: bool) -> Flow {
+#[allow(clippy::too_many_arguments)]
+pub(super) fn flow(fonts: &mut FontsView<'_>, toks: Vec<Tok>, font: &FontId, max_w: f32, line_h: f32, align: Align, rtl: bool, explicit_spacing: bool) -> Flow {
     enum Item {
         Space,
         Group(Vec<Tok>),
     }
     let mut items: Vec<Item> = Vec::new();
     // Android's word model (nuvx-core, core/contracts/lyrics-words.json): whether a token continues the word before it.
-    let glue = toks.iter().any(|t| t.space);
+    let glue = explicit_spacing || toks.iter().any(|t| t.space);
     let mut last: Option<char> = None;
     let toks: Vec<(Tok, bool)> = toks
         .into_iter()
