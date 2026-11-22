@@ -56,7 +56,8 @@ export default function SettingsPage() {
   const discord = useDiscord();
   const party = useParty();
   const autoplay = usePlayer((s) => s.autoplay);
-  const worship = usePlayer((s) => s.worship);
+  const hideExplicit = usePlayer((s) => s.hideExplicit);
+  const focusedFeed = usePlayer((s) => s.focusedFeed);
   const crossfadeSec = usePlayer((s) => s.crossfadeSec);
   const automix = usePlayer((s) => s.automix);
   const automixBars = usePlayer((s) => s.automixBars);
@@ -70,7 +71,7 @@ export default function SettingsPage() {
   const setBackgroundMotion = useUi((s) => s.setBackgroundMotion);
   const backgroundMonochrome = useUi((s) => s.backgroundMonochrome);
   const setBackgroundMonochrome = useUi((s) => s.setBackgroundMonochrome);
-  const { setAutoplay, setWorship, setCrossfade, setAutomix, setAutomixBars, setShowNerdStats, setLoudnessTarget, setSleepTimer } = usePlayer.getState();
+  const { setAutoplay, setHideExplicit, setFocusedFeed, setCrossfade, setAutomix, setAutomixBars, setShowNerdStats, setLoudnessTarget, setSleepTimer } = usePlayer.getState();
   const [lyrics, setLyrics] = useState(false);
   const [localPlaylistsOnly, setLocalPlaylistsOnly] = useState(createPlaylistsLocally);
   const present = extension.state === 'present';
@@ -195,10 +196,16 @@ export default function SettingsPage() {
             onChange={setAutoplay}
           />
           <Toggle
-            label="Worship mode"
-            detail="Keep Home and autoplay on Quran and Islamic content, and block explicit tracks."
-            checked={worship}
-            onChange={setWorship}
+            label="Hide explicit content"
+            detail="Removes tracks marked explicit from Home and autoplay."
+            checked={hideExplicit}
+            onChange={setHideExplicit}
+          />
+          <Toggle
+            label="Keep recommendations on-topic"
+            detail="Filters Home and autoplay to the artists and topics in your recent plays."
+            checked={focusedFeed}
+            onChange={setFocusedFeed}
           />
           <label className={settingsUi.controlRow}>
             <span>Crossfade</span>
@@ -284,4 +291,4 @@ export default function SettingsPage() {
       )}
     </div>
   );
-              }
+}
