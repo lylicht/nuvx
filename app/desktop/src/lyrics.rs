@@ -34,7 +34,7 @@ mod tests {
 
     #[test]
     fn lrc_skips_credits_and_reads_offset() {
-        let l = parse_lrc("[offset:+0.5]\n[00:01.00]作词 : 野田洋次郎\n[00:05.00]Hello\n[00:07.00]World", 10_000);
+        let l = parse_lrc("[offset:+500]\n[00:01.00]作词 : 野田洋次郎\n[00:05.00]Hello\n[00:07.00]World", 10_000);
         assert_eq!(l.len(), 3);
         assert!(l[0].instrumental, "intro gap before a first line at 4.5 s");
         assert_eq!(l[1].start, 4500);

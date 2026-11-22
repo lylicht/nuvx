@@ -106,6 +106,11 @@ pub fn parse_lrc(text: &str, song_ms: i32) -> Vec<Line> {
         let times: Vec<i32> = ls.iter().map(|(_, t)| lrc_time(t)).collect();
         let (c, u) = (*times.iter().min().unwrap(), *times.iter().max().unwrap());
         let g = remove_ranges(a, &ls).trim().to_owned();
+        // "<R>" puts a line on the right, like a second singer (Android's LrcLib does the same).
+        let (g, right) = match g.strip_prefix("<R>") {
+            Some(rest) => (rest.to_owned(), true),
+            None => (g, false),
+        };
         let (main, bg) = match g.rfind("[bg:") {
             Some(i) if g[i..].trim_end().ends_with(']') => {
                 let inner = g[i + 4..].trim_end();
@@ -164,6 +169,7 @@ pub fn parse_lrc(text: &str, song_ms: i32) -> Vec<Line> {
             dur: u - c,
             text: b.trim().to_owned(),
             parts,
+            agent: right.then(|| "v2".to_owned()),
             ..Default::default()
         });
     }
@@ -199,7 +205,8 @@ pub fn parse_lrc(text: &str, song_ms: i32) -> Vec<Line> {
         }
     }
     if let Some(off) = meta.get("offset") {
-        let off = (off.trim().parse::<f64>().unwrap_or(0.0) * 1000.0) as i32;
+        // LRC offsets are milliseconds; a positive one shows the lyrics sooner.
+        let off = off.trim().parse::<f64>().unwrap_or(0.0) as i32;
         for a in &mut lines {
             a.start -= off;
             for p in &mut a.parts {
@@ -331,4 +338,22 @@ pub fn parse_plain(text: &str) -> Vec<Line> {
             ..Default::default()
         })
         .collect()
+}
+
+#[cfg(test)]
+mod lrc_marker_tests {
+    #[test]
+    fn offset_is_in_milliseconds() {
+        let l = super::parse_lrc("[offset:+500]\n[00:01.00]one\n[00:02.00]two", 10_000);
+        assert_eq!((l[0].start, l[1].start), (500, 1500));
+    }
+
+    #[test]
+    fn right_marker_aligns_the_line_and_is_not_shown() {
+        let l = super::parse_lrc("[00:01.00]<R>right side\n[00:03.00]left", 10_000);
+        assert_eq!(l[0].text, "right side");
+        assert_eq!(l[0].agent.as_deref(), Some("v2"));
+        assert!(l[0].parts.is_empty());
+        assert_eq!(l[1].agent, None);
+    }
 }
