@@ -174,7 +174,7 @@ impl App {
             Resp::Home(page) => self.on_home(page),
             Resp::HomeMore(page) => {
                 if let Some(h) = &mut self.home {
-                    h.shelves.extend(crate::worship::filter_shelves(page.shelves, self.worship));
+                    h.shelves.extend(page.shelves);
                     h.continuation = page.continuation;
                     h.loading_more = None;
                 }
@@ -557,4 +557,4 @@ mod search_response_tests {
         assert!(accepts_search_result(&page, "query"));
         assert!(!accepts_search_result(&page, "Query"));
     }
-                        }
+            }
