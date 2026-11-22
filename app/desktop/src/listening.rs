@@ -109,8 +109,8 @@ fn recaps_for(months: &Months, month: &str) -> Vec<Recap> {
     let m: u32 = month[5..7].parse().unwrap_or(1);
     let last_month = if m == 1 { format!("{}-12", year - 1) } else { format!("{year}-{:02}", m - 1) };
     let (this_year, last_year) = (format!("{year}-"), format!("{}-", year - 1));
-    type Keep = Box<dyn Fn(&str) -> bool>;
-    let periods: [(&'static str, Keep); 5] = [
+    type Keep<'a> = Box<dyn Fn(&str) -> bool + 'a>;
+    let periods: [(&'static str, Keep<'_>); 5] = [
         ("This month", Box::new(|k: &str| k == month)),
         ("Last month", Box::new(move |k: &str| k == last_month)),
         ("This year", Box::new(move |k: &str| k.starts_with(&this_year))),
