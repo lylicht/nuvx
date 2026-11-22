@@ -7,3 +7,4 @@ pub mod model;
 pub mod qrc;
 pub mod timeline;
 pub mod ttml;
+pub mod words;

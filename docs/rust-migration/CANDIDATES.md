@@ -46,7 +46,10 @@ file, and both sides pass it.
 **Gap rule: decided 2026-11-22, Android's.** Pinned in `core/contracts/lyrics-gaps.json` (11 cases); Android passes it
 unchanged (`LyricGapsContractTest`), nuvx-core now follows it, so the desktop shows gaps where Android does (intro gap
 from 4 s, gap at the sung end incl. background vocals, no gap at song end, LRC blank lines only before a 4 s break).
-**Word model: still open** (Kotlin words with syllables vs Rust parts); Android keeps its parser until that is chosen.
+**Word model: decided 2026-11-22, Android's.** Pinned in `core/contracts/lyrics-words.json` (8 cases); Android's
+`wordsFromRuns` passes unchanged (`LyricWordsContractTest`), `nuvx_core::lyrics::words` implements it, and the desktop
+karaoke groups words with the same join rule (CJK/kana/Thai never join; touching runs join only when the line uses
+spaces). Next for lyrics: Android calls the Rust parsers once `core/shared` loads nuvx-ffi (today only the phone app does).
 
 ## Leave native (glue, not duplicated logic)
 

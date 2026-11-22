@@ -23,10 +23,12 @@ generic master prompt do not apply.
 
 | 2026-11-22 | Lyrics gap rule: Android's, chosen by the owner; nuvx-core and the desktop follow it | core/contracts/lyrics-gaps.json: Android LyricGapsContractTest 2/2 (11 cases, unchanged code), nuvx-core 28/28, desktop 267/267 |
 
+| 2026-11-22 | Lyrics word model: Android's, chosen by the owner; nuvx-core implements it and the desktop karaoke groups words by it | core/contracts/lyrics-words.json: Android LyricWordsContractTest (8 cases, unchanged code), nuvx-core 29/29, desktop 267/267 |
+
 ## Measured, not moved (and why)
 
-- Lyrics parsing on Android: gaps now agree; the word model (Kotlin words with syllables vs Rust parts) still
-  differs and needs an owner decision before Android can switch to the Rust parser (CANDIDATES.md).
+- Lyrics parsing on Android: gaps and word model now agree with nuvx-core. Android still runs its Kotlin parsers
+  because they live in `core/shared`, which does not load nuvx-ffi yet (only the phone app module does).
 - Stream recovery: only two numbers are shared; Android's skip reasons are tied to Media3 error codes (glue).
 
 ## Known regressions
@@ -40,6 +42,7 @@ added in 3d6aaf69 without translations).
 - Minified release build calling Rust at runtime (R8 build passes; runtime needs a signed release with playback).
 - ARM device run (emulator is x86_64; the owner's phone is off-limits for device tests).
 - iOS and web bridges (not built yet; iOS needs the Apple CI workflow).
+- Desktop karaoke grouping on screen: covered by the shared join-rule tests, not checked visually with CJK lyrics.
 
 ## Blockers
 

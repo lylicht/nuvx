@@ -89,24 +89,36 @@ pub(super) fn flow(fonts: &mut FontsView<'_>, toks: Vec<Tok>, font: &FontId, max
         Group(Vec<Tok>),
     }
     let mut items: Vec<Item> = Vec::new();
-    let toks = toks.into_iter().flat_map(|t| {
+    // Android's word model (nuvx-core, core/contracts/lyrics-words.json): whether a token continues the word before it.
+    let glue = toks.iter().any(|t| t.space);
+    let mut last: Option<char> = None;
+    let toks: Vec<(Tok, bool)> = toks
+        .into_iter()
+        .map(|t| {
+            let cont = !t.space && last.zip(t.text.chars().next()).is_some_and(|(p, n)| nuvx_core::lyrics::words::continues_word(glue, p, n));
+            last = if t.space { None } else { t.text.chars().next_back() };
+            (t, cont)
+        })
+        .collect();
+    let toks = toks.into_iter().flat_map(|(t, cont)| {
         if t.space || joining_script(&t.text) || crate::bidi::has_rtl(&t.text) || t.text.chars().count() < 2 || text_size(fonts, &t.text, font).x <= max_w {
-            return vec![t];
+            return vec![(t, cont)];
         }
         let n = t.text.chars().count();
+        // Letters of one token split to fit the width stay one word.
         t.text
             .chars()
             .enumerate()
-            .map(|(i, c)| Tok { text: c.to_string(), start: t.start + t.dur * i as f64 / n as f64, dur: t.dur / n as f64, bg: t.bg, space: false })
+            .map(|(i, c)| (Tok { text: c.to_string(), start: t.start + t.dur * i as f64 / n as f64, dur: t.dur / n as f64, bg: t.bg, space: false }, cont || i > 0))
             .collect()
     });
-    for t in toks {
+    for (t, cont) in toks {
         if t.space {
             items.push(Item::Space);
             continue;
         }
         match items.last_mut() {
-            Some(Item::Group(g)) if g[0].bg == t.bg => g.push(t),
+            Some(Item::Group(g)) if g[0].bg == t.bg && cont => g.push(t),
             _ => items.push(Item::Group(vec![t])),
         }
     }

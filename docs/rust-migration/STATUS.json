@@ -5,7 +5,7 @@
   "branch": "main",
   "head_sha": null,
   "current_task": "06",
-  "next_action": "Owner decision: lyrics word model (Kotlin words+syllables vs Rust parts), then Android can call the Rust lyrics parsers. Independent: 06c iOS exports via native-core (Apple CI); backup format through nuvx-ffi.",
+  "next_action": "Load nuvx-ffi from core/shared (Android target) so the shared lyrics parsers can call nuvx-core; then 06c iOS exports via native-core (Apple CI); backup format through nuvx-ffi.",
   "tasks": [
     {
       "id": "00",
@@ -137,6 +137,12 @@
           "what": "lyrics gap rule unified on Android's behaviour (owner decision 2026-11-22)",
           "state": "PASS",
           "evidence": "core/contracts/lyrics-gaps.json: Android LyricGapsContractTest 2/2, nuvx-core 28/28, desktop 267/267; desktop gap positions change to match Android"
+        },
+        {
+          "id": "06a5",
+          "what": "lyrics word model unified on Android's (owner decision 2026-11-22): nuvx_core::lyrics::words, desktop karaoke grouping uses its join rule",
+          "state": "PASS",
+          "evidence": "core/contracts/lyrics-words.json: Android LyricWordsContractTest 1/1 (8 cases), nuvx-core 29/29, desktop 267/267; desktop grouping not visually checked"
         },
         {
           "id": "06a-r8",
