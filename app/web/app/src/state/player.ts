@@ -70,6 +70,7 @@ interface PlayerState extends PlayerSettings {
   toggleShuffle: () => void;
   cycleRepeat: () => void;
   setAutoplay: (on: boolean) => void;
+  setWorship: (on: boolean) => void;
   setVolume: (volume: number) => void;
   toggleMute: () => void;
   setCrossfade: (seconds: number) => void;
@@ -502,6 +503,17 @@ export const usePlayer = create<PlayerState>()((set, get) => ({
     else {
       const { queue, index } = get();
       set({ queue: queue.filter((e, i) => i <= index || e.tier !== 'autoplay') });
+    }
+  },
+
+  setWorship(worship) {
+    set({ worship });
+    saveSettings(get());
+    if (worship) {
+      // Drop already-queued autoplay picks that do not fit, then refill within the filter.
+      const { queue, index } = get();
+      set({ queue: queue.filter((e, i) => i <= index || e.tier !== 'autoplay') });
+      void playerAutoplay.refill(true);
     }
   },
 
