@@ -45,6 +45,8 @@ An open-source YouTube Music player for your phone, TV, car, wrist, desktop and 
   <tr>
     <td width="50%" valign="top">
 
+
+IMPORTANT: This repo is forked from Bitchord; https://github.com/kushagrasinghx/BitChord
 #### Playback
 - **Search, browse and play** anything on YouTube Music, with new releases, moods, your library and queue.
 - **Lossless and Dolby Atmos** where a source has them, with separate quality for Wi-Fi and mobile data.
