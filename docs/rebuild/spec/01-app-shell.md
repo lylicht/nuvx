@@ -1,21 +1,22 @@
 # Spec 01: app shell
 
 What the user sees around every page: navigation, player chrome, themes, sizes, layout changes by screen width,
-keyboard behaviour. Written from the current web player (desktop and narrow widths, live at web.nuvx.lol on
-2026-11-22) and the Android phone app. Behaviour only: implementers build this from the text, not from the old code
+keyboard behaviour. Written from the current desktop app (PC layout), the web player (live at web.nuvx.lol on 2026-11-22) and the
+Android phone app. Behaviour only: implementers build this from the text, not from the old code
 (`docs/rebuild/DECISIONS.md`, R1). Visual parity is checked side by side in plan step 11.
 
 ## 1. Two shells
 
 | Shell | Used by | Navigation | Player |
 |---|---|---|---|
-| **Sidebar shell** | Desktop apps (Windows, Linux, macOS); web at 484 px wide and up | Fixed sidebar on the left | Floating player pill centred at the bottom |
+| **PC shell** | Desktop apps (Windows, Linux, macOS) | Fixed sidebar on the left | **Player bar across the top**, which is also the window's title bar (§2.3) |
+| **Web shell** | Web at 484 px wide and up | Fixed sidebar on the left | Floating player pill centred at the bottom (§2.6) |
 | **Phone shell** | Android and iOS apps on phones | Floating glass tab bar at the bottom | Mini-player pill above the tab bar |
 | Narrow web | Web below 484 px | Top bar with a menu button; sidebar opens as a drawer | Mini-player bar at the bottom (only while something is loaded) |
 
 Tablets and Android TV, Auto and Wear OS are specified later (plan step 13); until then tablets use the sidebar shell.
 
-## 2. Sidebar shell
+## 2. PC and web shells (sidebar)
 
 ### 2.1 Layout
 
@@ -23,8 +24,8 @@ Tablets and Android TV, Auto and Wear OS are specified later (plan step 13); unt
   width). It uses the glass material (§5.3).
 - Page content to the right of it, scrolling vertically; side padding (gutter) **25 px**, **40 px** at 1000 px wide
   and up.
-- Player pill floats over the content, centred horizontally in the content area, **20 px** above the bottom edge,
-  **56 px** tall, up to **668 px** wide (narrower when the window is).
+- **PC:** the player bar spans the full window width at the top, **56 px** tall, above both the sidebar and the content
+  (§2.3). **Web:** a player pill floats over the content instead (§2.6).
 - Optional side panel on the right (§2.4), **300 px** wide.
 - Behind everything: an animated soft gradient ("mesh backdrop") taken from the current artwork's colours; with
   nothing playing it is a dark, slightly green-tinted gradient in the dark theme.
@@ -44,21 +45,55 @@ Tablets and Android TV, Auto and Wear OS are specified later (plan step 13); unt
 The list scrolls on its own when it is taller than the window, without a visible scrollbar. The current page's item
 has a filled rounded background (8 px radius, key colour at 14 % opacity). Hovering an item shows a faint fill.
 
-### 2.3 Player pill
+### 2.3 PC player bar (title bar)
 
-Left to right: **Shuffle, Previous, Play/Pause, Next, Repeat** (repeat cycles off → all → one; its label says which),
-then the centre display (artwork, title, artist, progress), then **Lyrics** and **Up Next** buttons and the volume
-control. Lyrics is hidden while a live radio stream plays; both buttons show as pressed while their panel is open. With nothing playing the centre display is empty and shows the app mark. Clicking the artwork opens the
-full-screen player.
+The top **56 px** of the window is one bar that holds the player and serves as the custom title bar.
+
+- **Window frame:** dragging empty bar space moves the window; double-clicking it maximises and restores. On Windows
+  and Linux the minimise, maximise and close buttons sit at the right end (three buttons, **46 px** wide each, full bar
+  height); on macOS the traffic-light buttons sit at the left end and the bar's contents start after them. In full
+  screen the window buttons are hidden.
+- **Look:** in the light theme the bar has a solid surface fill; in the dark theme it is transparent over the backdrop.
+  A **1 px** hairline runs along its bottom edge (white at 8 % in dark, the divider colour in light).
+- **Left group**, button centres **31.5 px** apart, **30 px** hit targets: **Shuffle up next** (a one-shot action that
+  shuffles the upcoming queue, not a toggle), **Previous**, **Play/Pause** (play and pause glyphs cross-morph in
+  0.18 s; a small spinning ring replaces them while buffering), **Next**, **Repeat** (cycles off → all → one; the glyph
+  changes to repeat-one). The group sits midway between the bar's left edge (at least **22 px** in) and the centre
+  display.
+- **Centre display**, centred **1.1 %** of the window width left of the window's centre, **34.4 %** of the window width
+  wide, at most **720 px**; if it would be narrower than **160 px** it is hidden. Contents:
+  - square artwork at its left end, rounded on the left corners only; a music-note placeholder when nothing is loaded;
+    hovering darkens it and shows a maximise glyph; clicking it opens the full-screen player ("Open now playing");
+  - title (semibold 12.5 px) and artists (regular 11 px, secondary colour) to the right of the artwork; the title and
+    each artist name are clickable;
+  - a thin seek line along the display's bottom edge; hovering or dragging it thickens it, fades the title and artists
+    and shows elapsed time on the left and "-remaining" on the right (semibold 11 px); dragging seeks;
+  - at its right end a **favourite** star ("Add to favourites" / "Remove from favourites", filled when on, with a short
+    pop) and a **mini player** button ("Mini player" / "Close mini player"; tinted with the accent colour while the mini
+    player window is open).
+- **Right group**, centres **35 px** apart: **volume** (glyph shows the level in four steps, or muted; clicking mutes
+  and unmutes), **Lyrics**, **Up next**; then the **account** avatar, a **32 px** circle (the account's initial on a
+  colour, or a person glyph when signed out), **16 px** from the right edge of the bar's content area (before the
+  window buttons). Clicking the avatar opens the account menu.
+- **States:** hovering a control fades its glyph from the secondary to the primary text colour in 0.12 s; with nothing
+  loaded the transport controls are drawn at **45 %** opacity and do nothing.
 
 ### 2.4 Side panel
 
-Opened by the pill's Lyrics or Up Next buttons; shows that panel (**Lyrics** or **Up Next**) at 300 px on the right.
+Opened by the player's Lyrics or Up Next buttons (PC bar or web pill); shows that panel (**Lyrics** or **Up Next**) at 300 px on the right.
 Pressing the active button again or Escape closes it. Below 484 px it covers the full width.
 
 ### 2.5 Full-screen player
 
 Opened from the player artwork; always uses the dark palette over the artwork's colours. Escape closes it.
+
+### 2.6 Web player pill
+
+On the web (not the PC apps) the player is a pill floating over the content, centred horizontally in the content
+area, **20 px** above the bottom edge, **56 px** tall, up to **668 px** wide (narrower when the window is). Left to
+right: **Shuffle, Previous, Play/Pause, Next, Repeat**, the centre display (artwork, title, artist, progress; the app
+mark when nothing is loaded; clicking it opens the full-screen player), then **Lyrics**, **Up Next** and the volume
+control. Lyrics is hidden while a live radio stream plays; both buttons show as pressed while their panel is open.
 
 ## 3. Phone shell (Android and iOS apps)
 
@@ -163,7 +198,45 @@ dividers. With "reduce transparency": no blur.
 
 Page content → floating chrome (sidebar, player, bars) → context menus → modal dialogs.
 
-## 6. Keyboard (sidebar shell)
+## 5.6 Icons
+
+All icons are Apple **SF Symbols**, the same symbol names on every platform (owner decision 2026-11-17, reaffirmed
+2026-11-22). iOS and macOS may use the system's symbols; every other platform uses SVG exports of the owner's SFStudio
+library (`rebuild/crates/nuvx-ui/assets/sf-symbols/`, re-exported with `tools/export_sf_symbols.py`). Glyphs take the
+current text colour; their layers keep SF Symbols' 85 % opacity. Android draws them in a bold weight; matching that
+weight on PC and web is checked in plan step 11.
+
+| Meaning | SF Symbol |
+|---|---|
+| Search | magnifyingglass |
+| Home | house.fill |
+| New / Explore | square.grid.2x2.fill |
+| Podcasts | microphone |
+| Radio | dot.radiowaves.left.and.right |
+| Recently Played | clock.arrow.trianglehead.counterclockwise.rotate.90 |
+| Artists | person |
+| Albums | square.stack.3d.up.fill |
+| Songs, artwork placeholder | music.note |
+| Made for You | sparkles |
+| All Playlists, Library tab | square.stack.fill |
+| Settings | gearshape |
+| Downloads | arrow.down.circle |
+| Guide | book |
+| External link | arrow.up.right |
+| Shuffle | shuffle |
+| Previous / Next | backward.fill / forward.fill |
+| Play / Pause | play.fill / pause.fill |
+| Repeat / repeat one | repeat / repeat.1 |
+| Volume (muted, then three levels, then full) | speaker.slash.fill, speaker.fill, speaker.wave.1.fill, speaker.wave.2.fill, speaker.wave.3.fill |
+| Lyrics (closed / open) | quote.bubble / quote.bubble.fill |
+| Up Next | list.bullet |
+| Favourite (off / on) | star / star.fill |
+| Account (signed out) | person.crop.circle.fill |
+| Open full-screen | arrow.up.left.and.arrow.down.right |
+| Mini player | pip.enter |
+| Menu / close | line.3.horizontal / xmark |
+
+## 6. Keyboard (PC and web shells)
 
 | Keys | Action |
 |---|---|
@@ -192,12 +265,16 @@ honoured as above.
 
 ## 9. Acceptance tests for the implementation
 
-1. At 1280 × 800 the sidebar is 260 px wide, the player pill is 56 px tall, 20 px from the bottom, centred in the
-   content area; at 600 px wide the sidebar is about 203 px; at 400 px the top bar and drawer appear instead.
+1. PC at 1280 × 800: the player bar spans the top, 56 px tall, with the window buttons at its right end; the sidebar
+   below it is 260 px wide; the centre display is about 440 px wide (34.4 %). Web at 1280 × 800: the player pill is
+   56 px tall, 20 px from the bottom, centred in the content area. At 600 px wide the sidebar is about 203 px; at
+   400 px the top bar and drawer appear instead.
 2. Clicking each sidebar item navigates to its page and marks only that item current.
 3. Each keyboard shortcut in §6 does its action and none fires while typing in a text field (except Ctrl/Cmd+F).
 4. Light and dark themes follow the system setting and use the §5.2 values; increase contrast removes the blur.
 5. Lyrics / Up Next open the 300 px side panel, the same button or Escape closes it.
+8. PC: dragging the bar's empty space moves the window, double-click maximises, the window buttons work; every icon
+   is the SF Symbol listed in §5.6.
 6. Phone shell: five tabs as in §3.1; the selection pill springs between tabs; reselecting scrolls to top; 50 dp of
    downward scroll collapses the bar, 50 dp upward expands it.
 7. Reduce motion turns off the slides, springs and backdrop animation.
