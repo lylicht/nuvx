@@ -1,7 +1,7 @@
 # Independent rebuild: step plan
 
 One step at a time; each ends with something that works and is tested, recorded here. Decisions: `DECISIONS.md`.
-Rules for every step: R1 (spec and implementation separated), new code only under `rebuild/`.
+Rules for every step: R1 (specs first; since step 4 written in the main session, see the R1 update), new code only under `rebuild/`.
 
 | # | Step | Side | State |
 |---|---|---|---|
@@ -9,7 +9,7 @@ Rules for every step: R1 (spec and implementation separated), new code only unde
 | 2 | Decisions: process, YouTube Music access, UI framework (`DECISIONS.md`) | spec | done 2026-11-22 |
 | 2b | Feature inventory from nuvx and BitChord's multiplatform-rebase branch, BitChord backend excluded (`spec/00-features.md`); downloadable models (R4) | spec | done 2026-11-22 |
 | 3 | Spec: app shell (navigation, sidebar, themes, layout breakpoints) from the current apps' behaviour | spec | done 2026-11-22 (`spec/01-app-shell.md`) |
-| 4 | `rebuild/` Cargo workspace + Dioxus desktop shell built from spec 3 (window, navigation, theme), CI | implementation | next |
+| 4 | `rebuild/` Cargo workspace + Dioxus desktop shell built from spec 3 (window, navigation, theme), CI | implementation | done 2026-11-22 (PC title-bar player, SF Symbols; `rebuild/README.md`) |
 | 5 | Spec: playback model (states, queue, shuffle, repeat, gapless, errors) as testable cases | spec | |
 | 6 | Audio engine + queue crates from spec 5 (Symphonia/CPAL), unit and state-machine tests | implementation | |
 | 7 | YouTube Music through InnerTubeX (R2): Rust-facing interface spec, then Android (JNI) and iOS (Swift) bridges | both | |

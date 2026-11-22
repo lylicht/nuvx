@@ -77,3 +77,11 @@ and about 44 MB to iOS.
   works.
 - The web app fetches the same files on demand and keeps them in browser storage.
 - Platform formats (for example Core ML on iOS) are separate downloads with their own pins.
+
+## R1 update. Implementation in the main session (2026-11-22, owner)
+
+The owner asked for no subagents: everything is built in the main session. That session wrote the specs and has
+read the nuvx sources and BitChord's code (provenance audit, feature inventory), so from plan step 4 on the
+implementer is **not** someone who never saw the old code. Code is still written from the specs and public APIs,
+not copied or translated, and each `rebuild/PROVENANCE.md` says who wrote what. The rebuild must not be described as
+a two-team or clean-room implementation.

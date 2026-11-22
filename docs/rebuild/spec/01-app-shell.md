@@ -202,7 +202,8 @@ Page content → floating chrome (sidebar, player, bars) → context menus → m
 
 All icons are Apple **SF Symbols**, the same symbol names on every platform (owner decision 2026-11-17, reaffirmed
 2026-11-22). iOS and macOS may use the system's symbols; every other platform uses SVG exports of the owner's SFStudio
-library (`rebuild/crates/nuvx-ui/assets/sf-symbols/`, re-exported with `tools/export_sf_symbols.py`). Glyphs take the
+library (`rebuild/crates/nuvx-ui/assets/sf-symbols/`, re-exported with `rebuild/tools/export_sf_symbols.py`).
+The app mark is licht's nuvx mark from `core/brand`. Glyphs take the
 current text colour; their layers keep SF Symbols' 85 % opacity. Android draws them in a bold weight; matching that
 weight on PC and web is checked in plan step 11.
 
@@ -235,6 +236,7 @@ weight on PC and web is checked in plan step 11.
 | Open full-screen | arrow.up.left.and.arrow.down.right |
 | Mini player | pip.enter |
 | Menu / close | line.3.horizontal / xmark |
+| Window: minimise / maximise / restore / close | minus / square / square.on.square / xmark |
 
 ## 6. Keyboard (PC and web shells)
 
