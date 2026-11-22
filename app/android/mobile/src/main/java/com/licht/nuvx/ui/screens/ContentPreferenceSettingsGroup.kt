@@ -19,6 +19,7 @@ internal fun ContentPreferenceSettingsGroup(
     hideHomeMoods: Boolean,
     squareVideoThumbnails: Boolean,
     classicSearch: Boolean,
+    worshipMode: Boolean,
 ) {
     SearchableSettingsGroup(search, header = stringResource(R.string.content_preferences)) {
         val preferMusicOnlyTitle = stringResource(R.string.prefer_music_only)
@@ -63,6 +64,20 @@ internal fun ContentPreferenceSettingsGroup(
                     )
                 },
                 onClick = { AppSettings.setCreatePlaylistsLocally(!createPlaylistsLocally) },
+            )
+        }
+        row("Worship mode", "worship", "quran", "islamic", "prayer", "feed", "home", "autoplay", "explicit") {
+            SettingsRow(
+                icon = SfIcons.Star,
+                title = "Worship mode",
+                subtitle = "Keeps Home and autoplay on Quran and Islamic content and blocks explicit tracks.",
+                trailing = {
+                    IosSwitch(
+                        checked = worshipMode,
+                        onCheckedChange = AppSettings::setWorshipMode,
+                    )
+                },
+                onClick = { AppSettings.setWorshipMode(!worshipMode) },
             )
         }
         val hideRecentsTitle = stringResource(R.string.hide_recents)
