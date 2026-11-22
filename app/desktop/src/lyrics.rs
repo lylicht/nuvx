@@ -22,20 +22,22 @@ mod tests {
     #[test]
     fn enhanced_lrc_parts() {
         let l = parse_lrc("[00:31.69] <00:31.69> Like <00:35.63>   <00:35.64> the <00:35.69>\n[00:40.00] Next", 60_000);
-        assert_eq!(l[0].text, "Like the");
-        assert_eq!(l[0].parts[0].start, 31690);
-        assert_eq!(l[0].parts[0].text, "Like");
-        assert_eq!(l[0].parts[1].text, " ");
-        assert_eq!(l[0].parts[0].dur, 3940);
-        assert_eq!(l[1].start, 40000);
-        assert_eq!(l[1].dur, 20000);
+        assert!(l[0].instrumental && l[0].start == 0, "intro gap: the first line starts 4 s in or later");
+        assert_eq!(l[1].text, "Like the");
+        assert_eq!(l[1].parts[0].start, 31690);
+        assert_eq!(l[1].parts[0].text, "Like");
+        assert_eq!(l[1].parts[1].text, " ");
+        assert_eq!(l[1].parts[0].dur, 3940);
+        assert_eq!(l[2].start, 40000);
+        assert_eq!(l[2].dur, 20000);
     }
 
     #[test]
     fn lrc_skips_credits_and_reads_offset() {
         let l = parse_lrc("[offset:+0.5]\n[00:01.00]作词 : 野田洋次郎\n[00:05.00]Hello\n[00:07.00]World", 10_000);
-        assert_eq!(l.len(), 2);
-        assert_eq!(l[0].start, 4500);
+        assert_eq!(l.len(), 3);
+        assert!(l[0].instrumental, "intro gap before a first line at 4.5 s");
+        assert_eq!(l[1].start, 4500);
         assert_eq!(lrc_songwriters("[00:01.00]作词 : 野田洋次郎\n"), vec!["野田洋次郎"]);
     }
 
@@ -61,7 +63,7 @@ mod tests {
         let xml = r#"<tt xmlns="http://www.w3.org/ns/ttml" xmlns:itunes="http://music.apple.com/lyric-ttml-internal" xmlns:ttm="http://www.w3.org/ns/ttml#metadata" xml:lang="ja"><head><metadata><ttm:agent type="person" xml:id="v1"/><ttm:agent type="person" xml:id="v2"/><iTunesMetadata xmlns="http://music.apple.com/lyric-ttml-internal"><translations><translation xml:lang="en"><text for="L1">Hello world</text></translation></translations><songwriters><songwriter>野田洋次郎</songwriter></songwriters><transliterations><transliteration xml:lang="ja-Latn"><text for="L1"><span begin="1.0" end="2.0">kon</span> <span begin="2.0" end="3.0">nichiwa</span></text></transliteration></transliterations></iTunesMetadata></metadata></head><body dur="20.0"><div>
 <p begin="1.0" end="3.0" itunes:key="L1" ttm:agent="v1"><span begin="1.0" end="1.5">こん</span><span begin="1.5" end="2.0">に</span> <span begin="2.0" end="3.0">ちは</span><span ttm:role="x-bg"><span begin="2.5" end="3.5">(yeah)</span></span></p>
 <p begin="10.0" end="11.0" itunes:key="L2" ttm:agent="v2">Line two</p></div></body></tt>"#;
-        let t = parse_ttml(xml, 0);
+        let t = parse_ttml(xml);
         assert!(t.word_synced);
         assert_eq!(t.language.as_deref(), Some("ja"));
         assert_eq!(t.songwriters, vec!["野田洋次郎"]);
@@ -74,10 +76,11 @@ mod tests {
         assert_eq!(l.translations, vec![("en".to_owned(), "Hello world".to_owned())]);
         assert_eq!(l.romanization.as_deref(), Some("kon nichiwa"));
         assert_eq!(l.timed_roman.len(), 3);
-        assert!(t.lines[1].instrumental && t.lines[1].start == 3000);
+        // Android's gap rule (core/contracts/lyrics-gaps.json): the gap starts where the background vocal ends.
+        assert!(t.lines[1].instrumental && t.lines[1].start == 3500);
         assert_eq!(t.lines[2].agent.as_deref(), Some("v2"));
         assert!(t.lines[2].parts.is_empty());
-        assert!(t.lines.last().unwrap().instrumental);
+        assert!(!t.lines.last().unwrap().instrumental, "no gap at the end of the song");
     }
 
     #[test]

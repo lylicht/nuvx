@@ -21,15 +21,18 @@ generic master prompt do not apply.
 | 2026-11-22 | Loudness gain: one millibel function in nuvx-core, Kotlin formula removed | core/contracts/loudness-gain.json on Rust, desktop, Android |
 | 2026-11-22 | Update rules (is newer, old builds, release order): Kotlin copies removed, Android calls nuvx-core | AppUpdateCheckerTest 26/26 through Rust; desktop update tests 7/7; new contract case for builds without a build time |
 
+| 2026-11-22 | Lyrics gap rule: Android's, chosen by the owner; nuvx-core and the desktop follow it | core/contracts/lyrics-gaps.json: Android LyricGapsContractTest 2/2 (11 cases, unchanged code), nuvx-core 28/28, desktop 267/267 |
+
 ## Measured, not moved (and why)
 
-- Lyrics: same lines and times as Android, different instrumental-gap lines and word model. Visible, so it waits
-  for an owner decision on which behaviour is right (CANDIDATES.md).
+- Lyrics parsing on Android: gaps now agree; the word model (Kotlin words with syllables vs Rust parts) still
+  differs and needs an owner decision before Android can switch to the Rust parser (CANDIDATES.md).
 - Stream recovery: only two numbers are shared; Android's skip reasons are tied to Media3 error codes (glue).
 
 ## Known regressions
 
-None found. Pre-existing on main, not from this work: `LocaleStringsTest` fails for 17 languages (3 strings
+None found. Intended desktop change: lyrics gaps now follow Android's rule. Pre-existing on main, not from this work:
+desktop `cargo clippy -D warnings` reports ~25 findings in untouched files with the local rustc 1.100; `LocaleStringsTest` fails for 17 languages (3 strings
 added in 3d6aaf69 without translations).
 
 ## Not verified

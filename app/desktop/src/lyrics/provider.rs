@@ -157,7 +157,7 @@ impl Client {
             .error_for_status()?
             .text()
             .await?;
-        let t = parse_ttml(&text, q.duration.unwrap_or(0) as i32 * 1000);
+        let t = parse_ttml(&text);
         let word = if text.contains("lrc:timing=\"Line\"") {
             false
         } else if text.contains("lrc:timing=\"Word\"") || text.contains("lrc:timing=\"Syllable\"") {
@@ -284,14 +284,14 @@ pub fn from_stream(body: &str, q: &Query) -> Vec<Lyrics> {
             "golyrics" => {
                 if let Some(raw) = s("lyrics") {
                     let ttml = serde_json::from_str::<Value>(raw).ok().and_then(|j| j["ttml"].as_str().map(str::to_owned)).unwrap_or_else(|| raw.to_owned());
-                    let t = parse_ttml(&ttml, dur_ms);
+                    let t = parse_ttml(&ttml);
                     let p = if t.word_synced { Provider::BLyricsRich } else { Provider::BLyricsSynced };
                     push(p, t.lines, t.language, t.songwriters);
                 }
             }
             "binimum" => {
                 if let Some(raw) = s("lyrics") {
-                    let t = parse_ttml(raw, dur_ms);
+                    let t = parse_ttml(raw);
                     let word = match r["timingType"].as_str() {
                         Some("syllable") => true,
                         Some("line") => false,
@@ -311,7 +311,7 @@ fn from_unison(data: &Value, dur_ms: i32) -> Vec<Lyrics> {
     let (Some(format), Some(text)) = (data["format"].as_str(), data["lyrics"].as_str()) else { return vec![] };
     let lyrics = match format {
         "ttml" => {
-            let t = parse_ttml(text, dur_ms);
+            let t = parse_ttml(text);
             let p = if t.word_synced { Provider::UnisonRich } else { Provider::UnisonSynced };
             Lyrics::new(p, t.lines, t.language, t.songwriters)
         }

@@ -5,7 +5,7 @@
   "branch": "main",
   "head_sha": null,
   "current_task": "06",
-  "next_action": "06b/06c: wire TV/Wear and iOS to the same exports; then pick the lyrics gap rule and word model (owner decision) and pin it in core/contracts before Android switches parsers.",
+  "next_action": "Owner decision: lyrics word model (Kotlin words+syllables vs Rust parts), then Android can call the Rust lyrics parsers. Independent: 06c iOS exports via native-core (Apple CI); backup format through nuvx-ffi.",
   "tasks": [
     {
       "id": "00",
@@ -131,6 +131,12 @@
           "what": "stream recovery rules",
           "state": "RETAINED_WITH_EVIDENCE",
           "evidence": "only retry count and delay are shared; skip reasons depend on Media3 error codes (platform glue); an FFI call would add risk without removing logic"
+        },
+        {
+          "id": "06a4",
+          "what": "lyrics gap rule unified on Android's behaviour (owner decision 2026-11-22)",
+          "state": "PASS",
+          "evidence": "core/contracts/lyrics-gaps.json: Android LyricGapsContractTest 2/2, nuvx-core 28/28, desktop 267/267; desktop gap positions change to match Android"
         },
         {
           "id": "06a-r8",

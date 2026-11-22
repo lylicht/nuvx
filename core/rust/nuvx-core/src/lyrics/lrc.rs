@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 use super::credits::{dedup, is_credit_line, split_names, writers_on};
 use super::model::{Line, Part};
+use super::timeline::{MIN_GAP_MS, gap};
 
 fn lrc_time(t: &str) -> i32 {
     let p: Vec<&str> = t.split(':').collect();
@@ -206,7 +207,33 @@ pub fn parse_lrc(text: &str, song_ms: i32) -> Vec<Line> {
             }
         }
     }
-    lines
+    line_synced_gaps(lines)
+}
+
+/// Android's gap rule for LRC (core/contracts/lyrics-gaps.json): a blank line stays, as a gap, only when the next
+/// line is 4 s or more after it; a gap at 0 when the first line is not blank and starts 4 s in or later.
+fn line_synced_gaps(lines: Vec<Line>) -> Vec<Line> {
+    let mut out: Vec<Line> = Vec::with_capacity(lines.len() + 1);
+    for (i, l) in lines.iter().enumerate() {
+        let mut l = l.clone();
+        if l.text.is_empty() {
+            if lines
+                .get(i + 1)
+                .is_some_and(|n| n.start - l.start < MIN_GAP_MS)
+            {
+                continue;
+            }
+            l.instrumental = true;
+        }
+        out.push(l);
+    }
+    if let Some(first) = out.first()
+        && !first.instrumental
+        && first.start >= MIN_GAP_MS
+    {
+        out.insert(0, gap(0, first.start));
+    }
+    out
 }
 
 pub fn lrc_fixers(lines: &mut [Line]) {

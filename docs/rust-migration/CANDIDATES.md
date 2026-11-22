@@ -43,6 +43,11 @@ Both differences are visible in the lyrics view, so Android keeps its parser unt
 are chosen (an owner decision on which app's behaviour is right), pinned in a `core/contracts/lyrics-*.json` case
 file, and both sides pass it.
 
+**Gap rule: decided 2026-11-22, Android's.** Pinned in `core/contracts/lyrics-gaps.json` (11 cases); Android passes it
+unchanged (`LyricGapsContractTest`), nuvx-core now follows it, so the desktop shows gaps where Android does (intro gap
+from 4 s, gap at the sung end incl. background vocals, no gap at song end, LRC blank lines only before a 4 s break).
+**Word model: still open** (Kotlin words with syllables vs Rust parts); Android keeps its parser until that is chosen.
+
 ## Leave native (glue, not duplicated logic)
 
 Playback (Media3 / AVAudioSession), downloads and cache storage, Canvas rendering, notifications, Cast, Auto, Wear,

@@ -178,7 +178,7 @@ fn ttml_parts(node: roxmltree::Node, line_start: i32) -> (Vec<Part>, String, boo
     (e, s, timed)
 }
 
-pub fn parse_ttml(text: &str, song_ms: i32) -> Ttml {
+pub fn parse_ttml(text: &str) -> Ttml {
     let empty = |language| Ttml {
         lines: vec![],
         word_synced: false,
@@ -312,7 +312,6 @@ pub fn parse_ttml(text: &str, song_ms: i32) -> Ttml {
             }
         }
     }
-    let song = attr(body, "dur").map(ttml_time).unwrap_or(song_ms);
     let songwriters = {
         let mut n = Vec::new();
         if let Some(m) = head_meta {
@@ -338,7 +337,7 @@ pub fn parse_ttml(text: &str, song_ms: i32) -> Ttml {
         dedup(n)
     };
     Ttml {
-        lines: insert_instrumentals(lines, song),
+        lines: insert_instrumentals(lines),
         word_synced,
         language,
         songwriters,

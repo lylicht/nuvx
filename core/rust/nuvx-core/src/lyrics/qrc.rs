@@ -314,7 +314,7 @@ pub fn parse_qrc(text: &str, song_ms: i32, meta: Option<(&str, &str)>) -> Vec<Li
             }
         })
         .collect();
-    insert_instrumentals(lines, song_ms)
+    insert_instrumentals(lines)
 }
 
 pub fn qrc_songwriters(text: &str) -> Vec<String> {
