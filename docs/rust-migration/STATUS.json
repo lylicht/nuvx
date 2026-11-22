@@ -4,8 +4,8 @@
   "repo": "https://github.com/lylicht/nuvx",
   "branch": "main",
   "head_sha": null,
-  "current_task": "05",
-  "next_action": "Task 05e next slice: iOS native-core takes its curves from nuvx-core (needs the Apple CI build to verify); then loudness/spatial DSP comparisons.",
+  "current_task": "06",
+  "next_action": "06b/06c: wire TV/Wear and iOS to the same exports; then pick the lyrics gap rule and word model (owner decision) and pin it in core/contracts before Android switches parsers.",
   "tasks": [
     {
       "id": "00",
@@ -98,7 +98,6 @@
           "what": "Nuvx Sync replay + diff rules (lan/replay.rs) moved into nuvx-core, still pinned by core/sync/fixtures/replay-v1.json",
           "state": "PASS",
           "evidence": "nuvx-core 21 tests + desktop 262 (283 total, unchanged), clippy clean, cargo_notices.py"
-
         },
         {
           "id": "05h",
@@ -113,11 +112,48 @@
     },
     {
       "id": "06",
-      "state": "TODO",
-      "subtargets": [],
+      "state": "IN_PROGRESS",
+      "subtargets": [
+        {
+          "id": "06a",
+          "what": "Android phone: core/rust/nuvx-ffi (UniFFI 0.32 -> Kotlin over JNA 5.17), built by Gradle with cargo-ndk for arm64-v8a, armeabi-v7a, x86, x86_64; first export loudness_gain_mb replaces the Kotlin formula",
+          "state": "PASS",
+          "evidence": "LoudnessGainTest 4/4 on the JVM through the host-built Rust library (contract core/contracts/loudness-gain.json); RustCoreDeviceTest 1/1 on the x86_64 emulator via am instrument; nuvx-core 27 tests + clippy -D warnings; desktop norm tests pass; 16 KB ELF alignment checked; full Android unit suite 1437 run, the only 17 failures are LocaleStringsTest from 3 untranslated strings already on main (3d6aaf69)"
+        },
+        {
+          "id": "06a-r8",
+          "what": "minified release build calling the Rust core at runtime (JNA + UniFFI keep rules)",
+          "state": "NOT_VERIFIED",
+          "evidence": "assembleProdRelease with R8 succeeds; not exercised at runtime (needs playback in a signed release build)"
+        },
+        {
+          "id": "06a-arm",
+          "what": "device check on an ARM ABI",
+          "state": "NOT_VERIFIED",
+          "evidence": "only the x86_64 emulator was used (no device tests on the owner's phone)"
+        },
+        {
+          "id": "06b",
+          "what": "Android TV and Wear use nuvx-ffi",
+          "state": "TODO",
+          "evidence": ""
+        },
+        {
+          "id": "06c",
+          "what": "iOS: same exports through app/ios/native-core UniFFI",
+          "state": "TODO",
+          "evidence": "native-core already depends on nuvx-core and uses UniFFI 0.32"
+        },
+        {
+          "id": "06d",
+          "what": "web: wasm-bindgen build of nuvx-core",
+          "state": "TODO",
+          "evidence": ""
+        }
+      ],
       "evidence": [],
-      "last_updated": null,
-      "notes": ""
+      "last_updated": "2026-11-22",
+      "notes": "Contract per export (core/rust/nuvx-ffi/src/lib.rs): values copied, no Rust-owned handles; UniFFI catches panics (no unwinding into the JVM); pure, synchronous, thread-safe; core_api_version plus UniFFI's checksum check catch a mismatched library. APK cost: ~0.73 MB compressed libnuvx_ffi.so over 4 ABIs + ~0.17 MB libjnidispatch + JNA classes. Lyrics was measured and is not swap-ready: see CANDIDATES.md."
     },
     {
       "id": "07",

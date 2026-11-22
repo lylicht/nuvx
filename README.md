@@ -133,7 +133,12 @@ Batch downloads resolve YouTube stream URLs one at a time to avoid request burst
 
 </div>
 
-Android builds use Kotlin and Compose. Install JDK 25 and Android SDK Platform 37, then set `ANDROID_HOME` or add `sdk.dir` to `local.properties`.
+Android builds use Kotlin and Compose. Install JDK 25 and Android SDK Platform 37 (with the NDK), then set `ANDROID_HOME` or add `sdk.dir` to `local.properties`. The phone app also builds the shared Rust core, so install [Rust](https://rustup.rs), its Android targets and cargo-ndk:
+
+```bash
+rustup target add aarch64-linux-android armv7-linux-androideabi i686-linux-android x86_64-linux-android
+cargo install cargo-ndk --version 4.1.2 --locked
+```
 
 ```bash
 ./gradlew :app:assembleDevDebug     # phone and tablet

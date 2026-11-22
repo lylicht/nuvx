@@ -1,15 +1,12 @@
 # Handoff
 
-**State (2026-11-19):** Tasks 00–02 PASS, 03–04 partly done (NOT_VERIFIED). No product code changed by these tasks.
+**State (2026-11-22):** Task 06a PASS: the Android phone app calls nuvx-core through `core/rust/nuvx-ffi` (UniFFI → Kotlin, JNA), built by Gradle with cargo-ndk; first export is loudness gain. Ranked next candidates: `CANDIDATES.md`.
 
 **Files:** `CONTRACT.md`, `RUST_ANYTHING_EVALUATION.md`, `TOOL_ELIGIBILITY.csv`, `FEATURE_MATRIX.csv`,
 `UI_PARITY.csv`, `METRICS.csv`, `BLOCKERS.csv`, `STATUS.json`. Visual baselines live in `baselines/` on the
 working machine only (gitignored: album art and personal data).
 
-**Next:** Task 05c. Done: 05a shared update cases, 05b `core/rust/nuvx-core` (release order, stream recovery) used by the desktop, shared stream-recovery cases. Two Rust trees already exist (desktop app crate, `app/ios/native-core`). Do not start by
-rewriting apps; start a workspace with one small shared crate whose first content is logic duplicated today in
-Kotlin and Rust (update tag/version rules in `app/desktop/src/update.rs` and `AppUpdateChecker.kt`), proven by
-shared golden vectors before either side switches.
+**Next:** see `STATUS.json` `next_action` (06b/06c: TV, Wear and iOS on the same exports; lyrics needs an owner decision on the gap rule and word model first).
 
 **Open blockers:** see `BLOCKERS.csv` (tool install needs approval; iOS/TV/Wear/web baselines; runtime metrics;
 scope decision for 05+).

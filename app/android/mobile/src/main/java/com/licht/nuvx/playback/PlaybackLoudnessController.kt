@@ -2,6 +2,7 @@ package com.licht.nuvx.playback
 
 import androidx.media3.common.C
 import androidx.media3.exoplayer.ExoPlayer
+import com.licht.nuvx.core.loudnessGainMb
 import com.licht.nuvx.data.innertube.StreamResolver
 import com.licht.nuvx.data.settings.AppSettings
 import kotlinx.coroutines.CoroutineScope
@@ -9,7 +10,6 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.pow
-import kotlin.math.roundToInt
 
 internal class PlaybackLoudnessController(
     private val scope: CoroutineScope,
@@ -72,7 +72,3 @@ internal class PlaybackLoudnessController(
         const val LOUDNESS_RETRY_MS = 6_000L
     }
 }
-
-// YouTube's loudnessDb is relative to its own -14 LUFS reference.
-internal fun loudnessGainMb(loudnessDb: Double, targetLufs: Int): Int =
-    ((targetLufs + 14 - loudnessDb) * 100.0).roundToInt().coerceIn(-1500, 300)

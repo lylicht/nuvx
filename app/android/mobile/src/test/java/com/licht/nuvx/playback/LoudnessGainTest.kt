@@ -1,5 +1,6 @@
 package com.licht.nuvx.playback
 
+import com.licht.nuvx.core.loudnessGainMb
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -23,7 +24,7 @@ class LoudnessGainTest {
 
     @Test
     fun `agrees with the shared loudness gain cases`() {
-        // The same cases the shared Rust core (core/rust/nuvx-core) is tested against.
+        // Runs the real Rust (core/rust/nuvx-ffi host build) through the generated Kotlin bindings.
         val file = java.io.File("../../../core/contracts/loudness-gain.json").takeIf { it.isFile }
             ?: java.io.File("core/contracts/loudness-gain.json")
         val cases = (kotlinx.serialization.json.Json.parseToJsonElement(file.readText()) as kotlinx.serialization.json.JsonObject)["cases"]
