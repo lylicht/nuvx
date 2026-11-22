@@ -24,9 +24,19 @@ YouTube Music playback). Consequences:
 
 - This goes against YouTube's terms of service and can break whenever YouTube changes it; the app must fail
   gracefully and the client must be easy to update.
-- The client is written independently, from public descriptions of the protocol and observed requests, not from
-  nuvx's, Metrolist's, NewPipe's or BitChord's client code.
 - No circumvention of DRM or of signed-in access the user does not have.
+
+**Update (2026-11-22, owner):** the YouTube Music client is **InnerTubeX**
+(https://github.com/MetrolistGroup/innertubex, GPL-3.0, MetrolistGroup), used as a library dependency, not copied
+or translated. It is not BitChord or Convx code, so R1 is not affected; the rebuild stays GPL-3.0 as nuvx is.
+InnerTubeX is Kotlin Multiplatform with Android, JVM desktop and iOS targets only:
+
+| Platform | How the Rust app reaches it | State |
+|---|---|---|
+| Android | JNI from the Rust app into the bundled Kotlin library | planned |
+| iOS | its KMP framework through a thin Swift bridge | planned |
+| Windows, Linux, macOS | only by embedding a JVM (~50–100 MB, slower start) | **open: owner decision** |
+| Web | not possible (no JS/WASM target; browsers cannot call YouTube directly) | **open: owner decision** |
 
 ## R3. UI framework: Dioxus 0.7 with the webview renderer, DOM on the web (2026-11-22, Claude)
 
