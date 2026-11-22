@@ -9,8 +9,8 @@ impl Backend {
             Ok(Some(match req {
                 Req::Home(params) => Resp::Home(ytm::home(api, params.as_deref(), me).await?),
                 Req::HomeMore(token) => Resp::HomeMore(ytm::home_more(api, &token, me).await?),
-                Req::MoreQuickPicks(seed) => {
-                    let tracks = ytm::radio(api, &seed, me, 0).await?;
+                Req::MoreQuickPicks { seed, worship } => {
+                    let tracks = ytm::radio(api, &seed, me, 0, worship).await?;
                     Resp::QuickPicksMore { seed, tracks }
                 }
                 Req::Explore(preferred_artists) => self.explore(&preferred_artists, me).await?,
@@ -170,10 +170,10 @@ impl Backend {
                     });
                     Resp::ArtistSignature { key, signature }
                 }
-                Req::Radio { seed, song_of } => {
+                Req::Radio { seed, song_of, worship } => {
                     let song = self.song_version(&seed, song_of.as_ref(), PREFETCH_SONG_WAIT).await;
                     let from = song.as_ref().map_or(&seed, |s| &s.id);
-                    let mut tracks = ytm::radio(api, from, false, 50).await?;
+                    let mut tracks = ytm::radio(api, from, false, 50, worship).await?;
                     tracks.retain(|t| t.id != *from);
                     Resp::Radio { seed, tracks }
                 }
@@ -306,4 +306,4 @@ mod transient_tests {
         assert!(!super::transient(&anyhow::anyhow!("it's age-restricted")));
         assert!(!super::transient(&anyhow::Error::from(std::io::Error::from(std::io::ErrorKind::NotFound))));
     }
-}
+                    }
