@@ -6,6 +6,9 @@ Every nuvx release, newest first. Downloads and checksums are on each version's 
 
 ## Unreleased
 
+- **Community invitations are no longer automatic** on Android and iOS: remove the unsolicited Discord / Telegram pop-up on app launch or tab changes; manual community links in Settings and optional onboarding buttons remain.
+- **1.0.4 in-place update:** Android release version code 6 and iOS build 6 upgrade prior installed versions with the same package and bundle identifiers. Keep existing signed Android release pipeline.
+
 - **Desktop recap cards in Library**: this month, last month, this year, last year and all time, with minutes, plays,
   top song and top artist, like Android's Replay cards. Plays are counted on this computer only; click a card to play
   that period's most played songs.

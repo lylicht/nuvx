@@ -1341,7 +1341,6 @@ private struct AppPrompts: View {
     @AppStorage("hide_radio_tab") private var hideRadioTab = false
     @AppStorage("hide_podcasts_tab") private var hidePodcastsTab = false
     @AppStorage("support_prompts_off") private var supportPromptsOff = false
-    @AppStorage("discord_invite_joined") private var discordInviteJoined = false
 
     let selectedTab: Int
     let held: Bool
@@ -1351,7 +1350,6 @@ private struct AppPrompts: View {
     @State private var activePrompt: Notice?
     @State private var deferredPrompt: Notice?
     @State private var skipIntroFollowup = false
-    @State private var discordPromptDismissed = false
 
     private enum Notice {
         case radioIntro
@@ -1360,7 +1358,6 @@ private struct AppPrompts: View {
         case podcastsFollowup
         case supportTip
         case supportStar
-        case discordInvite
 
         var title: String {
             switch self {
@@ -1368,7 +1365,6 @@ private struct AppPrompts: View {
             case .podcastsIntro, .podcastsFollowup: "Podcasts"
             case .supportTip: "Enjoying nuvx?"
             case .supportStar: "Like nuvx?"
-            case .discordInvite: "Join the nuvx community"
             }
         }
 
@@ -1386,14 +1382,12 @@ private struct AppPrompts: View {
                 "nuvx is free and made by one person. A small tip keeps it going."
             case .supportStar:
                 "A star on GitHub helps more people find it."
-            case .discordInvite:
-                "Meet other Nuvx listeners, share feedback, and get app updates."
             }
         }
 
         var isHeldSensitive: Bool {
             switch self {
-            case .supportTip, .supportStar, .discordInvite: true
+            case .supportTip, .supportStar: true
             case .radioIntro, .radioFollowup, .podcastsIntro, .podcastsFollowup: false
             }
         }
@@ -1440,16 +1434,6 @@ private struct AppPrompts: View {
                         Button("Don’t show again", role: .destructive) {
                             supportPromptsOff = true
                         }
-                    case .discordInvite:
-                        Button("Join Discord") {
-                            discordInviteJoined = true
-                            open("https://discord.gg/h4Wsu824Uf")
-                        }
-                        Button("Join Telegram") {
-                            discordInviteJoined = true
-                            open("https://t.me/nuvxserver")
-                        }
-                        Button("Not Now", role: .cancel) {}
                     }
                 }
             } message: {
@@ -1507,8 +1491,6 @@ private struct AppPrompts: View {
             self.deferredPrompt = nil
         } else if supportPrompt != 0 {
             activePrompt = supportPrompt == 1 ? .supportTip : .supportStar
-        } else if !discordInviteJoined, !discordPromptDismissed {
-            activePrompt = .discordInvite
         }
     }
 
@@ -1538,8 +1520,6 @@ private struct AppPrompts: View {
             podcastsIntroShown = true
         case .supportTip, .supportStar:
             supportPrompt = 0
-        case .discordInvite:
-            discordPromptDismissed = true
         }
 
         Task { @MainActor in
