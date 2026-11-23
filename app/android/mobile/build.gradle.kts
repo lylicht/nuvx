@@ -291,7 +291,7 @@ dependencies {
     implementation("org.bouncycastle:bcpkix-jdk18on:1.87")
 
     // nuvx-core's bindings (from :shared) load Rust through JNA; the jar carries host natives for unit tests.
-    testImplementation("net.java.dev.jna:jna:5.17.0")
+    testImplementation("net.java.dev.jna:jna:5.19.1")
     testImplementation("junit:junit:4.13.2")
     testImplementation("com.squareup.okhttp3:mockwebserver:5.5.1")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.11.0")
