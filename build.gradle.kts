@@ -3,7 +3,7 @@ buildscript {
         classpath("com.android.tools.build:gradle:9.5.2") {
             exclude(group = "com.google.guava", module = "guava")
         }
-        classpath("com.google.guava:guava:33.7.2-jre")
+        classpath("com.google.guava:guava:33.8.0-android")
     }
 
     configurations.classpath {

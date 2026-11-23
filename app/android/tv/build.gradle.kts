@@ -241,7 +241,7 @@ dependencies {
     implementation("androidx.media3:media3-exoplayer-hls:1.11.1")
     implementation("androidx.media3:media3-exoplayer-dash:1.11.1")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-guava:1.11.0")
-    implementation("com.google.guava:guava:33.7.2-android")
+    implementation("com.google.guava:guava:33.8.0-android")
 
     implementation("io.coil-kt.coil3:coil-compose:3.6.3")
     implementation("io.coil-kt.coil3:coil-network-okhttp:3.6.3")
