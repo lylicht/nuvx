@@ -129,6 +129,13 @@ Committed straight to `main` (owner's choice), each with its tests; Android item
 - **Not run (this container):** desktop `cargo test` (needs system `gdk-3.0`), shared Kotlin and Android Gradle tests (Kotlin Compose plugin 2.4.21 could not be resolved through the proxy), iOS.
 - **Exact next step:** on a machine with the Android SDK, run `./gradlew :shared:jvmTest :sharedUi:jvmTest` and add a `StreamResolver` test for the non-M4A download path; then continue "Next, in order" item 1.
 
+## Daily engineer run, 2026-11-23
+
+- **Opened:** this docs-only handoff PR. No defect proven with a failing test, so no code PR.
+- **Checked and healthy (tests run):** `core/sync` and `core/worker` (29 passed, 0 failed). Only open PR is 365 (not mine, skipped).
+- **Not run:** web `pnpm -r test` (dependencies not installed in the container), shared Kotlin, Android, desktop `cargo test`.
+- **Exact next step:** `pnpm install` then `pnpm -r test`; then continue "Next, in order" item 1.
+
 ## Checked and found healthy (2026-11-17, second session)
 
 - Desktop WebView reuse (reference audit, Metrolist PR 4615): the lyrics check and sign-in windows run in a child process that exits, so their WebViews cannot pile up.
