@@ -25,7 +25,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberSliderState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.key
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -301,22 +304,33 @@ internal fun SliderRow(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        Slider(
-            value = sliderValue,
-            onValueChange = onSliderValue,
-            valueRange = valueRange,
-            steps = steps,
-            colors = colors,
-            track = { state ->
-                SliderDefaults.Track(
-                    sliderState = state,
-                    colors = colors,
-                    drawStopIndicator = null,
-                    drawTick = { _, _ -> },
-                )
-            },
-            modifier = Modifier.padding(start = ICON_SIZE + ICON_GAP),
-        )
+        key(valueRange.start, valueRange.endInclusive, steps) {
+            val sliderState = rememberSliderState(
+                value = sliderValue,
+                steps = steps,
+                trackRange = valueRange,
+            )
+            LaunchedEffect(sliderValue) {
+                if (sliderState.value != sliderValue) sliderState.value = sliderValue
+            }
+            Slider(
+                state = sliderState,
+                onValueChange = { value ->
+                    sliderState.value = value
+                    onSliderValue(value)
+                },
+                colors = colors,
+                track = { state ->
+                    SliderDefaults.Track(
+                        sliderState = state,
+                        colors = colors,
+                        drawStopIndicator = null,
+                        drawTick = { _, _ -> },
+                    )
+                },
+                modifier = Modifier.padding(start = ICON_SIZE + ICON_GAP),
+            )
+        }
     }
 }
 

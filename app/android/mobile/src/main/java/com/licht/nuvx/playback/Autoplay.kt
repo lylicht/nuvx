@@ -1,11 +1,14 @@
 package com.licht.nuvx.playback
 
+import com.licht.nuvx.data.ContentFilter
 import com.licht.nuvx.data.YtMusicRepository
 import com.licht.nuvx.data.listentogether.ListenTogether
 import com.licht.nuvx.data.model.SearchFilter
 import com.licht.nuvx.data.model.SearchResult
 import com.licht.nuvx.data.model.QueueTier
 import com.licht.nuvx.data.model.Song
+import com.licht.nuvx.data.settings.AppSettings
+import com.licht.nuvx.data.stats.ListeningStats
 import com.licht.nuvx.data.sources.SourceRegistry
 import com.licht.nuvx.data.sources.TrackMatcher
 import com.licht.nuvx.playback.QueueCoordinator.asQueueEntry
@@ -57,7 +60,16 @@ suspend fun loadAutoplayTracks(
 ): Result<List<Song>> {
     val seed = youtubeSeedFor(seedSong) ?: return Result.success(emptyList())
     val videos = seedSong.isVideo && seed == seedSong.videoId && !MusicOnlyPlayback.isActive()
-    val related = YtMusicRepository.radio(seed, preferVideo = videos).getOrElse { return Result.failure(it) }
+    var related = YtMusicRepository.radio(seed, preferVideo = videos).getOrElse { return Result.failure(it) }
+    val hideExplicit = AppSettings.hideExplicit.value
+    val focused = AppSettings.focusedFeed.value
+    if (hideExplicit || focused) {
+        val profile =
+            if (focused) ListeningStats.tasteProfile(listOf(seedSong.title to seedSong.artist))
+            else ContentFilter.EMPTY_PROFILE
+        related = ContentFilter.filterSongs(related, hideExplicit, focused, profile)
+        if (focused && related.isEmpty()) related = onTopicSearch(seedSong, hideExplicit, profile)
+    }
     val extra = QueueBuilder.extend(existing, related, limit, preferVideos = videos)
     if (extra.isEmpty()) return Result.success(emptyList())
 
@@ -69,4 +81,22 @@ suspend fun loadAutoplayTracks(
             playbackSourceId = seedSong.playbackSourceId,
         ).asQueueEntry(QueueTier.AUTOPLAY)
     })
+}
+
+/**
+ * On-topic fallback: when the radio mix seeded by [seedSong] has nothing that
+ * matches the user's taste profile (YouTube blends the account's wider history
+ * into it), rebuild the queue from a search for more like the seed instead.
+ */
+private suspend fun onTopicSearch(
+    seedSong: Song,
+    hideExplicit: Boolean,
+    profile: ContentFilter.TasteProfile,
+): List<Song> {
+    val query = ContentFilter.fallbackQuery(seedSong.title, seedSong.artist) ?: return emptyList()
+    val results = YtMusicRepository.search(query, SearchFilter.SONGS).getOrNull() ?: return emptyList()
+    return ContentFilter.filterSongs(
+        results.filterIsInstance<SearchResult.Track>().map { it.song },
+        hideExplicit = hideExplicit, focused = true, profile = profile,
+    )
 }

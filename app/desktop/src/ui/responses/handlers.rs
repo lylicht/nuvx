@@ -160,7 +160,7 @@ impl App {
         }
         self.home = None;
         self.home_loading = true;
-        self.backend.request(Req::Home(None));
+        self.backend.request(Req::Home { params: None, hide_explicit: self.hide_explicit, focused: self.focused_feed });
         if v {
             self.request_library();
             self.request_liked(false);
@@ -211,4 +211,4 @@ mod account_block_tests {
         assert!(account_block("This video is only available to Music Premium members", true).is_some());
         assert!(account_block("decode: end of stream", false).is_none());
     }
-}
+    }

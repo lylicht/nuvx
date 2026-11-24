@@ -12,6 +12,8 @@ internal class HomeFeedSettingsController {
     val hideTopPicks = MutableStateFlow(false)
     val hideHomeMoods = MutableStateFlow(false)
     val squareVideoThumbnails = MutableStateFlow(false)
+    val hideExplicit = MutableStateFlow(false)
+    val focusedFeed = MutableStateFlow(false)
 
     fun initialize(prefs: SharedPreferences) {
         this.prefs = prefs
@@ -24,6 +26,8 @@ internal class HomeFeedSettingsController {
         hideHomeMoods.value = prefs.getBoolean(KEY_HIDE_HOME_MOODS, false)
         squareVideoThumbnails.value = prefs.getBoolean(KEY_SQUARE_VIDEO_THUMBNAILS, false)
         VideoThumbnails.square = squareVideoThumbnails.value
+        hideExplicit.value = prefs.getBoolean(KEY_HIDE_EXPLICIT, false)
+        focusedFeed.value = prefs.getBoolean(KEY_FOCUSED_FEED, false)
     }
 
     fun setHideRecents(value: Boolean) {
@@ -46,6 +50,16 @@ internal class HomeFeedSettingsController {
         prefs.edit().putBoolean(KEY_HIDE_HOME_MOODS, value).apply()
     }
 
+    fun setHideExplicit(value: Boolean) {
+        hideExplicit.value = value
+        prefs.edit().putBoolean(KEY_HIDE_EXPLICIT, value).apply()
+    }
+
+    fun setFocusedFeed(value: Boolean) {
+        focusedFeed.value = value
+        prefs.edit().putBoolean(KEY_FOCUSED_FEED, value).apply()
+    }
+
     fun setSquareVideoThumbnails(value: Boolean) {
         squareVideoThumbnails.value = value
         VideoThumbnails.square = value
@@ -58,5 +72,7 @@ internal class HomeFeedSettingsController {
         const val KEY_HIDE_TOP_PICKS = "hide_top_picks"
         const val KEY_HIDE_HOME_MOODS = "hide_home_moods"
         const val KEY_SQUARE_VIDEO_THUMBNAILS = "square_video_thumbnails"
+        const val KEY_HIDE_EXPLICIT = "hide_explicit"
+        const val KEY_FOCUSED_FEED = "focused_feed"
     }
 }

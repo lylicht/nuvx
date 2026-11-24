@@ -22,18 +22,6 @@ data class Song(
     val isVideo: Boolean = false,
     val setVideoId: String? = null,
     val fromAutoplay: Boolean = false,
-
-
-
-
-
-
-
-
-
-
-
-
     val isExplicit: Boolean? = null,
 
     val localPath: String? = null,
@@ -146,6 +134,7 @@ data class ShelfItem(
     val videoId: String? = null,
     val browseId: String? = null,
     val isVideo: Boolean = false,
+    val isExplicit: Boolean? = null,
 )
 
 @Serializable

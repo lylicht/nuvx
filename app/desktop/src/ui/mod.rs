@@ -144,6 +144,7 @@ pub enum Action {
     Dislike(Track),
     Share(Target),
     AddToPlaylist(Vec<Track>),
+    AddToSpotify(Vec<Track>),
     RemoveFromPlaylist(Vec<usize>),
     Download(Track),
     DownloadAll(String, Vec<Target>),
@@ -163,6 +164,7 @@ pub enum Action {
 
 enum Dialog {
     PickPlaylist(Vec<Track>, String),
+    PickSpotifyPlaylist { tracks: Vec<Track>, query: String },
     NewPlaylist { title: String, tracks: Vec<Track> },
     EditPlaylist { id: String, title: String, description: String, privacy: Option<String> },
     ConfirmDelete { id: String, title: String },
@@ -272,6 +274,8 @@ pub struct App {
     play_retry: Option<(std::time::Instant, u64)>,
     recoveries: u32,
     autoplay: bool,
+    hide_explicit: bool,
+    focused_feed: bool,
     norm_target: Option<i32>,
     sleep: sleep_timer::SleepTimer,
     sleep_cut: u32,

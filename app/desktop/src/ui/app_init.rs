@@ -32,7 +32,7 @@ impl App {
         backend.set_music_sources(jiosaavn_enabled, radiojavan_enabled);
         let prefer_atmos = get("prefer_atmos").is_none_or(|v| v == "1");
         backend.set_prefer_atmos(prefer_atmos);
-        backend.request(Req::Home(None));
+        backend.request(Req::Home { params: None, hide_explicit: get("hide_explicit").is_some_and(|v| v == "1"), focused: get("focused_feed").is_some_and(|v| v == "1") });
         if logged_in {
             backend.request(Req::Library);
             backend.request(Req::Account);
@@ -115,6 +115,8 @@ impl App {
             play_retry: None,
             recoveries: 0,
             autoplay: get("autoplay").is_none_or(|v| v == "1"),
+            hide_explicit: get("hide_explicit").is_some_and(|v| v == "1"),
+            focused_feed: get("focused_feed").is_some_and(|v| v == "1"),
             lib_list: get("lib_list").is_some_and(|v| v == "1"),
             sleep: Default::default(),
             sleep_cut: 0,
@@ -348,4 +350,4 @@ impl App {
         app.set_crossfade();
         app
     }
-}
+                }

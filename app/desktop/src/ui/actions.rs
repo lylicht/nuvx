@@ -52,7 +52,7 @@ impl App {
                 self.play_list(vec![t.clone()], 0);
                 if !self.radio_pending {
                     self.radio_pending = true;
-                    self.backend.request(Req::Radio { song_of: self.song_of(&t), seed: t.id });
+                    self.backend.request(Req::Radio { song_of: self.song_of(&t), seed: t.id, hide_explicit: self.hide_explicit, focused: self.focused_feed });
                 }
             }
             Action::Open(Target::Album(id)) => self.go(Page::Album(id)),
@@ -139,6 +139,14 @@ impl App {
             Action::AddToPlaylist(tracks) => {
                 if self.logged_in || self.create_playlists_locally || !self.local_playlists.is_empty() { self.dialog = Some(Dialog::PickPlaylist(tracks, String::new())); }
                 else { self.toast("Sign in to edit playlists"); }
+            }
+            Action::AddToSpotify(tracks) => {
+                if crate::transfer::saved_cookie(&self.backend.data_dir()).is_none() {
+                    self.toast("Sign in to Spotify in Settings › Import first");
+                    return;
+                }
+                self.transfer.ensure_account(&self.backend);
+                self.dialog = Some(Dialog::PickSpotifyPlaylist { tracks, query: String::new() });
             }
             Action::RemoveFromPlaylist(mut rows) => {
                 let Some(playlist_id) = self.current_collection().filter(|c| c.owned && !c.is_album).map(|c| c.id.clone()) else { return };
@@ -363,4 +371,4 @@ mod share_tests {
         assert_eq!(share_url(&Target::Album("MPRE123".into())), "https://music.youtube.com/browse/MPRE123");
         assert_eq!(share_url(&Target::Artist("UC123".into())), "https://music.youtube.com/channel/UC123");
     }
-}
+                }

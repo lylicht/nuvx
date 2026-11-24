@@ -12,6 +12,14 @@ pub(super) fn settings_playback(app: &mut App, ui: &mut Ui) {
             toggle(ui, &mut app.autoplay, "Autoplay");
         });
         divider(ui);
+        setting_row(ui, "Hide explicit content", Some("Removes tracks marked explicit from Home and autoplay."), |ui| {
+            toggle(ui, &mut app.hide_explicit, "Hide explicit content");
+        });
+        divider(ui);
+        setting_row(ui, "Keep recommendations on-topic", Some("Filters Home and autoplay to the artists and topics in your recent plays."), |ui| {
+            toggle(ui, &mut app.focused_feed, "Keep recommendations on-topic");
+        });
+        divider(ui);
         setting_row(ui, "Loudness target", Some("Level songs are brought to: lower is quieter, -14 matches YouTube Music."), |ui| {
             let label = app.norm_target.map_or("Off".to_string(), |t| format!("{t} LUFS"));
             let btn = dropdown_button(ui, &label, 150.0, "Loudness target");
@@ -299,4 +307,4 @@ fn seconds_slider(ui: &mut Ui, v: &mut u32, range: std::ops::RangeInclusive<u32>
     ui.painter().circle_filled(knob + vec2(0.0, 1.0), 7.0 + h, theme::shade(0.25));
     ui.painter().circle_filled(knob, 7.0 + h, Color32::WHITE);
     resp
-}
+                        }

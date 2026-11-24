@@ -27,6 +27,13 @@ struct SongActionButtons: View {
             toast.queueNotice("Added to queue: \(entry.title)")
         }
         Button("Start Radio") { controller.playRadio(entry) }
+        if !PlatformSettings.shared.getString(key: "spotify_spdc_token", default: "").isEmpty {
+            Button("Add to Spotify…") {
+                appModel.playlistPicker = PlaylistPickerRequest(
+                    videoId: entry.videoId ?? "", title: entry.title, artist: entry.artist, spotify: true,
+                )
+            }
+        }
         if auth.signedIn, let vid = entry.videoId {
             Divider()
             Button(SongRatingActions.likeTitle(vid)) {
@@ -565,11 +572,30 @@ struct PlaylistPickerRequest: Identifiable {
     let id = UUID()
     let videoId: String
     let title: String
+    var artist: String = ""
+    var spotify: Bool = false
+}
+
+private struct SpotifyPlaylistsPayload: Decodable {
+    let playlists: [Item]
+    struct Item: Decodable { let id: String; let name: String; let trackCount: Int }
+}
+
+private struct SpotifyTracksPayload: Decodable {
+    let tracks: [Item]
+    struct Item: Decodable { let id: String; let title: String; let artist: String }
+}
+
+private final class SpotifyBridgeCallback: SpotifyImportBridgeResultCallback {
+    private let done: (String?, String?) -> Void
+    init(_ done: @escaping (String?, String?) -> Void) { self.done = done }
+    func onResult(json: String?, message: String?) { done(json, message) }
 }
 
 struct PlaylistPickerView: View {
     let request: PlaylistPickerRequest
     @Environment(\.dismiss) private var dismiss
+    @Environment(ToastCenter.self) private var toast
     @State private var playlists: [UserPlaylistDTO] = []
     @State private var title = ""
     @State private var privacy = "PRIVATE"
@@ -578,11 +604,21 @@ struct PlaylistPickerView: View {
     @State private var selected: Set<String> = []
     @State private var query = ""
     @State private var adding = false
+    @State private var spotifyPlaylists: [SpotifyPlaylistsPayload.Item] = []
     @State private var createLocally = PlatformSettings.shared.getBoolean(key: "create_playlists_locally", default: false)
 
     var body: some View {
         NavigationStack {
             List {
+                if request.spotify {
+                    Section("Spotify") {
+                        Button("Liked Songs") { Task { await saveToSpotify(playlistId: nil) } }
+                        ForEach(spotifyPlaylists, id: \.id) { list in
+                            Button(list.name) { Task { await saveToSpotify(playlistId: list.id) } }
+                        }
+                    }
+                }
+                if !request.spotify {
                 Section("New playlist") {
                     TextField("Title", text: $title)
                     if !createLocally {
@@ -645,24 +681,31 @@ struct PlaylistPickerView: View {
                         .accessibilityAddTraits(selected.contains(list.playlistId) ? .isSelected : [])
                     }
                 }
+                }
                 if let error {
                     Section { Text(error).foregroundStyle(.red) }
                 }
             }
-            .navigationTitle("Add to Playlist")
+            .navigationTitle(request.spotify ? "Add to Spotify" : "Add to Playlist")
             .searchable(text: $query, prompt: "Search playlists")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button(selected.count > 1 ? "Add to \(selected.count)" : "Add") { addToSelected() }
-                        .disabled(selected.isEmpty || adding || request.videoId.isEmpty)
+                if !request.spotify {
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button(selected.count > 1 ? "Add to \(selected.count)" : "Add") { addToSelected() }
+                            .disabled(selected.isEmpty || adding || request.videoId.isEmpty)
+                    }
                 }
             }
             .task {
-                playlists = await LibraryActions.userPlaylists()
-                playlists += ImportedPlaylistStore.shared.playlists
-                    .filter { $0.sourceName == "Nuvx only" }
-                    .map { UserPlaylistDTO(playlistId: "nuvx-local:\($0.id)", title: $0.title, subtitle: "\($0.tracks.count) songs", thumbnailUrl: $0.tracks.first?.thumbnailUrl) }
+                if request.spotify {
+                    await loadSpotifyPlaylists()
+                } else {
+                    playlists = await LibraryActions.userPlaylists()
+                    playlists += ImportedPlaylistStore.shared.playlists
+                        .filter { $0.sourceName == "Nuvx only" }
+                        .map { UserPlaylistDTO(playlistId: "nuvx-local:\($0.id)", title: $0.title, subtitle: "\($0.tracks.count) songs", thumbnailUrl: $0.tracks.first?.thumbnailUrl) }
+                }
             }
         }
         #if os(macOS)
@@ -671,6 +714,46 @@ struct PlaylistPickerView: View {
     }
 
 
+
+    private func loadSpotifyPlaylists() async {
+        let json = await withCheckedContinuation { (cont: CheckedContinuation<String?, Never>) in
+            SpotifyImportBridge.shared.playlists(callback: SpotifyBridgeCallback { value, _ in cont.resume(returning: value) })
+        }
+        guard let json, let payload = try? JSONDecoder().decode(SpotifyPlaylistsPayload.self, from: Data(json.utf8)) else {
+            error = "Couldn’t load your Spotify playlists. Check the Spotify cookie in Settings."
+            return
+        }
+        spotifyPlaylists = payload.playlists.filter { $0.id != "liked" }
+    }
+
+    private func saveToSpotify(playlistId: String?) async {
+        adding = true
+        defer { adding = false }
+        let query = request.artist.isEmpty ? request.title : "\(request.title) \(request.artist)"
+        let found = await withCheckedContinuation { (cont: CheckedContinuation<String?, Never>) in
+            SpotifyImportBridge.shared.searchTracks(query: query, callback: SpotifyBridgeCallback { value, _ in cont.resume(returning: value) })
+        }
+        guard let found,
+              let tracks = try? JSONDecoder().decode(SpotifyTracksPayload.self, from: Data(found.utf8)),
+              let id = tracks.tracks.first?.id, !id.isEmpty else {
+            error = "That song wasn’t found on Spotify."
+            return
+        }
+        let message = await withCheckedContinuation { (cont: CheckedContinuation<String?, Never>) in
+            let callback = SpotifyBridgeCallback { _, message in cont.resume(returning: message) }
+            if let playlistId {
+                SpotifyImportBridge.shared.addToPlaylist(playlistId: playlistId, trackIds: [id], callback: callback)
+            } else {
+                SpotifyImportBridge.shared.saveTracks(trackIds: [id], callback: callback)
+            }
+        }
+        if let message {
+            error = message
+        } else {
+            toast.show("Added to Spotify")
+            dismiss()
+        }
+    }
 
     private func addToSelected() {
         adding = true

@@ -939,16 +939,16 @@ fn a_radio_is_its_songs_or_its_videos_when_it_has_only_those() {
         plays: None,
         music_video: false,
     };
-    let ids = |items: &[(Track, bool)]| {
+    let ids = |items: &[(Track, bool, bool)]| {
         radio_tracks(items)
-            .map(|t| t.id.clone())
+            .map(|(t, _, _)| t.id.clone())
             .collect::<Vec<_>>()
     };
     assert_eq!(
-        ids(&[(t("a"), false), (t("v"), true), (t("b"), false)]),
+        ids(&[(t("a"), false, false), (t("v"), true, false), (t("b"), false, false)]),
         ["a", "b"]
     );
-    assert_eq!(ids(&[(t("v1"), true), (t("v2"), true)]), ["v1", "v2"]);
+    assert_eq!(ids(&[(t("v1"), true, false), (t("v2"), true, false)]), ["v1", "v2"]);
     assert!(ids(&[]).is_empty());
 }
 

@@ -6,6 +6,7 @@ import com.licht.nuvx.R
 import com.licht.nuvx.data.LocalMediaRepository
 import com.licht.nuvx.data.YtMusicRepository
 import com.licht.nuvx.data.innertube.StreamResolver
+import com.licht.nuvx.data.matchingArtist
 import com.licht.nuvx.data.matchesSearch
 import com.licht.nuvx.data.model.EntityType
 import com.licht.nuvx.data.model.SearchFilter
@@ -87,7 +88,11 @@ internal class MainSearch(
         val term = query.trim()
         when {
             term.isEmpty() -> null
-            state is UiState.Success -> UiState.Success(state.data.filter { it.matchesSearch(term) })
+            state is UiState.Success -> {
+                val direct = state.data.filter { it.matchesSearch(term) }
+                val byArtist = state.data.matchingArtist(term)
+                UiState.Success((direct + byArtist).distinctBy { it.videoId })
+            }
             else -> state
         }
     }.flowOn(Dispatchers.Default)

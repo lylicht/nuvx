@@ -4,6 +4,8 @@ import { Shelves, TrackShelf } from '@/components/music/ShelfView';
 import { LoadError, LoadMoreError, NeedsExtension } from '@/components/music/States';
 import { useHome, useLibrary, useYouTubeReady } from '@/data/music/queries';
 import type { Track } from '@/data/music/types';
+import { buildProfile, filterShelves, filterTracks } from '@/data/music/contentFilter';
+import { usePlayer } from '@/state/player';
 import { HomeSkeleton } from '@/skeletons/PageSkeletons';
 import { ShelfSkeleton } from '@/skeletons/ShelfSkeleton';
 
@@ -21,7 +23,12 @@ function useRecentlyPlayed(): Track[] {
 export default function HomePage() {
   const { missing } = useYouTubeReady();
   const home = useHome();
-  const recent = useRecentlyPlayed();
+  const hideExplicit = usePlayer((s) => s.hideExplicit);
+  const focusedFeed = usePlayer((s) => s.focusedFeed);
+  const recentAll = useRecentlyPlayed();
+  // The topical profile is the user's own recent plays; empty history leaves it a no-op.
+  const profile = buildProfile(recentAll.map((t) => ({ title: t.title, artist: t.artists.map((a) => a.name).join(', ') })));
+  const recent = filterTracks(recentAll, hideExplicit, focusedFeed, profile);
   const sentinel = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -55,9 +62,14 @@ export default function HomePage() {
   }
   if (!home.data) return <HomeSkeleton />;
 
-  const shelves = home.data.pages
-    .flatMap((page) => page.data)
-    .filter((shelf) => !(recent.length > 0 && shelf.title.trim().toLowerCase() === RECENT_TITLE.toLowerCase()));
+  const shelves = filterShelves(
+    home.data.pages
+      .flatMap((page) => page.data)
+      .filter((shelf) => !(recent.length > 0 && shelf.title.trim().toLowerCase() === RECENT_TITLE.toLowerCase())),
+    hideExplicit,
+    focusedFeed,
+    profile,
+  );
   return (
     <>
       <PageHeader title="Home" />

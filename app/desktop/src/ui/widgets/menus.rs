@@ -104,6 +104,9 @@ pub fn song_actions(ui: &mut Ui, t: &Track, liked: bool, remove: Option<usize>, 
     if menu_action(ui, Some(icon::LIST_PLUS), "Add to playlist") {
         acts.push(Action::AddToPlaylist(vec![t.clone()]));
     }
+    if menu_glyph_action(ui, super::super::glyphs::SPOTIFY, "Add to Spotify") {
+        acts.push(Action::AddToSpotify(vec![t.clone()]));
+    }
     if let Some(i) = remove
         && menu_action(ui, Some(icon::LIST_MINUS), "Remove from playlist")
     {

@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, ListEnd, ListPlus, ListStart, MoreHorizontal, Search, Star } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Heart, ListEnd, ListPlus, ListStart, MoreHorizontal, Search, Star } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { Menu, MenuHeader, MenuItem, MenuSeparator, type MenuPlacement } from '@/components/Menu';
 import {
@@ -11,6 +11,9 @@ import {
 import type { Track } from '@/data/music/types';
 import { addToNuvxPlaylist, createNuvxPlaylist, createPlaylistsLocally, useNuvxPlaylists } from '@/data/music/localPlaylists';
 import { usePlayer } from '@/state/player';
+import { LIKED_ID, spotifyTrackId } from '@/data/spotify/api';
+import { useSpotifyPlaylists, useSpotifyWrites } from '@/data/spotify/queries';
+import { useSpotifySignedIn } from '@/extension/useSpotifyAuth';
 
 function PlaylistChoices({ track, onDone, onBack }: { track: Track; onDone: () => void; onBack: () => void }) {
   const { videoId } = track;
@@ -98,7 +101,71 @@ function PlaylistChoices({ track, onDone, onBack }: { track: Track; onDone: () =
   );
 }
 
-function AccountItems({ track, signedIn, onClose, onPlaylists }: { track: Track; signedIn: boolean; onClose: () => void; onPlaylists: () => void }) {
+function SpotifyChoices({ track, onDone, onBack }: { track: Track; onDone: () => void; onBack: () => void }) {
+  const playlists = useSpotifyPlaylists();
+  const { save, add } = useSpotifyWrites();
+  const [query, setQuery] = useState('');
+  const matches = (title: string) => title.toLowerCase().includes(query.trim().toLowerCase());
+  const run = async (playlistId: string | null) => {
+    try {
+      const id = await spotifyTrackId(track);
+      if (!id) throw new Error('This song was not found on Spotify');
+      if (playlistId === null) await save.mutateAsync([id]);
+      else await add.mutateAsync({ playlistId, trackIds: [id] });
+      onDone();
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : 'Could not save the song to Spotify');
+    }
+  };
+  const busy = save.isPending || add.isPending;
+  return (
+    <>
+      <MenuItem icon={<ChevronLeft size={14} />} onSelect={onBack}>
+        Back
+      </MenuItem>
+      <MenuSeparator />
+      <MenuHeader>Add to Spotify</MenuHeader>
+      <div className="relative mx-1 mb-1 flex items-center">
+        <Search size={13} strokeWidth={2.4} className="pointer-events-none absolute left-2 text-secondary" aria-hidden="true" />
+        <input
+          className="h-7 w-full rounded-[5px] border border-search-border bg-page pl-6 pr-2 type-body text-primary placeholder:text-tertiary [&::-webkit-search-cancel-button]:hidden"
+          type="search"
+          value={query}
+          placeholder="Find a playlist"
+          aria-label="Find a Spotify playlist"
+          autoComplete="off"
+          spellCheck={false}
+          onChange={(e) => setQuery(e.target.value)}
+        />
+      </div>
+      <MenuItem icon={<Heart size={14} />} disabled={busy} onSelect={() => void run(null)}>
+        Liked Songs
+      </MenuItem>
+      {playlists.isPending && (
+        <MenuItem disabled onSelect={() => {}}>
+          Loading…
+        </MenuItem>
+      )}
+      {playlists.isError && (
+        <MenuItem disabled onSelect={() => {}}>
+          Couldn’t load your Spotify playlists
+        </MenuItem>
+      )}
+      {playlists.data?.filter((playlist) => matches(playlist.name) && playlist.id !== LIKED_ID).map((playlist) => (
+        <MenuItem key={playlist.id} disabled={busy} onSelect={() => void run(playlist.id)}>
+          {playlist.name}
+        </MenuItem>
+      ))}
+      {query.trim() && !playlists.data?.some((p) => p.id !== LIKED_ID && matches(p.name)) && (
+        <MenuItem disabled onSelect={() => {}}>
+          No matching playlists
+        </MenuItem>
+      )}
+    </>
+  );
+}
+
+function AccountItems({ track, signedIn, spotifySignedIn, onClose, onPlaylists, onSpotify }: { track: Track; signedIn: boolean; spotifySignedIn: boolean; onClose: () => void; onPlaylists: () => void; onSpotify: () => void }) {
   const status = useLikeStatus(track.videoId);
   const setLiked = useSetLiked();
   const liked = status.data === 'LIKE';
@@ -118,17 +185,26 @@ function AccountItems({ track, signedIn, onClose, onPlaylists }: { track: Track;
       <MenuItem icon={<ListPlus size={15} />} trailing={<ChevronRight size={14} />} onSelect={onPlaylists}>
         Add to Playlist
       </MenuItem>
+      {spotifySignedIn && (
+        <MenuItem icon={<Heart size={15} />} trailing={<ChevronRight size={14} />} onSelect={onSpotify}>
+          Add to Spotify
+        </MenuItem>
+      )}
     </>
   );
 }
 
 function TrackMenuItems({ track, onClose }: { track: Track; onClose: () => void }) {
-  const [view, setView] = useState<'main' | 'playlists'>('main');
+  const [view, setView] = useState<'main' | 'playlists' | 'spotify'>('main');
   const signedIn = useSignedIn();
+  const spotifySignedIn = useSpotifySignedIn();
   const localOnly = createPlaylistsLocally();
   const localPlaylists = useNuvxPlaylists();
   if (view === 'playlists') {
     return <PlaylistChoices track={track} onDone={onClose} onBack={() => setView('main')} />;
+  }
+  if (view === 'spotify') {
+    return <SpotifyChoices track={track} onDone={onClose} onBack={() => setView('main')} />;
   }
   const { playNext, addToQueue } = usePlayer.getState();
   return (
@@ -139,7 +215,16 @@ function TrackMenuItems({ track, onClose }: { track: Track; onClose: () => void 
       <MenuItem icon={<ListEnd size={15} />} onSelect={() => (onClose(), addToQueue([track]))}>
         Add to Queue
       </MenuItem>
-      {(signedIn || localOnly || localPlaylists.length > 0) && <AccountItems track={track} signedIn={signedIn} onClose={onClose} onPlaylists={() => setView('playlists')} />}
+      {(signedIn || spotifySignedIn || localOnly || localPlaylists.length > 0) && (
+        <AccountItems
+          track={track}
+          signedIn={signedIn}
+          spotifySignedIn={spotifySignedIn}
+          onClose={onClose}
+          onPlaylists={() => setView('playlists')}
+          onSpotify={() => setView('spotify')}
+        />
+      )}
     </>
   );
 }

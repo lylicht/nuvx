@@ -506,6 +506,7 @@ object InnertubeParser {
             videoId = videoId,
             browseId = resolvedBrowseId,
             isVideo = isVideo,
+            isExplicit = renderer["subtitleBadges"].hasExplicitBadge(),
         )
     }
 

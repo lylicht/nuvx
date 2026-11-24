@@ -82,6 +82,7 @@ fun PlaylistPickerSheet(
     onCreate: (String, PlaylistPrivacy) -> Unit,
     onDismiss: () -> Unit,
     song: Song? = null,
+    songs: List<Song> = emptyList(),
     startCreating: Boolean = false,
     offline: Boolean = false,
     signedIn: Boolean = true,
@@ -142,12 +143,21 @@ fun PlaylistPickerSheet(
                     confirmEnabled = selected.isNotEmpty(),
                     onConfirm = { closeAfter { onAdd(playlists.filter { it.playlistId in selected }) } },
                 )
-                if (song != null) {
-                    SheetTrackHeader(song)
+                val headerSong = songs.firstOrNull() ?: song
+                if (headerSong != null) {
+                    SheetTrackHeader(headerSong)
+                    if (songs.size > 1) {
+                        Text(
+                            text = pluralStringResource(R.plurals.song_count_plural, songs.size, songs.size),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp),
+                        )
+                    }
                     HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outline)
                 }
                 SheetHeading(
-                    stringResource(if (song != null) R.string.add_to_playlist else R.string.your_playlists)
+                    stringResource(if (headerSong != null) R.string.add_to_playlist else R.string.your_playlists)
                         .uppercase(Locale.getDefault()),
                 )
 

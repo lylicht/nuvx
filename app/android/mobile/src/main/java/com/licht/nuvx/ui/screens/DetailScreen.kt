@@ -670,7 +670,7 @@ fun DetailScreen(
                     LocalFolderSelectionBar(
                         folder = folder,
                         state = folderState,
-                        songs = songs,
+                        songs = queue,
                         modifier = Modifier
                             .align(Alignment.TopCenter)
                             .padding(top = topBarContentPadding(), start = PAGE_GUTTER, end = PAGE_GUTTER),

@@ -85,6 +85,7 @@ fun SongActionsMenu(
     onToggleLike: () -> Unit,
     onToggleDislike: () -> Unit,
     onAddToPlaylist: () -> Unit,
+    onAddToSpotify: (() -> Unit)? = null,
     onOpenAlbum: (String) -> Unit,
     onOpenArtist: (String) -> Unit,
     modifier: Modifier = Modifier,
@@ -186,6 +187,14 @@ fun SongActionsMenu(
             accent = palette.accent,
             onClick = onAddToPlaylist,
         )
+        onAddToSpotify?.let {
+            ActionRow(
+                icon = SfIcons.Heart,
+                label = stringResource(R.string.add_to_spotify),
+                accent = palette.accent,
+                onClick = it,
+            )
+        }
         // Given only for a playlist this device may edit; nuvx playlists need no sign-in.
         onRemoveFromPlaylist?.let {
             ActionRow(

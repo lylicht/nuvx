@@ -83,7 +83,11 @@ kotlin {
 
 extensions.configure<LibraryExtension> {
     namespace = "com.licht.nuvx.sharedui"
-    compileSdk = 37
+    compileSdk {
+        version = release(37) {
+            minorApiLevel = 1
+        }
+    }
     defaultConfig {
         minSdk = 26
     }

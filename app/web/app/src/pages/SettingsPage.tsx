@@ -56,6 +56,8 @@ export default function SettingsPage() {
   const discord = useDiscord();
   const party = useParty();
   const autoplay = usePlayer((s) => s.autoplay);
+  const hideExplicit = usePlayer((s) => s.hideExplicit);
+  const focusedFeed = usePlayer((s) => s.focusedFeed);
   const crossfadeSec = usePlayer((s) => s.crossfadeSec);
   const automix = usePlayer((s) => s.automix);
   const automixBars = usePlayer((s) => s.automixBars);
@@ -69,7 +71,7 @@ export default function SettingsPage() {
   const setBackgroundMotion = useUi((s) => s.setBackgroundMotion);
   const backgroundMonochrome = useUi((s) => s.backgroundMonochrome);
   const setBackgroundMonochrome = useUi((s) => s.setBackgroundMonochrome);
-  const { setAutoplay, setCrossfade, setAutomix, setAutomixBars, setShowNerdStats, setLoudnessTarget, setSleepTimer } = usePlayer.getState();
+  const { setAutoplay, setHideExplicit, setFocusedFeed, setCrossfade, setAutomix, setAutomixBars, setShowNerdStats, setLoudnessTarget, setSleepTimer } = usePlayer.getState();
   const [lyrics, setLyrics] = useState(false);
   const [localPlaylistsOnly, setLocalPlaylistsOnly] = useState(createPlaylistsLocally);
   const present = extension.state === 'present';
@@ -192,6 +194,18 @@ export default function SettingsPage() {
             detail="When the queue ends, keep playing similar music."
             checked={autoplay}
             onChange={setAutoplay}
+          />
+          <Toggle
+            label="Hide explicit content"
+            detail="Removes tracks marked explicit from Home and autoplay."
+            checked={hideExplicit}
+            onChange={setHideExplicit}
+          />
+          <Toggle
+            label="Keep recommendations on-topic"
+            detail="Filters Home and autoplay to the artists and topics in your recent plays."
+            checked={focusedFeed}
+            onChange={setFocusedFeed}
           />
           <label className={settingsUi.controlRow}>
             <span>Crossfade</span>

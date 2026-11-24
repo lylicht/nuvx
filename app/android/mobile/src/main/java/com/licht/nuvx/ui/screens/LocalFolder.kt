@@ -88,6 +88,7 @@ class LocalFolder(
     val onOpenGroup: (LocalGroup) -> Unit,
     val onGroupLongPress: (LocalGroup) -> Unit,
     val onDelete: ((List<Song>) -> Unit)? = null,
+    val onAddToPlaylist: ((List<Song>) -> Unit)? = null,
     val onUpload: ((List<Song>) -> Unit)? = null,
     val onDownload: ((List<Song>) -> Unit)? = null,
     val onRemoveFromCache: ((List<Song>) -> Unit)? = null,
@@ -736,6 +737,15 @@ internal fun LocalFolderSelectionBar(
             color = if (dark) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.weight(1f),
         )
+        folder.onAddToPlaylist?.let { add ->
+            SelectionAction(
+                icon = SfIcons.AddToPlaylist,
+                label = stringResource(R.string.add_to_playlist),
+                color = MaterialTheme.colorScheme.primary,
+                enabled = count > 0,
+                onClick = { add(chosen()) },
+            )
+        }
         folder.onUpload?.let { upload ->
             SelectionAction(
                 icon = SfIcons.FileUpload,

@@ -70,6 +70,8 @@ interface PlayerState extends PlayerSettings {
   toggleShuffle: () => void;
   cycleRepeat: () => void;
   setAutoplay: (on: boolean) => void;
+  setHideExplicit: (on: boolean) => void;
+  setFocusedFeed: (on: boolean) => void;
   setVolume: (volume: number) => void;
   toggleMute: () => void;
   setCrossfade: (seconds: number) => void;
@@ -78,6 +80,19 @@ interface PlayerState extends PlayerSettings {
   setShowNerdStats: (on: boolean) => void;
   setLoudnessTarget: (lufs: number | null) => void;
   setSleepTimer: (minutes: number | null) => void;
+}
+
+// When a content filter (hide-explicit / on-topic) is switched on, drop
+// already-queued autoplay picks so they refill within the new filter.
+function requeueAutoplayForContentFilters(
+  get: () => PlayerState,
+  set: (partial: Partial<PlayerState>) => void,
+  enabled: boolean,
+) {
+  if (!enabled) return;
+  const { queue, index } = get();
+  set({ queue: queue.filter((e, i) => i <= index || e.tier !== 'autoplay') });
+  void playerAutoplay.refill(true);
 }
 
 function saveSettings(state: PlayerSettings) {
@@ -503,6 +518,18 @@ export const usePlayer = create<PlayerState>()((set, get) => ({
       const { queue, index } = get();
       set({ queue: queue.filter((e, i) => i <= index || e.tier !== 'autoplay') });
     }
+  },
+
+  setHideExplicit(hideExplicit) {
+    set({ hideExplicit });
+    saveSettings(get());
+    requeueAutoplayForContentFilters(get, set, hideExplicit);
+  },
+
+  setFocusedFeed(focusedFeed) {
+    set({ focusedFeed });
+    saveSettings(get());
+    requeueAutoplayForContentFilters(get, set, focusedFeed);
   },
 
   setVolume(volume) {

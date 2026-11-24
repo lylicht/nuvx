@@ -6,9 +6,9 @@ use crate::model::{self, Card, Target, Thumb, Track};
 use crate::ytm;
 
 pub enum Req {
-    Home(Option<String>),
-    HomeMore(String),
-    MoreQuickPicks(String),
+    Home { params: Option<String>, hide_explicit: bool, focused: bool },
+    HomeMore { token: String, hide_explicit: bool, focused: bool },
+    MoreQuickPicks { seed: String, hide_explicit: bool, focused: bool },
     Explore(Vec<String>),
     Moods,
     Mood { browse_id: String, params: Option<String> },
@@ -42,7 +42,7 @@ pub enum Req {
     Video { id: String, audio_id: String, height: u32 },
     VideoOf { generation: u64, track: Track },
     ArtistSignature { key: String, endpoint: String, name: String },
-    Radio { seed: String, song_of: Option<Track> },
+    Radio { seed: String, song_of: Option<Track>, hide_explicit: bool, focused: bool },
     PlayCollection { target: Target },
     Play { video_id: String, generation: u64, at: std::time::Duration, report: bool, start_paused: bool, song_of: Option<Track>, song: Option<Track>, track: Option<Track> },
     Prefetch { video_id: String, song_of: Option<Track>, track: Option<Track> },
@@ -57,6 +57,8 @@ pub enum Req {
     Collaboration(String),
     SetCollaboration { info: ytm::Collaboration, change: ytm::CollabChange },
     SaveCollection { id: String, save: bool },
+    /// Save a nuvx song to Spotify; `playlist_id: None` means Liked Songs.
+    SpotifySave { track: Track, playlist_id: Option<String> },
     SetCookie(String),
     Logout,
 }
@@ -64,8 +66,8 @@ pub enum Req {
 impl Req {
     pub(super) fn name(&self) -> &'static str {
         match self {
-            Req::Home(_) | Req::HomeMore(_) => "Loading home",
-            Req::MoreQuickPicks(_) => "Loading more picks",
+            Req::Home { .. } | Req::HomeMore { .. } => "Loading home",
+            Req::MoreQuickPicks { .. } => "Loading more picks",
             Req::Explore(_) => "Loading explore",
             Req::Moods => "Loading moods",
             Req::Mood { .. } => "Loading the mood",
@@ -110,13 +112,14 @@ impl Req {
             Req::Collaboration(_) => "Loading collaboration",
             Req::SetCollaboration { .. } => "Collaboration",
             Req::SaveCollection { .. } => "Save to library",
+            Req::SpotifySave { .. } => "Save to Spotify",
             Req::SetCookie(_) => "Sign in",
             Req::Logout => "Sign out",
         }
     }
 
     pub(super) fn quiet(&self) -> bool {
-        matches!(self, Req::Suggest { .. } | Req::Moods | Req::RadioClick(_) | Req::Account | Req::Channels | Req::ServerQueue | Req::Art { .. } | Req::AppleArtist { .. } | Req::Canvas { .. } | Req::Video { .. } | Req::SongCover { .. } | Req::ArtistSignature { .. } | Req::Prefetch { .. } | Req::HomeMore(_) | Req::Lyrics(_) | Req::Segments { .. } | Req::LyricsExtras { .. })
+        matches!(self, Req::Suggest { .. } | Req::Moods | Req::RadioClick(_) | Req::Account | Req::Channels | Req::ServerQueue | Req::Art { .. } | Req::AppleArtist { .. } | Req::Canvas { .. } | Req::Video { .. } | Req::SongCover { .. } | Req::ArtistSignature { .. } | Req::Prefetch { .. } | Req::HomeMore { .. } | Req::Lyrics(_) | Req::Segments { .. } | Req::LyricsExtras { .. })
     }
 }
 
@@ -239,6 +242,7 @@ pub enum Resp {
     LikedMany { video_ids: Vec<String>, failed: Vec<String>, like: bool },
     PlaylistCreated { id: String, songs: usize },
     PlaylistChanged { id: String, message: &'static str },
+    SpotifySaved { message: String },
     Collaboration(ytm::Collaboration),
     PlayError { generation: u64, msg: String },
     AudioInfo { generation: u64, info: crate::hires::Info },
@@ -271,4 +275,4 @@ impl Resp {
     pub(super) fn ended(id: String, load: u64) -> Self {
         Resp::CollectionMore { id, load, tracks: Vec::new(), set_ids: Vec::new(), more: false }
     }
-}
+            }

@@ -1,16 +1,52 @@
 use super::*;
 
 impl Backend {
+    /// Taste profile for "Keep recommendations on-topic", from the account's
+    /// YouTube Music history, cached for 30 minutes. Fetch failures and a
+    /// signed-out session yield an empty profile, which disables topical
+    /// filtering instead of breaking the feed.
+    pub(super) async fn taste_profile(&self, focused: bool) -> crate::content_filter::TasteProfile {
+        const TTL: std::time::Duration = std::time::Duration::from_secs(30 * 60);
+        if !focused {
+            return crate::content_filter::TasteProfile::default();
+        }
+        {
+            let cached = self.taste.lock().unwrap();
+            if let Some((at, profile)) = &*cached
+                && at.elapsed() < TTL
+            {
+                return profile.clone();
+            }
+        }
+        let profile = match ytm::history(&self.api).await {
+            Ok(tracks) => crate::content_filter::TasteProfile::from_tracks(&tracks),
+            Err(_) => crate::content_filter::TasteProfile::default(),
+        };
+        *self.taste.lock().unwrap() = Some((std::time::Instant::now(), profile.clone()));
+        profile
+    }
+
     pub(super) async fn handle(&self, req: Req) -> Option<Resp> {
         let api = &*self.api;
         let me = self.is_logged_in();
         let (what, quiet) = (req.name(), req.quiet());
         let res: anyhow::Result<Option<Resp>> = async {
             Ok(Some(match req {
-                Req::Home(params) => Resp::Home(ytm::home(api, params.as_deref(), me).await?),
-                Req::HomeMore(token) => Resp::HomeMore(ytm::home_more(api, &token, me).await?),
-                Req::MoreQuickPicks(seed) => {
-                    let tracks = ytm::radio(api, &seed, me, 0).await?;
+                Req::Home { params, hide_explicit, focused } => {
+                    let profile = self.taste_profile(focused).await;
+                    let mut page = ytm::home(api, params.as_deref(), me).await?;
+                    page.shelves = crate::content_filter::filter_shelves(page.shelves, hide_explicit, focused, &profile);
+                    Resp::Home(page)
+                }
+                Req::HomeMore { token, hide_explicit, focused } => {
+                    let profile = self.taste_profile(focused).await;
+                    let mut page = ytm::home_more(api, &token, me).await?;
+                    page.shelves = crate::content_filter::filter_shelves(page.shelves, hide_explicit, focused, &profile);
+                    Resp::HomeMore(page)
+                }
+                Req::MoreQuickPicks { seed, hide_explicit, focused } => {
+                    let profile = self.taste_profile(focused).await;
+                    let tracks = ytm::radio(api, &seed, me, 0, hide_explicit, focused, &profile).await?;
                     Resp::QuickPicksMore { seed, tracks }
                 }
                 Req::Explore(preferred_artists) => self.explore(&preferred_artists, me).await?,
@@ -170,10 +206,11 @@ impl Backend {
                     });
                     Resp::ArtistSignature { key, signature }
                 }
-                Req::Radio { seed, song_of } => {
+                Req::Radio { seed, song_of, hide_explicit, focused } => {
                     let song = self.song_version(&seed, song_of.as_ref(), PREFETCH_SONG_WAIT).await;
                     let from = song.as_ref().map_or(&seed, |s| &s.id);
-                    let mut tracks = ytm::radio(api, from, false, 50).await?;
+                    let profile = self.taste_profile(focused).await;
+                    let mut tracks = ytm::radio(api, from, false, 50, hide_explicit, focused, &profile).await?;
                     tracks.retain(|t| t.id != *from);
                     Resp::Radio { seed, tracks }
                 }
@@ -267,6 +304,32 @@ impl Backend {
                     ytm::save_collection(api, &id, save).await?;
                     Resp::PlaylistChanged { id, message: if save { "Saved to library" } else { "Removed from library" } }
                 }
+                Req::SpotifySave { track, playlist_id } => {
+                    let Some(cookie) = crate::transfer::saved_cookie(&self.data_dir) else {
+                        anyhow::bail!("Sign in to Spotify in Settings › Import first");
+                    };
+                    let client = crate::transfer::spotify::Client::connect(Some(&cookie), &self.data_dir).await?;
+                    let title = track.title.trim();
+                    anyhow::ensure!(!title.is_empty(), "That song has no title");
+                    let artist = track.artists.first().map(|a| a.name.trim()).filter(|a| !a.is_empty()).unwrap_or_default();
+                    let query = if artist.is_empty() { title.to_owned() } else { format!("{title} {artist}") };
+                    let results = client.search_tracks(&query).await?;
+                    let Some(spotify_id) = pick_spotify_track(&results, &track) else {
+                        anyhow::bail!("Spotify couldn't find “{}”", track.title);
+                    };
+                    let ids = vec![spotify_id];
+                    let message = match playlist_id {
+                        Some(playlist_id) => {
+                            client.add_to_playlist(&playlist_id, &ids).await?;
+                            "Added to a Spotify playlist".to_owned()
+                        }
+                        None => {
+                            client.save_tracks(&ids).await?;
+                            "Added to Liked Songs on Spotify".to_owned()
+                        }
+                    };
+                    Resp::SpotifySaved { message }
+                }
                 Req::SetCookie(input) => {
                     self.set_cookie(&input).await?;
                     *self.premium.lock().await = Err(None);
@@ -288,6 +351,24 @@ impl Backend {
     }
 }
 
+/// Prefers a search result whose title and first artist agree with the nuvx song.
+fn pick_spotify_track(results: &[crate::transfer::spotify::SpotifySearchTrack], track: &crate::model::Track) -> Option<String> {
+    let norm = |s: &str| s.trim().to_lowercase();
+    let wanted_title = norm(&track.title);
+    let wanted_artist = track.artists.first().map_or_else(String::new, |a| norm(&a.name));
+    let matches = |t: &crate::transfer::spotify::SpotifySearchTrack| {
+        let name = norm(&t.name);
+        let title_ok = name == wanted_title || name.contains(&wanted_title) || wanted_title.contains(&name);
+        let artist_ok = wanted_artist.is_empty()
+            || t.artists.iter().any(|a| {
+                let artist = norm(a);
+                artist.contains(&wanted_artist) || wanted_artist.contains(&artist)
+            });
+        title_ok && artist_ok
+    };
+    results.iter().find(|t| matches(t)).or_else(|| results.first()).map(|t| t.id.clone())
+}
+
 /// A network failure worth one more try; anything else (unavailable, age-restricted, decode) is final.
 fn transient(e: &anyhow::Error) -> bool {
     use std::io::ErrorKind::*;
@@ -306,4 +387,4 @@ mod transient_tests {
         assert!(!super::transient(&anyhow::anyhow!("it's age-restricted")));
         assert!(!super::transient(&anyhow::Error::from(std::io::Error::from(std::io::ErrorKind::NotFound))));
     }
-}
+                    }

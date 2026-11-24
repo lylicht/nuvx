@@ -1,9 +1,9 @@
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSyncExternalStore } from 'react';
 import type { SpotifyTrack } from '@nuvx/shared/bridge';
 import type { Track } from '@/data/music/types';
 import { useSpotifyAuth, useSpotifySignedIn } from '@/extension/useSpotifyAuth';
-import { fetchSpotifyPlaylistInfo, fetchSpotifyPlaylists, fetchSpotifyTracks, matchToYouTube, pendingTrack } from './api';
+import { LIKED_ID, addToSpotifyPlaylist, fetchSpotifyPlaylistInfo, fetchSpotifyPlaylists, fetchSpotifyTracks, matchToYouTube, pendingTrack, saveSpotifyTracks } from './api';
 
 export function useSpotifyPlaylists() {
   const signedIn = useSpotifySignedIn();
@@ -23,6 +23,26 @@ export function useSpotifyPlaylistInfo(playlistId: string) {
     enabled: signedIn && !!playlistId,
     staleTime: 5 * 60_000,
   });
+}
+
+/** Write actions for issue #369: save to Liked Songs or add to a playlist. */
+export function useSpotifyWrites() {
+  const queryClient = useQueryClient();
+  const save = useMutation({
+    mutationFn: (trackIds: string[]) => saveSpotifyTracks(trackIds),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['spotify', 'data', 'liked'] });
+      invalidateSpotifyRows(LIKED_ID);
+    },
+  });
+  const add = useMutation({
+    mutationFn: ({ playlistId, trackIds }: { playlistId: string; trackIds: string[] }) => addToSpotifyPlaylist(playlistId, trackIds),
+    onSuccess: (_result, vars) => {
+      void queryClient.invalidateQueries({ queryKey: ['spotify', 'data', 'playlist', vars.playlistId] });
+      invalidateSpotifyRows(vars.playlistId);
+    },
+  });
+  return { save, add };
 }
 
 const MATCH_PARALLELISM = 6;
@@ -62,6 +82,11 @@ class PlaylistJob {
     if (this.state.status !== 'error') return;
     this.emit({ status: 'loading', error: null });
     this.start();
+  }
+
+  /** A write happened: make the next subscriber refetch instead of using the cached rows. */
+  invalidate() {
+    this.completedAt = 0;
   }
 
   private start() {
@@ -111,6 +136,13 @@ class PlaylistJob {
 }
 
 const jobs = new Map<string, PlaylistJob>();
+
+/** Force every account's cached view of a playlist to refresh after a write. */
+export function invalidateSpotifyRows(playlistId: string) {
+  for (const [key, job] of jobs) {
+    if (key.endsWith(`|${playlistId}`)) job.invalidate();
+  }
+}
 
 export function useSpotifyRows(playlistId: string): SpotifyRows & { retry: () => void } {
   const auth = useSpotifyAuth();

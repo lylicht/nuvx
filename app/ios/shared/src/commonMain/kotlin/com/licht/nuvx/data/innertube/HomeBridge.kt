@@ -1,6 +1,8 @@
 package com.licht.nuvx.data.innertube
 
 import com.licht.nuvx.data.DebugLog
+import com.licht.nuvx.data.ContentFilter
+import com.licht.nuvx.data.settings.PlatformSettings
 
 import com.licht.nuvx.data.model.HomeFeed
 import com.licht.nuvx.data.model.HomeShelf
@@ -126,11 +128,14 @@ object HomeBridge {
             val primary = browse(if (home) "FEmusic_home" else "FEmusic_explore")
             parts[if (home) 1 else 0] = InnertubeParser.parseHome(primary)
             val token = InnertubeParser.continuationToken(primary)
+            val hideExplicit = PlatformSettings.getBoolean("hide_explicit", false)
+            val focused = PlatformSettings.getBoolean("focused_feed", false)
+            val profile = if (focused) TasteProfileBridge.profile() else ContentFilter.EMPTY_PROFILE
             fun emit(complete: Boolean) {
                 Innertube.checkSession(generation)
-                val shelves = parts.flatten().distinctBy { it.title.lowercase() }
-                if (complete) check(shelves.isNotEmpty()) { "No results from YouTube Music" }
-                publish(HomeFeed(shelves, token), complete)
+                val merged = parts.flatten().distinctBy { it.title.lowercase() }
+                if (complete) check(merged.isNotEmpty()) { "No results from YouTube Music" }
+                publish(HomeFeed(ContentFilter.filterShelves(merged, hideExplicit, focused, profile), token), complete)
             }
             emit(false)
             repeat(extras.size) { count ->

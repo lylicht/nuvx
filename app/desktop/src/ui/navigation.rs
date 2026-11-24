@@ -65,7 +65,7 @@ impl App {
             }
             Page::Home if !self.home_loading => {
                 self.home_loading = true;
-                Some(Req::Home(None))
+                Some(Req::Home { params: None, hide_explicit: self.hide_explicit, focused: self.focused_feed })
             }
             Page::New => Some(Req::Explore(self.preferred_artist_ids())),
             Page::Search(q) if !q.trim().is_empty() && self.search.as_ref().is_none_or(|s| &s.query != q) => Some(Req::Search(q.clone())),

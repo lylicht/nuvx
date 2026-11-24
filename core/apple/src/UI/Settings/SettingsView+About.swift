@@ -50,6 +50,22 @@ extension SettingsView {
                 isOn: $hideHomeMoods
             )
         }
+        rows.row("Hide Explicit Content", "explicit", "nsfw", "hide", "block", "feed", "home", "autoplay") {
+            SettingsToggleLine(
+                glyph: .filter,
+                title: "Hide Explicit Content",
+                subtitle: "Removes tracks marked explicit from Home and autoplay",
+                isOn: $hideExplicit
+            )
+        }
+        rows.row("Keep Recommendations On-Topic", "topic", "focus", "taste", "similar", "feed", "home", "autoplay") {
+            SettingsToggleLine(
+                glyph: .genres,
+                title: "Keep Recommendations On-Topic",
+                subtitle: "Filters Home and autoplay to the artists and topics in your recent plays",
+                isOn: $focusedFeed
+            )
+        }
     }
 
     func buildYourDataRows(_ rows: inout SettingsRows) {

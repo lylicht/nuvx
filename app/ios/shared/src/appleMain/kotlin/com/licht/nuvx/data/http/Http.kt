@@ -308,9 +308,12 @@ actual object Http {
                 requestTimeoutMillis = timeoutMillis
                 connectTimeoutMillis = 20_000
             }
-            headers.forEach { (key, value) -> header(key, value) }
+            val explicitContentType = headers.firstOrNull { it.key.equals("Content-Type", ignoreCase = true) }?.value
+            headers.forEach { (key, value) ->
+                if (!key.equals("Content-Type", ignoreCase = true)) header(key, value)
+            }
             if (body != null) {
-                header("Content-Type", "application/xml; charset=utf-8")
+                header("Content-Type", explicitContentType ?: "application/xml; charset=utf-8")
                 setBody(body)
             }
         }

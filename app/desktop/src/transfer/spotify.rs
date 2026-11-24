@@ -97,6 +97,39 @@ pub struct Account {
     pub library: Vec<Entry>,
 }
 
+/// A track found through the Spotify Web API, used to resolve a nuvx song before saving it.
+#[derive(Clone, Debug)]
+pub struct SpotifySearchTrack {
+    pub id: String,
+    pub name: String,
+    pub artists: Vec<String>,
+}
+
+#[derive(serde::Deserialize)]
+struct SearchResponse {
+    tracks: SearchPage,
+}
+
+#[derive(serde::Deserialize)]
+struct SearchPage {
+    #[serde(default)]
+    items: Vec<SearchItem>,
+}
+
+#[derive(serde::Deserialize)]
+struct SearchItem {
+    #[serde(default)]
+    id: Option<String>,
+    name: String,
+    #[serde(default)]
+    artists: Vec<SearchArtist>,
+}
+
+#[derive(serde::Deserialize)]
+struct SearchArtist {
+    name: String,
+}
+
 pub struct Client {
     http: reqwest::Client,
     access_token: String,
@@ -224,6 +257,76 @@ impl Client {
         Ok(out)
     }
 
+    /// Finds Spotify track IDs for a title (and optionally artist) through the Web API.
+    pub async fn search_tracks(&self, query: &str) -> Result<Vec<SpotifySearchTrack>> {
+        let resp = self
+            .http
+            .get("https://api.spotify.com/v1/search")
+            .query(&[("q", query), ("type", "track"), ("limit", "10")])
+            .bearer_auth(&self.access_token)
+            .header("Accept", "application/json")
+            .header("User-Agent", UA)
+            .send()
+            .await
+            .context("Spotify track search failed")?;
+        check_rest(&resp, "search for tracks")?;
+        let page: SearchResponse = resp.json().await?;
+        Ok(page
+            .tracks
+            .items
+            .into_iter()
+            .filter_map(|item| {
+                let id = item.id?;
+                if !valid_id(&id) || item.name.trim().is_empty() {
+                    return None;
+                }
+                let artists = item.artists.into_iter().map(|a| a.name).filter(|n| !n.trim().is_empty()).collect();
+                Some(SpotifySearchTrack { id, name: item.name.trim().to_owned(), artists })
+            })
+            .collect())
+    }
+
+    /// Adds tracks to an existing Spotify playlist, at most 100 URIs per request.
+    pub async fn add_to_playlist(&self, playlist_id: &str, track_ids: &[String]) -> Result<()> {
+        ensure!(valid_id(playlist_id), "That isn't a Spotify playlist");
+        ensure!(track_ids.iter().all(|id| valid_id(id)), "Spotify returned an invalid track ID");
+        for batch in track_ids.chunks(100) {
+            let uris: Vec<String> = batch.iter().map(|id| format!("spotify:track:{id}")).collect();
+            let resp = self
+                .http
+                // POST appends; PUT would replace the playlist's existing items.
+                .post(format!("https://api.spotify.com/v1/playlists/{playlist_id}/tracks"))
+                .bearer_auth(&self.access_token)
+                .header("Accept", "application/json")
+                .header("User-Agent", UA)
+                .json(&json!({"uris": uris}))
+                .send()
+                .await
+                .context("Adding to the Spotify playlist failed")?;
+            check_rest(&resp, "add tracks to the playlist")?;
+        }
+        Ok(())
+    }
+
+    /// Saves tracks to the signed-in account's Liked Songs, at most 50 IDs per request.
+    pub async fn save_tracks(&self, track_ids: &[String]) -> Result<()> {
+        ensure!(track_ids.iter().all(|id| valid_id(id)), "Spotify returned an invalid track ID");
+        for batch in track_ids.chunks(50) {
+            let resp = self
+                .http
+                .put("https://api.spotify.com/v1/me/tracks")
+                .query(&[("ids", batch.join(","))])
+                .bearer_auth(&self.access_token)
+                .header("Accept", "application/json")
+                .header("User-Agent", UA)
+                .send()
+                .await
+                .context("Saving to Spotify Liked Songs failed")?;
+            check_rest(&resp, "save tracks to Liked Songs")?;
+        }
+        Ok(())
+    }
+
     async fn library(&self) -> Result<Vec<Entry>> {
         let page = |offset: usize| async move {
             let variables = json!({
@@ -324,6 +427,19 @@ impl Client {
         items.extend(pages.into_iter().flat_map(|(_, page)| page));
         to_playlist(name, &items)
     }
+}
+
+fn valid_id(id: &str) -> bool {
+    !id.is_empty() && id.bytes().all(|b| b.is_ascii_alphanumeric())
+}
+
+fn check_rest(resp: &reqwest::Response, action: &str) -> Result<()> {
+    let status = resp.status();
+    if matches!(status.as_u16(), 401 | 403) {
+        return Err(SignedOut.into());
+    }
+    ensure!(status.is_success(), "Spotify couldn't {action} (HTTP {status})");
+    Ok(())
 }
 
 fn library_entry(item: &Value) -> Option<Entry> {

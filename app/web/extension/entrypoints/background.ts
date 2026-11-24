@@ -131,6 +131,14 @@ async function handle(request: BridgeRequest): Promise<BridgeResponse> {
         return okResponse<'spotify.canvas'>(request.id, {
           url: await spotify.canvas((request as BridgeRequest<'spotify.canvas'>).params.trackId),
         });
+      case 'spotify.addToPlaylist': {
+        const { playlistId, trackIds } = (request as BridgeRequest<'spotify.addToPlaylist'>).params;
+        return okResponse<'spotify.addToPlaylist'>(request.id, { added: await spotify.addToPlaylist(playlistId, trackIds ?? []) });
+      }
+      case 'spotify.saveTracks': {
+        const { trackIds } = (request as BridgeRequest<'spotify.saveTracks'>).params;
+        return okResponse<'spotify.saveTracks'>(request.id, { saved: await spotify.saveTracks(trackIds ?? []) });
+      }
       case 'discord.state':
         if (!__DISCORD_PRESENCE__) return errorResponse(request.id, 'unsupported', 'This build of the extension leaves Discord out.');
         return okResponse<'discord.state'>(request.id, await (await import('../lib/discord')).discordState());

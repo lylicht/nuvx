@@ -78,6 +78,27 @@ object SpotifyImportBridge {
         }
 
 
+    fun searchTracks(query: String, callback: ResultCallback) = deliver(callback) {
+        val items = SpotifyImport.searchTracks(query).map { track ->
+            buildJsonObject {
+                put("id", track.id.orEmpty())
+                put("title", track.title)
+                put("artist", track.artists)
+            }
+        }
+        buildJsonObject { put("tracks", JsonArray(items)) }.toString()
+    }
+
+    fun addToPlaylist(playlistId: String, trackIds: List<String>, callback: ResultCallback) = deliver(callback) {
+        SpotifyImport.addToPlaylist(playlistId, trackIds)
+        "{}"
+    }
+
+    fun saveTracks(trackIds: List<String>, callback: ResultCallback) = deliver(callback) {
+        SpotifyImport.saveTracks(trackIds)
+        "{}"
+    }
+
     fun createPlaylist(
         name: String,
         privacy: String,
