@@ -11,9 +11,9 @@
   },
   "dependencies": {
     "@nuvx/shared": "workspace:*",
-    "@tanstack/react-query": "^5.107.1",
+    "@tanstack/react-query": "^5.108.2",
     "@tanstack/react-virtual": "^3.14.26",
-    "@uimaxbai/am-lyrics": "^1.9.0",
+    "@uimaxbai/am-lyrics": "^1.9.2",
     "bgutils-js": "^4.0.3",
     "essentia.js": "^0.1.3",
     "googlevideo": "^5.0.1",
@@ -25,7 +25,7 @@
     "react-dom": "^19.3.1",
     "react-icons": "^5.7.0",
     "react-router": "^8.5.1",
-    "shaka-player": "^5.3.5",
+    "shaka-player": "^5.3.6",
     "signalsmith-stretch": "^1.3.2",
     "youtubei.js": "^18.3.0",
     "zustand": "^5.1.0"
