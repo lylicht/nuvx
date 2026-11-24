@@ -63,7 +63,7 @@ object LocalGroups {
         return when (group.kind) {
             ALBUM -> folderSongs.filter { it.albumName == group.name }.sortedForAlbum()
             FOLDER -> folderSongs.filter { it.directory() == group.name }.sortedByTitle()
-            else -> folderSongs.filter { it.artist == group.name }.sortedByTitle()
+            else -> folderSongs.filter { artistKey(it.artist) == artistKey(group.name) }.sortedByTitle()
         }
     }
 
@@ -103,8 +103,8 @@ object LocalGroups {
         songs: List<Song>,
         artistPhotos: Map<String, String> = emptyMap(),
     ): List<LocalGroup> =
-        songs.groupBy { it.artist }
-            .map { (name, group) -> artist(folderId, name, group, artistPhotos) }
+        songs.groupBy { artistKey(it.artist) }
+            .map { (_, group) -> artist(folderId, group.first().artist, group, artistPhotos) }
             .sortedBy { it.title.lowercase(Locale.ROOT) }
 
     fun foldersOf(folderId: String, songs: List<Song>): List<LocalGroup> =
@@ -170,10 +170,19 @@ object LocalGroups {
     }
 }
 
+private fun artistKey(name: String): String = name.trim().lowercase(Locale.ROOT)
+
 fun Song.matchesSearch(query: String): Boolean =
     title.contains(query, ignoreCase = true) ||
         artist.contains(query, ignoreCase = true) ||
         albumName?.contains(query, ignoreCase = true) == true
+
+/** Artist searches must return the whole artist, not just the rows whose tag
+ * happens to contain the typed text (issue #368). */
+fun List<Song>.matchingArtist(query: String): List<Song> {
+    val key = artistKey(query)
+    return if (key.isEmpty()) emptyList() else filter { artistKey(it.artist) == key }
+}
 
 fun List<Song>.sortedForLibrary(order: LocalMusicSort): List<Song> = when (order) {
     LocalMusicSort.TITLE_ASC -> sortedByTitle()

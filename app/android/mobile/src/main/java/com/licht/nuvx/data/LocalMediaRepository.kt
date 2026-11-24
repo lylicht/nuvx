@@ -317,6 +317,28 @@ object LocalMediaRepository {
         }
     }
 
+    /** Deletes a song from the device library (issue #368). MediaStore rows,
+     * plain files and SAF documents are all supported; anything we cannot
+     * legitimately write is left untouched. */
+    suspend fun delete(context: Context, song: Song): Boolean = withContext(Dispatchers.IO) {
+        val value = song.localUri ?: return@withContext false
+        runCatching {
+            when {
+                value.startsWith("content://media/") ->
+                    context.contentResolver.delete(Uri.parse(value), null, null) > 0
+                value.startsWith("file://") -> Uri.parse(value).path?.let { File(it).delete() } == true
+                value.startsWith("content://") && Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT -> {
+                    val uri = Uri.parse(value)
+                    if (DocumentsContract.isDocumentUri(context, uri)) {
+                        DocumentsContract.deleteDocument(context.contentResolver, uri)
+                        true
+                    } else false
+                }
+                else -> false
+            }
+        }.getOrDefault(false)
+    }
+
     private fun String.mediaStoreAudioId(): Long? {
         if (!startsWith("content://media/")) return null
         val uri = Uri.parse(this)

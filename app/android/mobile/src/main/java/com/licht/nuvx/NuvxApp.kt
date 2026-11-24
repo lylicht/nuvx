@@ -47,6 +47,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import com.licht.nuvx.data.listentogether.ServerConnectionState
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -85,6 +86,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.Dp
@@ -429,6 +431,8 @@ internal fun NuvxApp(
     var playlistTarget by remember { mutableStateOf<Song?>(null) }
     var creatingPlaylist by remember { mutableStateOf(false) }
     var offlinePlaylistTarget by remember { mutableStateOf<Song?>(null) }
+    var offlinePlaylistTargets by remember { mutableStateOf<List<Song>>(emptyList()) }
+    var deleteLocalTargets by remember { mutableStateOf<List<Song>>(emptyList()) }
     var creatingOfflinePlaylist by remember { mutableStateOf(false) }
     var showSpotifyImportDialog by remember { mutableStateOf(false) }
     var browseActions by remember { mutableStateOf<BrowseTarget?>(null) }
@@ -1741,7 +1745,7 @@ internal fun NuvxApp(
                                     sort = folderSortOf(page.browseId),
                                     viewType = folderViewTypeOf(page.browseId),
                                     collections = downloadCollections,
-                                    selectable = isDownloads || isCache,
+                                    selectable = isDownloads || isCache || isDevice,
                                     onOpenGroup = viewModel::openLocalGroup,
                                     onGroupLongPress = { group ->
                                         openBrowseMenu(
@@ -1756,8 +1760,8 @@ internal fun NuvxApp(
                                             ),
                                         )
                                     },
-                                    onDelete = if (isDownloads) {
-                                        { selected ->
+                                    onDelete = when {
+                                        isDownloads -> { selected ->
                                             scope.launch {
                                                 var failed = false
                                                 selected.forEach { song ->
@@ -1766,9 +1770,12 @@ internal fun NuvxApp(
                                                 if (failed) Toast.makeText(context, R.string.delete_download_failed, Toast.LENGTH_SHORT).show()
                                             }
                                         }
-                                    } else {
-                                        null
+                                        isDevice -> { selected -> deleteLocalTargets = selected }
+                                        else -> null
                                     },
+                                    onAddToPlaylist = if (isDevice) { selected ->
+                                        offlinePlaylistTargets = selected
+                                    } else null,
                                     onUpload = if (isDownloads &&
                                         com.licht.nuvx.data.webdav.WebDavConfig.isConfigured(webdavUrl)
                                     ) {
@@ -3238,6 +3245,87 @@ internal fun NuvxApp(
                 onCreate = { title, _ ->
                     OfflinePlaylists.create(title, listOfNotNull(target))
                     if (target != null) showQueueNotice(context.getString(R.string.song_added_to_playlist))
+                },
+            )
+        }
+
+        if (offlinePlaylistTargets.isNotEmpty()) {
+            val targets = offlinePlaylistTargets
+            val dismiss = { offlinePlaylistTargets = emptyList() }
+            val choices = remember(offlinePlaylists, playlistArtworkVersion) {
+                offlinePlaylists.map { playlist ->
+                    UserPlaylist(
+                        playlistId = playlist.id,
+                        title = playlist.title,
+                        subtitle = context.resources.getQuantityString(
+                            R.plurals.song_count_plural,
+                            playlist.songs.size,
+                            playlist.songs.size,
+                        ),
+                        thumbnailUrl = com.licht.nuvx.data.PlaylistArtworkStore.get(context, playlist.browseId)
+                            ?: playlist.songs.firstNotNullOfOrNull { it.thumbnailUrl }.takeUnless { playlist.isLiked },
+                    )
+                }
+            }
+            PlaylistPickerSheet(
+                playlists = choices,
+                loading = false,
+                songs = targets,
+                offline = true,
+                onDismiss = dismiss,
+                onAdd = { picked ->
+                    val result = OfflinePlaylists.add(picked.mapTo(HashSet()) { it.playlistId }, targets)
+                    showQueueNotice(
+                        when {
+                            result.added > 1 -> context.resources.getQuantityString(
+                                R.plurals.added_to_playlists_notice, result.added, result.added,
+                            )
+                            result.added == 1 -> context.getString(R.string.song_added_to_playlist)
+                            result.alreadyThere > 0 -> context.getString(R.string.song_already_in_playlist)
+                            else -> context.getString(R.string.failed)
+                        },
+                    )
+                    dismiss()
+                },
+                onCreate = { title, _ ->
+                    OfflinePlaylists.create(title, targets)
+                    showQueueNotice(context.getString(R.string.song_added_to_playlist))
+                    dismiss()
+                },
+            )
+        }
+
+        if (deleteLocalTargets.isNotEmpty()) {
+            val targets = deleteLocalTargets
+            AlertDialog(
+                onDismissRequest = { deleteLocalTargets = emptyList() },
+                title = { Text(stringResource(R.string.delete)) },
+                text = {
+                    Text(
+                        pluralStringResource(
+                            R.plurals.song_count_plural,
+                            targets.size,
+                            targets.size,
+                        ),
+                    )
+                },
+                confirmButton = {
+                    TextButton(onClick = {
+                        deleteLocalTargets = emptyList()
+                        scope.launch {
+                            var failed = false
+                            targets.forEach { song ->
+                                if (LocalMediaRepository.delete(context, song)) OfflinePlaylists.removeSong(song)
+                                else failed = true
+                            }
+                            if (failed) Toast.makeText(context, R.string.delete_download_failed, Toast.LENGTH_SHORT).show()
+                        }
+                    }) { Text(stringResource(R.string.delete)) }
+                },
+                dismissButton = {
+                    TextButton(onClick = { deleteLocalTargets = emptyList() }) {
+                        Text(stringResource(R.string.cancel))
+                    }
                 },
             )
         }

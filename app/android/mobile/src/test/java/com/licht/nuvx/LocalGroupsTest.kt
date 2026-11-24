@@ -1,6 +1,7 @@
 package com.licht.nuvx
 
 import com.licht.nuvx.data.LocalGroups
+import com.licht.nuvx.data.matchingArtist
 import com.licht.nuvx.data.model.BrowseType
 import com.licht.nuvx.data.model.Song
 import com.licht.nuvx.download.DownloadedCollection
@@ -95,5 +96,31 @@ class LocalGroupsTest {
         val rock = folders.last()
         assertEquals(listOf("a", "b"), rock.songs.map { it.videoId })
         assertEquals(listOf("a", "b"), LocalGroups.songsOf(rock.browseId, tracks).map { it.videoId })
+    }
+
+    @Test
+    fun artistsOf_mergesTagVariants() {
+        val tracks = listOf(
+            song("a", "A", artist = "  Reciter "),
+            song("b", "B", artist = "reciter"),
+            song("c", "C", artist = "Someone else"),
+        )
+        val artists = LocalGroups.artistsOf("local:all", tracks)
+        assertEquals(2, artists.size)
+        assertEquals(listOf("Reciter", "Someone else"), artists.map { it.title.trim() }.sortedBy { it.lowercase() })
+        val reciter = artists.first { it.title == "  Reciter " }
+        assertEquals(listOf("a", "b"), reciter.songs.map { it.videoId }.sorted())
+        assertEquals(listOf("a", "b"), LocalGroups.songsOf(reciter.browseId, tracks).map { it.videoId }.sorted())
+    }
+
+    @Test
+    fun matchingArtist_findsEverySongForTheArtist() {
+        val tracks = listOf(
+            song("a", "Instrumental", artist = "Reciter"),
+            song("b", "Vocal", artist = "RECITER "),
+            song("c", "Other", artist = "Someone else"),
+        )
+        assertEquals(listOf("a", "b"), tracks.matchingArtist("reciter").map { it.videoId })
+        assertTrue(tracks.matchingArtist("nobody").isEmpty())
     }
 }

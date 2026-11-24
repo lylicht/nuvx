@@ -120,6 +120,12 @@ object OfflinePlaylists {
         }
     }
 
+    /** Purges a deleted device song from every offline playlist (issue #368). */
+    fun removeSong(song: Song) {
+        val key = song.localUri ?: return
+        mutate { list -> list.map { it.copy(songs = it.songs.filterNot { s -> s.localUri == key }) } }
+    }
+
     fun rename(browseId: String, title: String) {
         val id = browseId.removePrefix(PREFIX)
         if (id == LIKED_ID || title.isBlank()) return
