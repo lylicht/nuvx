@@ -68,6 +68,15 @@
     <string name="auto_unavailable_title">Content unavailable</string>
     <string name="auto_unavailable_subtitle">Reopen the folder and try again</string>
     <string name="add_to_playlist">Add to playlist</string>
+    <string name="add_to_spotify">Add to Spotify</string>
+    <string name="spotify_playlists">Spotify playlists</string>
+    <string name="spotify_liked_songs">Liked Songs</string>
+    <string name="spotify_playlists_loading">Loading Spotify playlists…</string>
+    <string name="spotify_playlists_empty">No Spotify playlists found</string>
+    <string name="spotify_playlists_failed">Unable to load Spotify playlists</string>
+    <string name="spotify_track_not_found">Song not found on Spotify</string>
+    <string name="spotify_added">Added to Spotify</string>
+    <string name="spotify_add_failed">Unable to add to Spotify</string>
     <string name="add_to_library">Add to library</string>
     <string name="remove_from_library">Remove from library</string>
     <string name="subscribe">Subscribe</string>

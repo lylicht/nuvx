@@ -113,6 +113,7 @@ import com.licht.nuvx.data.model.withoutVideos
 import com.licht.nuvx.data.model.UserPlaylist
 import com.licht.nuvx.data.model.EntityType
 import com.licht.nuvx.data.model.SearchHistoryEntity
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import com.licht.nuvx.data.model.durationMillis
@@ -151,6 +152,9 @@ import com.licht.nuvx.ui.screens.SettingsScreen
 import com.licht.nuvx.ui.screens.SourcesScreen
 import com.licht.nuvx.ui.screens.SpotifyLibraryScreen
 import com.licht.nuvx.data.spotify.SPOTIFY_PAGE_PREFIX
+import com.licht.nuvx.data.spotify.SpotifyLibrary
+import com.licht.nuvx.data.spotify.SpotifyPlaylist
+import com.licht.nuvx.data.spotify.write.SpotifyWrite
 import com.licht.nuvx.playback.AudioCache
 import com.licht.nuvx.playback.MusicLink
 import com.licht.nuvx.playback.OriginalVersion
@@ -183,6 +187,7 @@ import com.licht.nuvx.ui.components.MenuAnchor
 import com.licht.nuvx.ui.components.menuAnchor
 import com.licht.nuvx.ui.components.IosMenuPopover
 import com.licht.nuvx.ui.components.SongActionsMenu
+import com.licht.nuvx.ui.components.SpotifyPlaylistPickerSheet
 import com.licht.nuvx.ui.components.HeldContextMenu
 import com.licht.nuvx.ui.components.HeldItem
 import androidx.media3.session.MediaController
@@ -429,6 +434,12 @@ internal fun NuvxApp(
     var linksLoading by remember { mutableStateOf(false) }
     var playlistTarget by remember { mutableStateOf<Song?>(null) }
     var creatingPlaylist by remember { mutableStateOf(false) }
+    val spotifyConfigured by AppSettings.spotifySpdcToken.collectAsStateWithLifecycle()
+    var spotifyTarget by remember { mutableStateOf<Song?>(null) }
+    var spotifyPlaylists by remember { mutableStateOf<List<SpotifyPlaylist>>(emptyList()) }
+    var spotifyPlaylistsLoading by remember { mutableStateOf(false) }
+    var spotifyPickerError by remember { mutableStateOf<String?>(null) }
+    var spotifySaving by remember { mutableStateOf(false) }
     var offlinePlaylistTarget by remember { mutableStateOf<Song?>(null) }
     var offlinePlaylistTargets by remember { mutableStateOf<List<Song>>(emptyList()) }
     var deleteLocalTargets by remember { mutableStateOf<List<Song>>(emptyList()) }
@@ -2859,6 +2870,30 @@ internal fun NuvxApp(
                         playlistTarget = song
                     }
                 },
+                // Deliberately independent of nuvx/YTM sign-in: only the saved sp_dc token matters.
+                onAddToSpotify = if (spotifyConfigured.isNotBlank()) {
+                    {
+                        songActions = null
+                        spotifyTarget = song
+                        spotifyPlaylists = emptyList()
+                        spotifyPickerError = null
+                        scope.launch {
+                            spotifyPlaylistsLoading = true
+                            try {
+                                spotifyPlaylists = SpotifyLibrary.playlists()
+                            } catch (e: CancellationException) {
+                                throw e
+                            } catch (e: Exception) {
+                                spotifyPickerError = e.message?.takeIf { it.isNotBlank() }
+                                    ?: context.getString(R.string.spotify_playlists_failed)
+                            } finally {
+                                spotifyPlaylistsLoading = false
+                            }
+                        }
+                    }
+                } else {
+                    null
+                },
                 onRemoveFromPlaylist = editable?.let {
                     {
                         songActions = null
@@ -3194,6 +3229,48 @@ internal fun NuvxApp(
                 },
                 onCreate = { title, privacy ->
                     viewModel.createPlaylist(title, privacy, target)
+                },
+            )
+        }
+
+        spotifyTarget?.let { target ->
+            SpotifyPlaylistPickerSheet(
+                song = target,
+                playlists = spotifyPlaylists.filter { it.id != SpotifyLibrary.LIKED_ID },
+                loading = spotifyPlaylistsLoading,
+                error = spotifyPickerError,
+                saving = spotifySaving,
+                onDismiss = { spotifyTarget = null },
+                onPick = { playlistId ->
+                    if (!spotifySaving) scope.launch {
+                        spotifySaving = true
+                        spotifyPickerError = null
+                        try {
+                            val trackId = SpotifyWrite.trackIdFor(target)
+                            if (trackId == null) {
+                                spotifyPickerError = context.getString(R.string.spotify_track_not_found)
+                                return@launch
+                            }
+                            val added = if (playlistId == null) {
+                                SpotifyWrite.saveTracks(listOf(trackId))
+                            } else {
+                                SpotifyWrite.addToPlaylist(playlistId, listOf(trackId))
+                            }
+                            if (added > 0) {
+                                showQueueNotice(context.getString(R.string.spotify_added))
+                                spotifyTarget = null
+                            } else {
+                                spotifyPickerError = context.getString(R.string.spotify_add_failed)
+                            }
+                        } catch (e: CancellationException) {
+                            throw e
+                        } catch (e: Exception) {
+                            spotifyPickerError = e.message?.takeIf { it.isNotBlank() }
+                                ?: context.getString(R.string.spotify_add_failed)
+                        } finally {
+                            spotifySaving = false
+                        }
+                    }
                 },
             )
         }

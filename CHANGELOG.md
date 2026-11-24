@@ -6,7 +6,7 @@ Every nuvx release, newest first. Downloads and checksums are on each version's 
 
 ## Unreleased
 
-- **Save songs to Spotify (#369):** the song menu can now add the current or found song to an existing Spotify playlist or to Liked Songs without leaving nuvx.
+- **Save songs to Spotify (#369):** on web, desktop and mobile, the song menu can now add the current or found song to an existing Spotify playlist or to Liked Songs without leaving nuvx.
 - **Offline library tools (#368):** Android can delete device-local songs, select several songs at once to add to offline playlists, and artist searches now return every song by that artist.
 - **Content controls on all four platforms:** Settings now offers *Hide explicit content* and *Keep recommendations on-topic*, filtering Home and autoplay using your own listening history. Thanks @vantom0101 for #365.
 - **Community invitations are no longer automatic** on Android and iOS: remove the unsolicited Discord / Telegram pop-up on app launch or tab changes; manual community links in Settings and optional onboarding buttons remain.

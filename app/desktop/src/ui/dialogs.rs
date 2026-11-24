@@ -30,6 +30,7 @@ impl App {
         let mut done = false;
         let heading = match &dialog {
             Dialog::PickPlaylist(..) => "Add to playlist",
+            Dialog::PickSpotifyPlaylist { .. } => "Add to Spotify",
             Dialog::NewPlaylist { .. } => "New playlist",
             Dialog::EditPlaylist { .. } => "Edit playlist",
             Dialog::ConfirmDelete { .. } => "Delete playlist",
@@ -73,6 +74,56 @@ impl App {
                                 }
                             }
                         });
+                    }
+                    Dialog::PickSpotifyPlaylist { tracks, query } => {
+                        use crate::transfer::{Account, spotify::Source};
+                        let account = self.transfer.account.lock().unwrap().clone();
+                        match account {
+                            Account::SignedIn { library, .. } => {
+                                text_field(ui, "", query, false, "Search Spotify playlists");
+                                ui.add_space(10.0);
+                                egui::ScrollArea::vertical().max_height(340.0).auto_shrink([false, true]).show(ui, |ui| {
+                                    let liked = library.iter().filter(|e| e.source == Source::Liked);
+                                    let playlists = library.iter().filter(|e| e.source != Source::Liked);
+                                    let mut shown = 0;
+                                    for entry in liked.chain(playlists) {
+                                        if !title_matches(&entry.name, query) { continue; }
+                                        let is_liked = entry.source == Source::Liked;
+                                        let label = if is_liked { "Liked Songs".to_owned() } else { entry.name.clone() };
+                                        let glyph = if is_liked { theme::icon::HEART } else { theme::icon::LIST_MUSIC };
+                                        if dialog_row(ui, None, Some(glyph), &label) {
+                                            let playlist_id = match &entry.source {
+                                                Source::Liked => None,
+                                                Source::Playlist(id) => Some(id.clone()),
+                                            };
+                                            for track in tracks.iter().cloned() {
+                                                self.backend.request(Req::SpotifySave { track, playlist_id: playlist_id.clone() });
+                                            }
+                                            done = true;
+                                        }
+                                        shown += 1;
+                                    }
+                                    if shown == 0 {
+                                        ui.label(egui::RichText::new("No matching playlists").font(theme::regular(13.0)).color(theme::text_dim()));
+                                    }
+                                });
+                            }
+                            Account::Loading | Account::Unknown => {
+                                ui.label(egui::RichText::new("Loading your Spotify playlists…").font(theme::regular(14.0)).color(theme::text_dim()));
+                                ui.add_space(24.0);
+                                done = done_button(ui);
+                            }
+                            Account::SignedOut => {
+                                ui.label(egui::RichText::new("Sign in to Spotify in Settings › Import first").font(theme::regular(14.0)).color(theme::text_dim()));
+                                ui.add_space(24.0);
+                                done = done_button(ui);
+                            }
+                            Account::Failed(error) => {
+                                ui.label(egui::RichText::new(error).font(theme::regular(14.0)).color(theme::text_dim()));
+                                ui.add_space(24.0);
+                                done = done_button(ui);
+                            }
+                        }
                     }
                     Dialog::NewPlaylist { title, tracks } => {
                         let name = text_field(ui, "Name", title, false, "My playlist");

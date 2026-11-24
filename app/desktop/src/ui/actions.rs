@@ -140,6 +140,14 @@ impl App {
                 if self.logged_in || self.create_playlists_locally || !self.local_playlists.is_empty() { self.dialog = Some(Dialog::PickPlaylist(tracks, String::new())); }
                 else { self.toast("Sign in to edit playlists"); }
             }
+            Action::AddToSpotify(tracks) => {
+                if crate::transfer::saved_cookie(&self.backend.data_dir()).is_none() {
+                    self.toast("Sign in to Spotify in Settings › Import first");
+                    return;
+                }
+                self.transfer.ensure_account(&self.backend);
+                self.dialog = Some(Dialog::PickSpotifyPlaylist { tracks, query: String::new() });
+            }
             Action::RemoveFromPlaylist(mut rows) => {
                 let Some(playlist_id) = self.current_collection().filter(|c| c.owned && !c.is_album).map(|c| c.id.clone()) else { return };
                 rows.sort_unstable();

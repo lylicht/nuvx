@@ -57,6 +57,8 @@ pub enum Req {
     Collaboration(String),
     SetCollaboration { info: ytm::Collaboration, change: ytm::CollabChange },
     SaveCollection { id: String, save: bool },
+    /// Save a nuvx song to Spotify; `playlist_id: None` means Liked Songs.
+    SpotifySave { track: Track, playlist_id: Option<String> },
     SetCookie(String),
     Logout,
 }
@@ -110,6 +112,7 @@ impl Req {
             Req::Collaboration(_) => "Loading collaboration",
             Req::SetCollaboration { .. } => "Collaboration",
             Req::SaveCollection { .. } => "Save to library",
+            Req::SpotifySave { .. } => "Save to Spotify",
             Req::SetCookie(_) => "Sign in",
             Req::Logout => "Sign out",
         }
@@ -239,6 +242,7 @@ pub enum Resp {
     LikedMany { video_ids: Vec<String>, failed: Vec<String>, like: bool },
     PlaylistCreated { id: String, songs: usize },
     PlaylistChanged { id: String, message: &'static str },
+    SpotifySaved { message: String },
     Collaboration(ytm::Collaboration),
     PlayError { generation: u64, msg: String },
     AudioInfo { generation: u64, info: crate::hires::Info },

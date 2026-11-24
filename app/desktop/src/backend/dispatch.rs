@@ -304,6 +304,32 @@ impl Backend {
                     ytm::save_collection(api, &id, save).await?;
                     Resp::PlaylistChanged { id, message: if save { "Saved to library" } else { "Removed from library" } }
                 }
+                Req::SpotifySave { track, playlist_id } => {
+                    let Some(cookie) = crate::transfer::saved_cookie(&self.data_dir) else {
+                        anyhow::bail!("Sign in to Spotify in Settings › Import first");
+                    };
+                    let client = crate::transfer::spotify::Client::connect(Some(&cookie), &self.data_dir).await?;
+                    let title = track.title.trim();
+                    anyhow::ensure!(!title.is_empty(), "That song has no title");
+                    let artist = track.artists.first().map(|a| a.name.trim()).filter(|a| !a.is_empty()).unwrap_or_default();
+                    let query = if artist.is_empty() { title.to_owned() } else { format!("{title} {artist}") };
+                    let results = client.search_tracks(&query).await?;
+                    let Some(spotify_id) = pick_spotify_track(&results, &track) else {
+                        anyhow::bail!("Spotify couldn't find “{}”", track.title);
+                    };
+                    let ids = vec![spotify_id];
+                    let message = match playlist_id {
+                        Some(playlist_id) => {
+                            client.add_to_playlist(&playlist_id, &ids).await?;
+                            "Added to a Spotify playlist".to_owned()
+                        }
+                        None => {
+                            client.save_tracks(&ids).await?;
+                            "Added to Liked Songs on Spotify".to_owned()
+                        }
+                    };
+                    Resp::SpotifySaved { message }
+                }
                 Req::SetCookie(input) => {
                     self.set_cookie(&input).await?;
                     *self.premium.lock().await = Err(None);
@@ -323,6 +349,24 @@ impl Backend {
             (!quiet).then(|| Resp::Error(format!("{what} failed: {e}")))
         })
     }
+}
+
+/// Prefers a search result whose title and first artist agree with the nuvx song.
+fn pick_spotify_track(results: &[crate::transfer::spotify::SpotifySearchTrack], track: &crate::model::Track) -> Option<String> {
+    let norm = |s: &str| s.trim().to_lowercase();
+    let wanted_title = norm(&track.title);
+    let wanted_artist = track.artists.first().map_or_else(String::new, |a| norm(&a.name));
+    let matches = |t: &crate::transfer::spotify::SpotifySearchTrack| {
+        let name = norm(&t.name);
+        let title_ok = name == wanted_title || name.contains(&wanted_title) || wanted_title.contains(&name);
+        let artist_ok = wanted_artist.is_empty()
+            || t.artists.iter().any(|a| {
+                let artist = norm(a);
+                artist.contains(&wanted_artist) || wanted_artist.contains(&artist)
+            });
+        title_ok && artist_ok
+    };
+    results.iter().find(|t| matches(t)).or_else(|| results.first()).map(|t| t.id.clone())
 }
 
 /// A network failure worth one more try; anything else (unavailable, age-restricted, decode) is final.

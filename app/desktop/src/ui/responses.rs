@@ -466,6 +466,7 @@ impl App {
                 self.go(Page::Playlist(id));
             }
             Resp::PlaylistChanged { id, message } => self.on_playlist_changed(id, message),
+            Resp::SpotifySaved { message } => self.toast(message),
             Resp::Collaboration(c) => {
                 if let Some(Dialog::Collaborate { id, info, busy, .. }) = &mut self.dialog
                     && *id == c.playlist_id
