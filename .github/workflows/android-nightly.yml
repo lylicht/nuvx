@@ -213,6 +213,7 @@ jobs:
       - uses: android-actions/setup-android@v4.0.4
       - name: Install Android SDK packages
         run: sdkmanager "platforms;android-37.0" "build-tools;37.0.0" "ndk;30.0.16248370" "cmake;3.22.1"
+      - uses: ./.github/actions/setup-rust-android
       - name: Build and verify signed APKs
         env:
           NUVX_KEYSTORE_BASE64: ${{ secrets.NUVX_KEYSTORE_BASE64 }}
@@ -249,6 +250,10 @@ jobs:
                   out.write(f"{name}={escaped}\n")
           PY
           unset NUVX_KEYSTORE_BASE64 NUVX_KEYSTORE_PASSWORD NUVX_KEY_ALIAS NUVX_KEY_PASSWORD
+          # The APK ships core/rust/nuvx-ffi: bundle its Cargo notices with the other licenses.
+          python3 scripts/cargo_notices.py --manifest core/rust/nuvx-ffi/Cargo.toml \
+            --targets aarch64-linux-android,armv7-linux-androideabi,i686-linux-android,x86_64-linux-android \
+            --output app/android/legal-assets/licenses/cargo-notices.txt
           bash gradlew :app:testProdDebugUnitTest \
             :app:assembleProdRelease :tv:assembleProdTvRelease :tv:assembleProdAutoRelease :wearos:assembleProdRelease \
             -Pnuvx.androidVersionCode="$code" -Pnuvx.androidVersionName="$version" -Pnuvx.nightlySuffix="$suffix" \

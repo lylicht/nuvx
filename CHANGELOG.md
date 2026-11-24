@@ -6,6 +6,20 @@ Every nuvx release, newest first. Downloads and checksums are on each version's 
 
 ## Unreleased
 
+- **Community invitations are no longer automatic** on Android and iOS: remove the unsolicited Discord / Telegram pop-up on app launch or tab changes; manual community links in Settings and optional onboarding buttons remain.
+- **1.0.4 in-place update:** Android release version code 6 and iOS build 6 upgrade prior installed versions with the same package and bundle identifiers. Keep existing signed Android release pipeline.
+
+- **Desktop recap cards in Library**: this month, last month, this year, last year and all time, with minutes, plays,
+  top song and top artist, like Android's Replay cards. Plays are counted on this computer only; click a card to play
+  that period's most played songs.
+- **Desktop mini player window and corner snapping**: a mini player button next to the favourite star in the player bar
+  opens the mini player in its own small window beside the main one (it keeps working with the main window minimized),
+  and the mini player snaps to any corner of the screen (Settings → Window → Mini player corner, or the corner button on
+  the mini player itself).
+- **Android pop-ups are opaque**: menus and player pop-ups no longer show the page through them.
+- **Earlier versions of nuvx playlists** (Android): every change to a nuvx playlist keeps the state before it (the last 10).
+  Playlist menu → Earlier versions lists them with their time and song count; tap one to put it back, and Undo returns
+  to the state you had.
 - **Build security:** use patched Guava for Android Gradle Plugin and Wear OS, and declare Media3's compile-only annotations explicitly. Thanks @vantom0101 for flagging the remaining Dependabot alert.
 - **Desktop Light Theme lyrics:** made lyric text readable. Thanks @vantom0101 for reporting #349.
 - **Playback reliability:** clear stale Smart Fade markers, retry unavailable Loop Mix lyrics, preserve cancellation, and test crossfade phase policies. Thanks @vantom0101 for #341 and #343–#345.

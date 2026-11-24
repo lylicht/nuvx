@@ -350,6 +350,16 @@ internal class MainPlaylistController(
         }
     }
 
+    /** Puts nuvx playlist [playlist] back to an earlier version and updates the open page. */
+    fun restoreVersion(playlist: UserPlaylist, index: Int): Boolean {
+        val restored = com.licht.nuvx.data.spotify.LocalPlaylistStore.restoreVersion(playlist.playlistId, index) ?: return false
+        setPlaylistTitle(playlist, restored.title)
+        _detailStack.value = _detailStack.value.map { page ->
+            if (page.browseId == playlist.browseId) page.copy(songs = UiState.Success(withArtwork(restored.songs, page.thumbnailUrl))) else page
+        }
+        return true
+    }
+
     /** Renames [playlist]; returns an undo that gives it its old name back, or null when nothing changed. */
     fun renamePlaylist(playlist: UserPlaylist, title: String): (() -> Unit)? {
         val name = title.trim()

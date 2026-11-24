@@ -221,13 +221,13 @@ mod tests {
         let font = FontId::proportional(20.0);
         let line = |text: &str| line_synced_parts(&Line { start: 0, dur: 1000, text: text.into(), ..Default::default() }).iter().flat_map(split_part).collect::<Vec<_>>();
         let x = |f: &Flow, word: &str| f.words.iter().find(|w| w.text == word).unwrap().pos.x;
-        let f = flow(&mut fv, line("שלום עולם hello world"), &font, 1000.0, 27.0, Align::Right, true);
+        let f = flow(&mut fv, line("שלום עולם hello world"), &font, 1000.0, 27.0, Align::Right, true, false);
         assert!(x(&f, "שלום") > x(&f, "עולם"));
         assert!(x(&f, "עולם") > x(&f, "world"));
         assert!(x(&f, "world") > x(&f, "hello"));
-        let f = flow(&mut fv, line("my song שלום עולם remix"), &font, 1000.0, 27.0, Align::Left, false);
+        let f = flow(&mut fv, line("my song שלום עולם remix"), &font, 1000.0, 27.0, Align::Left, false, false);
         assert!(x(&f, "song") < x(&f, "עולם") && x(&f, "עולם") < x(&f, "שלום") && x(&f, "שלום") < x(&f, "remix"));
-        let f = flow(&mut fv, line(&"word ".repeat(40)), &font, 300.0, 27.0, Align::Left, false);
+        let f = flow(&mut fv, line(&"word ".repeat(40)), &font, 300.0, 27.0, Align::Left, false, false);
         assert!(f.height > 27.0 && f.words.iter().all(|w| w.pos.x + w.w <= 300.0 + 0.5));
     }
 
@@ -293,7 +293,7 @@ mod tests {
         let lh = 30.0 * 1.333;
         let toks = line_synced_parts(&Line { start: 0, dur: 1000, text: lyric.into(), ..Default::default() }).iter().flat_map(split_part).collect();
         let (words, galleys) = ctx.fonts_mut(|f| {
-            let fl = flow(f, toks, &font, width, lh, Align::Left, false);
+            let fl = flow(f, toks, &font, width, lh, Align::Left, false, false);
             let gs: Vec<Arc<Galley>> = fl.words.iter().map(|w| f.layout_no_wrap(w.text.clone(), font.clone(), Color32::WHITE)).collect();
             (fl.words, gs)
         });
@@ -363,7 +363,7 @@ mod tests {
                 at.x += w + space;
             }
             let toks = line_synced_parts(&Line { start: 0, dur: 1000, text: lyric.into(), ..Default::default() }).iter().flat_map(split_part).collect();
-            let fl = flow(f, toks, &lyric_font, width, 30.0 * 1.333, Align::Right, true);
+            let fl = flow(f, toks, &lyric_font, width, 30.0 * 1.333, Align::Right, true, false);
             for w in fl.words {
                 draw.push((pos2(30.0 + col, y) + w.pos.to_vec2(), f.layout_no_wrap(w.text.clone(), lyric_font.clone(), Color32::WHITE)));
             }

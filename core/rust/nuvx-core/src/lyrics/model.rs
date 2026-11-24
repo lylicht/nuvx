@@ -130,6 +130,10 @@ pub struct Line {
     pub text: String,
     pub parts: Vec<Part>,
     pub agent: Option<String>,
+    /// Sits on the right (a second singer, or an LRC "<R>" line).
+    pub right: bool,
+    /// Touching timed parts join into words even without spaces in the line (TTML marks spaces explicitly).
+    pub explicit_spacing: bool,
     pub instrumental: bool,
     pub translations: Vec<(String, String)>,
     pub romanization: Option<String>,

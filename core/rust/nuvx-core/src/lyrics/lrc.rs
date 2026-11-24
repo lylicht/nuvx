@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 use super::credits::{dedup, is_credit_line, split_names, writers_on};
 use super::model::{Line, Part};
+use super::timeline::{MIN_GAP_MS, gap};
 
 fn lrc_time(t: &str) -> i32 {
     let p: Vec<&str> = t.split(':').collect();
@@ -102,9 +103,16 @@ pub fn parse_lrc(text: &str, song_ms: i32) -> Vec<Line> {
         if ls.is_empty() {
             continue;
         }
-        let times: Vec<i32> = ls.iter().map(|(_, t)| lrc_time(t)).collect();
-        let (c, u) = (*times.iter().min().unwrap(), *times.iter().max().unwrap());
+        let mut times: Vec<i32> = ls.iter().map(|(_, t)| lrc_time(t)).collect();
+        times.sort_unstable();
+        times.dedup();
+        let c = times[0];
         let g = remove_ranges(a, &ls).trim().to_owned();
+        // "<R>" puts a line on the right, like a second singer (Android's LrcLib does the same).
+        let (g, right) = match g.strip_prefix("<R>") {
+            Some(rest) => (rest.to_owned(), true),
+            None => (g, false),
+        };
         let (main, bg) = match g.rfind("[bg:") {
             Some(i) if g[i..].trim_end().ends_with(']') => {
                 let inner = g[i + 4..].trim_end();
@@ -158,14 +166,26 @@ pub fn parse_lrc(text: &str, song_ms: i32) -> Vec<Line> {
         if is_credit_line(&plain) {
             continue;
         }
-        lines.push(Line {
-            start: c,
-            dur: u - c,
-            text: b.trim().to_owned(),
-            parts,
-            ..Default::default()
-        });
+        // A line with several timestamps is sung at each of them (core/contracts/lyrics-lrc.json).
+        for &t in &times {
+            let shift = t - c;
+            lines.push(Line {
+                start: t,
+                dur: 0,
+                text: b.trim().to_owned(),
+                parts: parts
+                    .iter()
+                    .map(|p| Part {
+                        start: p.start + shift,
+                        ..p.clone()
+                    })
+                    .collect(),
+                right,
+                ..Default::default()
+            });
+        }
     }
+    lines.sort_by_key(|l| l.start);
     let n = lines.len();
     for l in 0..n {
         if l + 1 < n {
@@ -179,8 +199,8 @@ pub fn parse_lrc(text: &str, song_ms: i32) -> Vec<Line> {
                 for f in &a.parts {
                     c = c.max(f.start);
                 }
-                let last = a.parts.last_mut().unwrap();
-                last.dur = (next_start - last.start).max(0);
+                // The last word has no end stamp: it ends where it starts, like Android (lights up at once).
+                a.parts.last_mut().unwrap().dur = 0;
                 a.dur = (c - a.start).max(0);
             }
         } else {
@@ -189,16 +209,11 @@ pub fn parse_lrc(text: &str, song_ms: i32) -> Vec<Line> {
             if a.dur == 0 && i > 0 {
                 a.dur = i;
             }
-            if let Some(last) = a.parts.last_mut() {
-                let u = song_ms - last.start;
-                if u > 0 {
-                    last.dur = u;
-                }
-            }
         }
     }
     if let Some(off) = meta.get("offset") {
-        let off = (off.trim().parse::<f64>().unwrap_or(0.0) * 1000.0) as i32;
+        // LRC offsets are milliseconds; a positive one shows the lyrics sooner.
+        let off = off.trim().parse::<f64>().unwrap_or(0.0) as i32;
         for a in &mut lines {
             a.start -= off;
             for p in &mut a.parts {
@@ -206,7 +221,33 @@ pub fn parse_lrc(text: &str, song_ms: i32) -> Vec<Line> {
             }
         }
     }
-    lines
+    line_synced_gaps(lines)
+}
+
+/// Android's gap rule for LRC (core/contracts/lyrics-gaps.json): a blank line stays, as a gap, only when the next
+/// line is 4 s or more after it; a gap at 0 when the first line is not blank and starts 4 s in or later.
+fn line_synced_gaps(lines: Vec<Line>) -> Vec<Line> {
+    let mut out: Vec<Line> = Vec::with_capacity(lines.len() + 1);
+    for (i, l) in lines.iter().enumerate() {
+        let mut l = l.clone();
+        if l.text.is_empty() {
+            if lines
+                .get(i + 1)
+                .is_some_and(|n| n.start - l.start < MIN_GAP_MS)
+            {
+                continue;
+            }
+            l.instrumental = true;
+        }
+        out.push(l);
+    }
+    if let Some(first) = out.first()
+        && !first.instrumental
+        && first.start >= MIN_GAP_MS
+    {
+        out.insert(0, gap(0, first.start));
+    }
+    out
 }
 
 pub fn lrc_fixers(lines: &mut [Line]) {
@@ -304,4 +345,46 @@ pub fn parse_plain(text: &str) -> Vec<Line> {
             ..Default::default()
         })
         .collect()
+}
+
+#[cfg(test)]
+mod lrc_marker_tests {
+    #[test]
+    fn offset_is_in_milliseconds() {
+        let l = super::parse_lrc("[offset:+500]\n[00:01.00]one\n[00:02.00]two", 10_000);
+        assert_eq!((l[0].start, l[1].start), (500, 1500));
+    }
+
+    #[test]
+    fn right_marker_aligns_the_line_and_is_not_shown() {
+        let l = super::parse_lrc("[00:01.00]<R>right side\n[00:03.00]left", 10_000);
+        assert_eq!(l[0].text, "right side");
+        assert!(l[0].right);
+        assert!(l[0].parts.is_empty());
+        assert!(!l[1].right);
+    }
+}
+
+#[cfg(test)]
+mod lrc_contract_tests {
+    #[test]
+    fn agrees_with_the_shared_lrc_cases() {
+        let doc: serde_json::Value =
+            serde_json::from_str(include_str!("../../../../contracts/lyrics-lrc.json")).unwrap();
+        for c in doc["cases"].as_array().unwrap() {
+            // Song length 0, as Android passes it.
+            let got: Vec<serde_json::Value> = super::parse_lrc(c["lrc"].as_str().unwrap(), 0)
+                .iter()
+                .map(|l| {
+                    let words: Vec<serde_json::Value> = super::super::words::line_words(l, false)
+                        .into_iter()
+                        .map(|w| serde_json::json!([w.text, w.start, w.end]))
+                        .collect();
+                    let align = if l.right { "end" } else { "start" };
+                    serde_json::json!([l.start, l.text, align, words])
+                })
+                .collect();
+            assert_eq!(&serde_json::Value::Array(got), &c["lines"], "{}", c["name"]);
+        }
+    }
 }

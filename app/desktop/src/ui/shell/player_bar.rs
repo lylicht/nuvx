@@ -161,7 +161,8 @@ pub fn player_bar(app: &mut App, ui: &mut Ui, now: f64) {
     ui.painter().rect_stroke(lcd, R, egui::Stroke::new(1.0 / ctx.pixels_per_point(), edge), egui::StrokeKind::Inside);
     let cover = Rect::from_min_size(lcd.min, Vec2::splat(lcd.height()));
     let star_x = lcd.right() - 18.0;
-    let (text_l, text_r) = (cover.right() + 10.0, star_x - 16.0);
+    let mini_x = star_x - 26.0;
+    let (text_l, text_r) = (cover.right() + 10.0, mini_x - 16.0);
     let text_w = (text_r - text_l).max(20.0);
     let tcx = (text_l + text_r) / 2.0;
 
@@ -283,6 +284,18 @@ pub fn player_bar(app: &mut App, ui: &mut Ui, now: f64) {
         && let Some(t) = heard
     {
         app.actions.push(Action::Like(t, !liked));
+    }
+
+    let m = Rect::from_center_size(pos2(mini_x, cy - 2.0), Vec2::splat(24.0));
+    let m = ui.interact(m, ui.scope_id().with("bar-mini"), Sense::click());
+    let open = app.mini.window;
+    let m = named(m, if open { "Close mini player" } else { "Mini player" })
+        .on_hover_text(if open { "Close the mini player window" } else { "Open the mini player in its own window" })
+        .on_hover_cursor(egui::CursorIcon::PointingHand);
+    let mh = theme::anim_bool(&ctx, m.id.with("h"), m.hovered(), 0.15);
+    glyphs::draw(ui, m.rect.center(), 15.0, glyphs::MINI_PLAYER, if open { accent } else { ink(mh) });
+    if m.clicked() {
+        app.mini.window = !open;
     }
 
     if total > 0.0

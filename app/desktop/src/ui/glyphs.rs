@@ -20,6 +20,7 @@ pub const VIDEO: Glyph = include_str!("../../assets/icon/glyphs/video.svg");
 pub const MUSIC_NOTE: Glyph = include_str!("../../assets/icon/glyphs/music_note.svg");
 pub const PODCAST: Glyph = include_str!("../../assets/icon/glyphs/podcast.svg");
 pub const MAXIMIZE_2: Glyph = include_str!("../../assets/icon/glyphs/maximize2.svg");
+pub const MINI_PLAYER: Glyph = include_str!("../../assets/icon/glyphs/miniplayer.svg");
 pub const VOLUME: [Glyph; 4] = [
     include_str!("../../assets/icon/glyphs/volume_0.svg"),
     include_str!("../../assets/icon/glyphs/volume_1.svg"),

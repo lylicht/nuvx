@@ -1,0 +1,18 @@
+{
+  "about": "Where lyrics show an instrumental gap. Android's behaviour, chosen by the owner on 2026-11-22. Timed lines (TTML, QRC, word-synced): a gap at 0 when the first line starts 4 s in or later; a gap at a line's sung end (its last word, or its end without words, extended by background vocals) when that end is known and 4 s or more pass before the next line; never one at the end of the song. Line-synced LRC: a blank line stays (as a gap) only when the next line is 4 s or more after it; a gap at 0 when the first line is not blank and starts 4 s in or later. Rust nuvx-core::lyrics (timeline, lrc) and Android (LyricGaps.kt withInstrumentalGaps, LrcLib.parseLrc) must agree. end null means the end is unknown.",
+  "timed": [
+    { "name": "a short intro gets no gap", "lines": [{ "start": 1000, "end": 3000, "text": "a" }, { "start": 4000, "end": 6000, "text": "b" }], "gaps": [] },
+    { "name": "an intro of 4 s gets a gap at 0", "lines": [{ "start": 4000, "end": 6000, "text": "a" }], "gaps": [0] },
+    { "name": "a 4 s break gets a gap at the line's end", "lines": [{ "start": 1000, "end": 3000, "text": "a" }, { "start": 7000, "end": 9000, "text": "b" }], "gaps": [3000] },
+    { "name": "a break just under 4 s gets none", "lines": [{ "start": 1000, "end": 3000, "text": "a" }, { "start": 6999, "end": 8000, "text": "b" }], "gaps": [] },
+    { "name": "no gap after a line whose end is unknown", "lines": [{ "start": 1000, "end": null, "text": "a" }, { "start": 9000, "end": 10000, "text": "b" }], "gaps": [] },
+    { "name": "background vocals move the gap to where they end", "lines": [{ "start": 1000, "end": 3000, "backgroundEnd": 3500, "text": "a" }, { "start": 8000, "end": 9000, "text": "b" }], "gaps": [3500] },
+    { "name": "no gap at the end of the song", "lines": [{ "start": 1000, "end": 3000, "text": "a" }], "gaps": [] }
+  ],
+  "lrc": [
+    { "name": "a blank line before a 4 s break stays, and a late first line gets an intro gap", "lrc": "[00:05.00]one\n[00:08.00]\n[00:12.00]two", "lines": [[0, ""], [5000, "one"], [8000, ""], [12000, "two"]] },
+    { "name": "a blank line before a short break is dropped", "lrc": "[00:01.00]one\n[00:03.00]\n[00:05.00]two", "lines": [[1000, "one"], [5000, "two"]] },
+    { "name": "a closing blank line stays", "lrc": "[00:01.00]one\n[00:03.00]", "lines": [[1000, "one"], [3000, ""]] },
+    { "name": "no intro gap before a first line under 4 s", "lrc": "[00:03.99]one\n[00:06.00]two", "lines": [[3990, "one"], [6000, "two"]] }
+  ]
+}

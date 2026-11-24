@@ -146,7 +146,9 @@ fn ttml_parts(node: roxmltree::Node, line_start: i32) -> (Vec<Part>, String, boo
                 if t.is_empty() {
                     continue;
                 }
-                s.push_str(t);
+                if !bg {
+                    s.push_str(t);
+                }
                 let start = e.last().map_or(line_start, |p| p.start + p.dur);
                 e.push(Part {
                     start,
@@ -155,6 +157,10 @@ fn ttml_parts(node: roxmltree::Node, line_start: i32) -> (Vec<Part>, String, boo
                     bg,
                 });
             } else if m.is_element() && m.tag_name().name() == "span" {
+                // Inline translations and romanizations are not sung text (Android skips them too).
+                if matches!(attr(m, "role"), Some("x-translation" | "x-roman")) {
+                    continue;
+                }
                 let p = span_text(m);
                 if p.is_empty() {
                     continue;
@@ -167,7 +173,9 @@ fn ttml_parts(node: roxmltree::Node, line_start: i32) -> (Vec<Part>, String, boo
                     text: p.clone(),
                     bg,
                 });
-                s.push_str(&p);
+                if !bg {
+                    s.push_str(&p);
+                }
                 timed = true;
             }
         }
@@ -178,7 +186,12 @@ fn ttml_parts(node: roxmltree::Node, line_start: i32) -> (Vec<Part>, String, boo
     (e, s, timed)
 }
 
-pub fn parse_ttml(text: &str, song_ms: i32) -> Ttml {
+/// Until when a TTML line without timed words is sung (its end), for apps that track line ends.
+pub fn sung_until(l: &Line) -> Option<i32> {
+    (!l.instrumental && !l.parts.iter().any(|p| !p.bg) && l.dur > 0).then(|| l.end())
+}
+
+pub fn parse_ttml(text: &str) -> Ttml {
     let empty = |language| Ttml {
         lines: vec![],
         word_synced: false,
@@ -215,12 +228,19 @@ pub fn parse_ttml(text: &str, song_ms: i32) -> Ttml {
         let mut k = 0;
         for a in m.children().filter(|n| n.tag_name().name() == "agent") {
             let Some(id) = attr(a, "id") else { continue };
-            let kind = attr(a, "type").unwrap_or_default();
-            if kind == "person" || kind == "character" {
-                k += 1;
-                agents.insert(id.to_owned(), format!("v{k}"));
-            } else {
-                agents.insert(id.to_owned(), "v1000".to_owned());
+            // Android's singer types: a group, another voice, or (any other type) a person; untyped keeps its id.
+            match attr(a, "type").unwrap_or_default() {
+                "" => {}
+                "group" => {
+                    agents.insert(id.to_owned(), "v1000".to_owned());
+                }
+                "other" => {
+                    agents.insert(id.to_owned(), "v2000".to_owned());
+                }
+                _ => {
+                    k += 1;
+                    agents.insert(id.to_owned(), format!("v{k}"));
+                }
             }
         }
     }
@@ -239,9 +259,18 @@ pub fn parse_ttml(text: &str, song_ms: i32) -> Ttml {
         let Some(begin) = attr(p, "begin") else {
             continue;
         };
-        let start = ttml_time(begin);
+        let begin = ttml_time(begin);
         let end = ttml_time(attr(p, "end").unwrap_or_default());
-        let (parts, text, timed) = ttml_parts(p, start);
+        let (parts, text, timed) = ttml_parts(p, begin);
+        let text = text.split_whitespace().collect::<Vec<_>>().join(" ");
+        if text.trim().is_empty() && parts.is_empty() {
+            continue;
+        }
+        let start = parts
+            .iter()
+            .filter(|p| !p.bg)
+            .map(|p| p.start)
+            .fold(begin, i32::min);
         word_synced |= timed;
         let agent =
             attr(p, "agent").map(|a| agents.get(a).cloned().unwrap_or_else(|| a.to_owned()));
@@ -254,6 +283,7 @@ pub fn parse_ttml(text: &str, song_ms: i32) -> Ttml {
             text,
             parts,
             agent,
+            explicit_spacing: true,
             ..Default::default()
         });
     }
@@ -312,7 +342,6 @@ pub fn parse_ttml(text: &str, song_ms: i32) -> Ttml {
             }
         }
     }
-    let song = attr(body, "dur").map(ttml_time).unwrap_or(song_ms);
     let songwriters = {
         let mut n = Vec::new();
         if let Some(m) = head_meta {
@@ -337,10 +366,41 @@ pub fn parse_ttml(text: &str, song_ms: i32) -> Ttml {
         }
         dedup(n)
     };
+    lines.sort_by_key(|l| l.start);
+    super::sides::assign_sides(&mut lines);
     Ttml {
-        lines: insert_instrumentals(lines, song),
+        lines: insert_instrumentals(lines),
         word_synced,
         language,
         songwriters,
+    }
+}
+
+#[cfg(test)]
+mod ttml_contract_tests {
+    #[test]
+    fn agrees_with_the_shared_ttml_cases() {
+        use super::super::words::line_words;
+        let doc: serde_json::Value =
+            serde_json::from_str(include_str!("../../../../contracts/lyrics-ttml.json")).unwrap();
+        for c in doc["cases"].as_array().unwrap() {
+            let got: Vec<serde_json::Value> = super::parse_ttml(c["ttml"].as_str().unwrap())
+                .lines
+                .iter()
+                .map(|l| {
+                    let words: Vec<_> = line_words(l, false)
+                        .into_iter()
+                        .map(|w| serde_json::json!([w.text, w.start, w.end, w.syllables.len()]))
+                        .collect();
+                    let bg: Vec<_> =
+                        line_words(l, true).into_iter().map(|w| serde_json::json!([w.text, w.start, w.end])).collect();
+                    serde_json::json!({
+                        "start": l.start, "text": l.text, "align": if l.right { "end" } else { "start" },
+                        "words": words, "background": bg, "sungUntil": super::sung_until(l),
+                    })
+                })
+                .collect();
+            assert_eq!(&serde_json::Value::Array(got), &c["lines"], "{}", c["name"]);
+        }
     }
 }

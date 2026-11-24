@@ -37,8 +37,58 @@ fn card_row(ui: &mut Ui, c: &Card, acts: &mut Vec<Action>) {
     }
 }
 
+/// Recap cards (like Android's Replay cards in Library): what was played this month, last month, this year and so on.
+/// Clicking one plays that period's most played songs.
+fn recap_row(app: &mut App, ui: &mut Ui) {
+    use egui::{Align2, Sense, pos2};
+    let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map_or(0, |d| d.as_secs());
+    let recaps = crate::listening::recaps(now);
+    if recaps.is_empty() {
+        return;
+    }
+    ui.add_space(14.0);
+    egui::ScrollArea::horizontal().id_salt("recaps").scroll_bar_visibility(egui::scroll_area::ScrollBarVisibility::AlwaysHidden).show(ui, |ui| {
+        ui.horizontal(|ui| {
+            ui.spacing_mut().item_spacing.x = 12.0;
+            for r in &recaps {
+                let (rect, resp) = ui.allocate_exact_size(vec2(300.0, 180.0), Sense::click());
+                let resp = widgets::named(resp, &format!("{} recap", r.label)).on_hover_cursor(egui::CursorIcon::PointingHand);
+                if !ui.is_rect_visible(rect) {
+                    continue;
+                }
+                let h = theme::anim_bool(ui.ctx(), resp.id.with("h"), resp.hovered(), 0.18);
+                let top = &r.top[0];
+                let thumbs = r.tracks(1).pop().map(|t| t.thumbs).unwrap_or_default();
+                widgets::paint_cover(ui, rect, &thumbs, 18.0, 1.15 + 0.05 * h);
+                ui.painter().rect_filled(rect, 18.0, theme::shade(0.58 - 0.08 * h));
+                ui.painter().rect_stroke(rect, 18.0, egui::Stroke::new(1.0, theme::glass(0.16)), egui::StrokeKind::Inside);
+                let pad = 18.0;
+                let w = rect.width() - 2.0 * pad;
+                let white = egui::Color32::WHITE;
+                let dim = theme::with_alpha(white, 0.72);
+                ui.painter().text(pos2(rect.left() + pad, rect.top() + pad), Align2::LEFT_TOP, r.label.to_uppercase(), theme::semibold(11.5), dim);
+                ui.painter().text(pos2(rect.right() - pad, rect.top() + pad), Align2::RIGHT_TOP, "nuvx", theme::semibold(12.0), dim);
+                let minutes = r.ms / 60_000;
+                let big = if minutes >= 1_000 { format!("{},{:03} min", minutes / 1_000, minutes % 1_000) } else { format!("{minutes} min") };
+                ui.painter().text(pos2(rect.left() + pad, rect.top() + 44.0), Align2::LEFT_TOP, big, theme::semibold(30.0), white);
+                let plays = if r.plays == 1 { "1 play".to_owned() } else { format!("{} plays", r.plays) };
+                widgets::text_at(ui, pos2(rect.left() + pad, rect.top() + 84.0), &plays, theme::regular(13.0), dim, w);
+                widgets::text_at(ui, pos2(rect.left() + pad, rect.bottom() - 58.0), &format!("Top song  {}", top.1.title), theme::semibold(13.5), white, w);
+                if let Some(a) = &r.top_artist {
+                    widgets::text_at(ui, pos2(rect.left() + pad, rect.bottom() - 36.0), &format!("Top artist  {a}"), theme::regular(13.0), dim, w);
+                }
+                if resp.clicked() {
+                    app.actions.push(Action::Play(r.tracks(50), 0));
+                }
+            }
+        });
+    });    ui.add_space(6.0);
+}
+
 pub(super) fn library(app: &mut App, ui: &mut Ui, tab: LibTab, now: f64) {
     page_title(ui, "Library");
+    // Recaps come from this computer's own history, so they show signed out too.
+    recap_row(app, ui);
     if !app.logged_in && (tab != LibTab::Playlists || (!app.create_playlists_locally && app.local_playlists.is_empty())) {
         ui.add_space(10.0);
         ui.label(RichText::new("Sign in to see your playlists, liked songs and history.").color(theme::text_dim()));

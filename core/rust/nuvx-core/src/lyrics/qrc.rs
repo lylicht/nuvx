@@ -276,7 +276,7 @@ pub fn parse_qrc(text: &str, song_ms: i32, meta: Option<(&str, &str)>) -> Vec<Li
         return vec![];
     }
     let n = r.len();
-    let lines = (0..n)
+    let mut lines: Vec<Line> = (0..n)
         .map(|i| {
             let a = &r[i];
             let mut parts: Vec<Part> = a
@@ -314,7 +314,8 @@ pub fn parse_qrc(text: &str, song_ms: i32, meta: Option<(&str, &str)>) -> Vec<Li
             }
         })
         .collect();
-    insert_instrumentals(lines, song_ms)
+    super::sides::assign_sides(&mut lines);
+    insert_instrumentals(lines)
 }
 
 pub fn qrc_songwriters(text: &str) -> Vec<String> {

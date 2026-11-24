@@ -39,11 +39,14 @@ Never commit secrets, keystores, `local.properties` or `keystore.properties`.
 
 Each command runs from the repository root unless it says otherwise.
 
-- **Android** (needs the Android SDK; set `ANDROID_HOME` if there is no `local.properties`):
+- **Android** (needs the Android SDK and NDK, set `ANDROID_HOME` if there is no `local.properties`; the phone and TV apps also need Rust with
+  the four Android targets and cargo-ndk, see the README):
   `./gradlew :app:assembleDevDebug` builds the phone app (`com.licht.nuvx.dev`, which installs next to the real one),
   `./gradlew :app:testDevDebugUnitTest` runs its unit tests. TV and Wear: `:tv:compileDevTvDebugKotlin`, `:wearos:compileDevDebugKotlin`.
 - **Desktop**: `cd app/desktop && cargo test`. Run a test copy with its own data folder so it never touches your real settings: set `NUVX_DATA_DIR` to an empty folder first.
-- **Shared Rust core**: `cd core/rust/nuvx-core && cargo test && cargo clippy --all-targets -- -D warnings`.
+- **Shared Rust core**: `cd core/rust/nuvx-core && cargo test && cargo clippy --all-targets -- -D warnings`. Android reaches it through
+  `core/rust/nuvx-ffi` (UniFFI); `core/shared`'s Gradle build compiles that crate and its Kotlin bindings for every Android
+  app, and the unit tests call the real Rust.
 - **iOS engine**: `cd app/ios/native-core && cargo test --lib` (needs CMake for the Opus codec). The iPhone app itself builds in the *Apple builds* workflow.
 - **Web**: see [app/web/README.md](app/web/README.md#checks).
 - **Worker and Sync server**: `npm test` in `core/worker` and in `core/sync`.

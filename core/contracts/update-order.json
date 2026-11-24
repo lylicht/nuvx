@@ -10,6 +10,7 @@
     { "name": "an older stable of the same version is not newer", "candidate": ["1.0.0", "v1.0.0", "2026-11-17T09:00:00Z"], "current": ["1.0.0-nightly.5.1", "nightly.5.1", "2026-11-17T10:00:00Z"], "allowNightly": false, "newer": false },
     { "name": "a higher stable always wins", "candidate": ["1.1.0", "v1.1.0", "2026-11-17T09:00:00Z"], "current": ["1.0.0-nightly.5.1", "nightly.5.1", "2026-11-17T10:00:00Z"], "allowNightly": true, "newer": true },
     { "name": "a lower version never wins", "candidate": ["0.9.0", "v0.9.0", "2026-11-18T09:00:00Z"], "current": ["1.0.0", "v1.0.0", "2026-11-17T10:00:00Z"], "allowNightly": true, "newer": false },
-    { "name": "the installed release itself is not newer", "candidate": ["1.0.0", "v1.0.0", "2026-11-17T12:00:00Z"], "current": ["1.0.0", "v1.0.0", "2026-11-17T10:00:00Z"], "allowNightly": false, "newer": false }
+    { "name": "the installed release itself is not newer", "candidate": ["1.0.0", "v1.0.0", "2026-11-17T12:00:00Z"], "current": ["1.0.0", "v1.0.0", "2026-11-17T10:00:00Z"], "allowNightly": false, "newer": false },
+    { "name": "a build without a build time (local developer build) is not offered a same-version nightly", "candidate": ["1.0.0-nightly.6.1", "nightly.6.1", "2026-11-18T00:00:00Z"], "current": ["1.0.0", "v1.0.0", ""], "allowNightly": true, "newer": false }
   ]
 }

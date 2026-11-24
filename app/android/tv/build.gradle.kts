@@ -164,6 +164,8 @@ extensions.configure<ApplicationExtension> {
     }
     packaging {
         jniLibs.useLegacyPackaging = true
+        // JNA (nuvx-core bindings from :shared) ships natives for ABIs nuvx never built.
+        jniLibs.excludes += setOf("lib/armeabi/**", "lib/mips/**", "lib/mips64/**")
         resources {
             excludes += "META-INF/versions/9/OSGI-INF/MANIFEST.MF"
             merges += setOf("META-INF/LICENSE.md", "META-INF/LICENSE.txt", "META-INF/NOTICE.md")
@@ -210,7 +212,7 @@ dependencies {
     implementation(project(":sharedUi"))
     compileOnly("org.checkerframework:checker-qual:3.43.0")
 
-    val composeBom = platform("androidx.compose:compose-bom:2026.09.00")
+    val composeBom = platform("androidx.compose:compose-bom:2026.11.01")
     implementation(composeBom)
     implementation("androidx.compose.foundation:foundation:1.12.1")
     implementation("androidx.compose.ui:ui")
@@ -239,7 +241,7 @@ dependencies {
     implementation("androidx.media3:media3-exoplayer-hls:1.11.1")
     implementation("androidx.media3:media3-exoplayer-dash:1.11.1")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-guava:1.11.0")
-    implementation("com.google.guava:guava:33.7.2-android")
+    implementation("com.google.guava:guava:33.8.0-android")
 
     implementation("io.coil-kt.coil3:coil-compose:3.6.3")
     implementation("io.coil-kt.coil3:coil-network-okhttp:3.6.3")

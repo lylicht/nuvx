@@ -11,7 +11,7 @@ pub fn strip(app: &mut App, ui: &mut Ui, now: f64) {
     let ctx = ui.ctx().clone();
     let r = ctx.content_rect();
     if titlebar::drag_strip(ui, r, "mini").double_clicked() {
-        app.actions.push(Action::Mini(false));
+        leave(app, &ctx);
     }
     ui.painter().rect_filled(r, theme::thumb_radius() + 1.0, theme::panel(0.62));
 
@@ -53,15 +53,16 @@ pub fn strip(app: &mut App, ui: &mut Ui, now: f64) {
 
     let scope = ui.scope_id();
     let btn_id = move |key: &str| scope.with(("mini-btn", key));
-    let focused = ctx.memory(|m| m.focused()).is_some_and(|f| ["close", "full", "pin"].iter().any(|k| btn_id(k) == f));
+    let focused = ctx.memory(|m| m.focused()).is_some_and(|f| ["close", "full", "pin", "corner"].iter().any(|k| btn_id(k) == f));
     let over = ctx.input(|i| i.pointer.hover_pos()).is_some_and(|p| r.contains(p));
     let reveal = theme::anim_bool(&ctx, "mini-btns", over || focused, 0.15);
-    let count = if titlebar::custom() { 3.0 } else { 2.0 };
+    let closable = titlebar::custom() || app.mini.in_window;
+    let count = if closable { 4.0 } else { 3.0 };
     let backdrop = Rect::from_min_max(pos2(r.right() - 6.0 - 30.0 * count - 2.0, r.top() + 2.0), pos2(r.right() - 2.0, r.top() + 38.0));
     let pill = theme::lerp_color(super::super::shell::base_color(app), if theme::light() { Color32::WHITE } else { Color32::BLACK }, 0.55);
     ui.painter().rect_filled(backdrop, 9.0, pill.gamma_multiply(reveal));
     let mut bx = r.right() - 6.0;
-    let mut top_btn = |ui: &mut Ui, glyph: char, key: &str, name: &str, close: bool, on: bool| -> bool {
+    let mut top_btn = |ui: &mut Ui, glyph: char, key: &str, name: &str, close: bool, on: bool, pic: Option<glyphs::Glyph>| -> bool {
         let b = Rect::from_min_size(pos2(bx - 28.0, r.top() + 6.0), Vec2::splat(28.0));
         bx -= 30.0;
         let resp = ui.interact(b, btn_id(key), Sense::click());
@@ -74,24 +75,36 @@ pub fn strip(app: &mut App, ui: &mut Ui, now: f64) {
         }
         let idle = if on { theme::text() } else { theme::text_dim() };
         let fg = theme::lerp_color(idle, if close { Color32::WHITE } else { theme::text() }, h);
-        icon_at(ui, b.center(), glyph, if down { 13.0 } else { 14.0 }, fg.gamma_multiply(reveal));
+        match pic {
+            Some(g) => glyphs::draw(ui, b.center(), if down { 14.0 } else { 15.0 }, g, fg.gamma_multiply(reveal)),
+            None => icon_at(ui, b.center(), glyph, if down { 13.0 } else { 14.0 }, fg.gamma_multiply(reveal)),
+        }
         if resp.has_focus() {
             ui.painter().rect_stroke(b.shrink(1.0), 6.0, egui::Stroke::new(1.5, theme::text()), egui::StrokeKind::Inside);
         }
         resp.clicked() && (reveal > 0.5 || resp.has_focus())
     };
-    if titlebar::custom() && top_btn(ui, icon::X, "close", "Close", true, false) {
+    if closable && top_btn(ui, icon::X, "close", "Close", true, false, None) {
         match CLOSE {
+            _ if app.mini.in_window => app.mini.window = false,
             CloseButton::LikeFullWindow => ctx.send_viewport_cmd(ViewportCommand::Close),
             CloseButton::Expand => app.actions.push(Action::Mini(false)),
         }
     }
-    if top_btn(ui, icon::MAXIMIZE_2, "full", "Full window (Ctrl+M)", false, false) {
-        app.actions.push(Action::Mini(false));
+    if top_btn(ui, icon::MAXIMIZE_2, "full", "Full window (Ctrl+M)", false, false, None) {
+        leave(app, &ctx);
     }
     let pinned = app.mini.pinned;
-    if top_btn(ui, if pinned { icon::PIN } else { icon::PIN_OFF }, "pin", if pinned { "Stop keeping on top" } else { "Keep on top" }, false, pinned) {
+    if top_btn(ui, if pinned { icon::PIN } else { icon::PIN_OFF }, "pin", if pinned { "Stop keeping on top" } else { "Keep on top" }, false, pinned, None) {
         app.mini.set_pinned(&ctx, !pinned);
+    }
+    let picking = app.mini.picking_corner;
+    if top_btn(ui, ' ', "corner", "Snap to a corner", false, picking, Some(glyphs::MINI_PLAYER)) {
+        app.mini.picking_corner = !picking;
+    }
+    if app.mini.picking_corner {
+        corner_picker(app, ui, r);
+        return;
     }
 
     let cy = art.bottom() - 17.0;
@@ -214,6 +227,47 @@ pub fn strip(app: &mut App, ui: &mut Ui, now: f64) {
     }
 
     seek_line(app, ui, r, track.as_ref());
+}
+
+/// Back to the full window: closes the separate mini player window, or grows the main window back.
+fn leave(app: &mut App, ctx: &egui::Context) {
+    if app.mini.in_window {
+        app.mini.window = false;
+        ctx.send_viewport_cmd_to(egui::ViewportId::ROOT, ViewportCommand::Minimized(false));
+        ctx.send_viewport_cmd_to(egui::ViewportId::ROOT, ViewportCommand::Focus);
+    } else {
+        app.actions.push(Action::Mini(false));
+    }
+}
+
+/// Covers the strip with a small screen and its four corners; clicking one snaps the mini player there.
+fn corner_picker(app: &mut App, ui: &mut Ui, r: Rect) {
+    let ctx = ui.ctx().clone();
+    let k = theme::anim_bool(&ctx, "mini-corner-pick", true, 0.15);
+    let panel = Rect::from_min_max(pos2(r.left() + 2.0, r.top() + 40.0), pos2(r.right() - 2.0, r.bottom() - 2.0));
+    let bg = theme::lerp_color(super::super::shell::base_color(app), if theme::light() { Color32::WHITE } else { Color32::BLACK }, 0.35);
+    ui.painter().rect_filled(panel, theme::thumb_radius(), bg.gamma_multiply(k));
+    text_at(ui, pos2(panel.left() + 14.0, panel.center().y - 17.0), "Snap to a corner", theme::semibold(13.5), theme::text().gamma_multiply(k), 160.0);
+    text_at(ui, pos2(panel.left() + 14.0, panel.center().y + 2.0), app.mini.corner.name(), theme::regular(12.5), theme::text_dim().gamma_multiply(k), 160.0);
+    let screen = Rect::from_center_size(pos2(panel.right() - 64.0, panel.center().y), vec2(96.0, 54.0));
+    ui.painter().rect_stroke(screen, 6.0, egui::Stroke::new(1.5, theme::text_dim().gamma_multiply(k)), egui::StrokeKind::Inside);
+    for c in super::Corner::ALL {
+        let x = if matches!(c, super::Corner::TopLeft | super::Corner::BottomLeft) { screen.left() + 5.0 } else { screen.right() - 5.0 - 34.0 };
+        let y = if matches!(c, super::Corner::TopLeft | super::Corner::TopRight) { screen.top() + 5.0 } else { screen.bottom() - 5.0 - 14.0 };
+        let spot = Rect::from_min_size(pos2(x, y), vec2(34.0, 14.0));
+        let resp = ui.interact(spot.expand(3.0), ui.scope_id().with(("mini-corner", c.name())), Sense::click());
+        let resp = named(resp, c.name()).on_hover_text(c.name()).on_hover_cursor(egui::CursorIcon::PointingHand);
+        let h = theme::anim_bool(&ctx, resp.id.with("h"), resp.hovered(), 0.12);
+        let on = app.mini.corner == c;
+        let fill = if on { app.accent_color() } else { theme::glass(0.14 + 0.16 * h) };
+        ui.painter().rect_filled(spot, 3.0, fill.gamma_multiply(k));
+        if resp.clicked() {
+            app.mini.snap(&ctx, c);
+        }
+    }
+    if ctx.input(|i| i.key_pressed(egui::Key::Escape)) {
+        app.mini.picking_corner = false;
+    }
 }
 
 fn seek_line(app: &mut App, ui: &mut Ui, r: Rect, track: Option<&crate::model::Track>) {

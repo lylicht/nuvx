@@ -1,0 +1,15 @@
+name: Rust for Android
+description: Rust Android targets and cargo-ndk, so Gradle can build core/rust/nuvx-ffi into the Android app.
+runs:
+  using: composite
+  steps:
+    - uses: dtolnay/rust-toolchain@stable
+      with:
+        targets: aarch64-linux-android,armv7-linux-androideabi,i686-linux-android,x86_64-linux-android
+    - uses: Swatinem/rust-cache@v2
+      with:
+        workspaces: core/rust/nuvx-ffi
+        key: android
+    - name: Install cargo-ndk
+      shell: bash
+      run: cargo ndk --version 2>/dev/null | grep -q '4.1.2' || cargo install cargo-ndk --version 4.1.2 --locked
