@@ -1534,4 +1534,26 @@
     <string name="nuvx_host_remove">Hapus</string>
     <string name="nuvx_host_remote_title">Izinkan kendali jarak jauh</string>
     <string name="nuvx_host_remote_subtitle">Ponsel berpasangan bisa memutar lewat ponsel ini dengan tombol speaker</string>
+
+
+    <string name="add_to_spotify">Add to Spotify</string>
+    <string name="spotify_playlists">Spotify playlists</string>
+    <string name="spotify_liked_songs">Liked Songs</string>
+    <string name="spotify_playlists_loading">Loading Spotify playlists…</string>
+    <string name="spotify_playlists_empty">No Spotify playlists found</string>
+    <string name="spotify_playlists_failed">Unable to load Spotify playlists</string>
+    <string name="spotify_track_not_found">Song not found on Spotify</string>
+    <string name="spotify_added">Added to Spotify</string>
+    <string name="spotify_add_failed">Unable to add to Spotify</string>
+    <string name="earlier_versions">Earlier versions</string>
+    <string name="playlist_version_restored">Earlier version restored</string>
+    <string name="delete_local_songs_failed">Couldn’t delete some songs. Try again.</string>
+    <plurals name="playlist_version">
+        <item quantity="one">%1$s · %2$d song</item>
+        <item quantity="other">%1$s · %2$d songs</item>
+    </plurals>
+    <plurals name="delete_local_songs_confirmation">
+        <item quantity="one">Delete this song from your device? This cannot be undone.</item>
+        <item quantity="other">Delete %1$d songs from your device? This cannot be undone.</item>
+    </plurals>
 </resources>

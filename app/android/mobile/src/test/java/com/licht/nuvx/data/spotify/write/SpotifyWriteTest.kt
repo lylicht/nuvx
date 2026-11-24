@@ -90,7 +90,7 @@ class SpotifyWriteTest {
 
         val request = server.takeRequest()
         assertEquals("PUT", request.method)
-        assertEquals("/v1/me/tracks", request.path)
+        assertEquals("/v1/me/tracks", request.requestUrl?.encodedPath)
         assertEquals("t1,t2", request.requestUrl?.queryParameter("ids"))
         assertEquals("{}", request.body.readUtf8())
     }
