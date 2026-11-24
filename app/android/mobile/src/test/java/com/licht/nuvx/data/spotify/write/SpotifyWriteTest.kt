@@ -66,13 +66,13 @@ class SpotifyWriteTest {
     }
 
     @Test
-    fun addsToPlaylistWithPut() = runBlocking {
+    fun addsToPlaylistWithPost() = runBlocking {
         server.enqueue(MockResponse().setResponseCode(200).setBody("{}"))
 
         assertEquals(2, SpotifyWrite.addToPlaylist("p1", listOf("t1", "t2")))
 
         val request = server.takeRequest()
-        assertEquals("PUT", request.method)
+        assertEquals("POST", request.method)
         assertEquals("/v1/playlists/p1/tracks", request.path)
         assertEquals("Bearer test-token", request.getHeader("Authorization"))
         val body = Json.parseToJsonElement(request.body.readUtf8()).jsonObject

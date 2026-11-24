@@ -335,12 +335,12 @@ object SpotifyImport {
 
     /** Spotify's web-player token has the write scopes, so the public Web API
      * can be used without a second OAuth flow (issue #369). */
-    private suspend fun write(url: String, body: String?): Boolean {
+    private suspend fun write(url: String, method: String, body: String?): Boolean {
         val token = SpotifyToken.accessToken()
             ?: error("Add your Spotify sp_dc cookie in Settings › Spotify Canvas first.")
         val response = Http.requestRaw(
             url,
-            "PUT",
+            method,
             body,
             mapOf(
                 "Authorization" to "Bearer $token",
@@ -380,7 +380,8 @@ object SpotifyImport {
         if (uris.isEmpty()) return
         for (batch in uris.chunked(100)) {
             val body = buildJsonObject { put("uris", JsonArray(batch.map(::JsonPrimitive))) }.toString()
-            if (!write("$API/playlists/$playlistId/tracks", body)) error("Spotify could not add the songs.")
+            // POST appends; PUT would replace the playlist's existing items.
+            if (!write("$API/playlists/$playlistId/tracks", "POST", body)) error("Spotify could not add the songs.")
         }
     }
 
@@ -389,7 +390,7 @@ object SpotifyImport {
         if (ids.isEmpty()) return
         for (batch in ids.chunked(50)) {
             val url = "$API/me/tracks?ids=${batch.joinToString(",")}"
-            if (!write(url, null)) error("Spotify could not save the songs.")
+            if (!write(url, "PUT", null)) error("Spotify could not save the songs.")
         }
     }
 

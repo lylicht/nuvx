@@ -3391,8 +3391,11 @@ internal fun NuvxApp(
                         scope.launch {
                             var failed = false
                             targets.forEach { song ->
-                                if (LocalMediaRepository.delete(context, song)) OfflinePlaylists.removeSong(song)
-                                else failed = true
+                                if (LocalMediaRepository.delete(context, song)) {
+                                    OfflinePlaylists.removeSong(song)
+                                    // Download-backed rows appear in local:all with their download id as videoId.
+                                    if (Downloads.saved.value.containsKey(song.videoId)) Downloads.delete(context, song.videoId)
+                                } else failed = true
                             }
                             if (failed) Toast.makeText(context, R.string.delete_local_songs_failed, Toast.LENGTH_SHORT).show()
                             viewModel.reloadLocalDetail("local:all")

@@ -130,5 +130,6 @@ export async function spotifyTrackId(track: Pick<Track, 'videoId' | 'title' | 'a
     })),
     target,
   );
-  return pick?.id ?? hits[0]?.id ?? null;
+  // Never write an unmatched search result to someone's library or playlist.
+  return pick?.id ?? null;
 }

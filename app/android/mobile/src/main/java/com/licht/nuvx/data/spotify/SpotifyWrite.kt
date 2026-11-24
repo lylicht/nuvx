@@ -89,7 +89,6 @@ object SpotifyWrite {
             if (tracks.isEmpty()) continue
             val best = TrackMatcher.best(tracks.map { it.asCandidate() }, target)
             val id = best?.videoId?.takeIf(::isValidTrackId)
-                ?: tracks.firstOrNull()?.id?.takeIf(::isValidTrackId)
             if (id != null) return id
         }
         return null
@@ -109,7 +108,8 @@ object SpotifyWrite {
             val (code, _) = execute { token ->
                 Request.Builder()
                     .url(url)
-                    .put(body.toRequestBody(mediaType))
+                    // POST appends; PUT would replace the playlist's existing items.
+                    .post(body.toRequestBody(mediaType))
                     .authorized(token)
                     .build()
             } ?: continue

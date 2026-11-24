@@ -499,7 +499,7 @@ async function write(path: string, init: RequestInit, retried = false): Promise<
   const bearer = await accessToken();
   const response = await fetch(`${API}${path}`, {
     ...init,
-    method: 'PUT',
+    method: init.method ?? 'PUT',
     headers: {
       Authorization: `Bearer ${bearer.token}`,
       Accept: 'application/json',
@@ -524,7 +524,8 @@ export async function addToPlaylist(playlistId: string, trackIds: string[]): Pro
   const uris = trackUris(trackIds);
   if (!uris.length) return 0;
   for (let offset = 0; offset < uris.length; offset += 100) {
-    await write(`/playlists/${encodeURIComponent(playlistId)}/tracks`, { body: JSON.stringify({ uris: uris.slice(offset, offset + 100) }) });
+    // POST appends; PUT would replace the playlist's existing items.
+    await write(`/playlists/${encodeURIComponent(playlistId)}/tracks`, { method: 'POST', body: JSON.stringify({ uris: uris.slice(offset, offset + 100) }) });
   }
   return uris.length;
 }

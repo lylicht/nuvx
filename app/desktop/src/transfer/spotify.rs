@@ -294,7 +294,8 @@ impl Client {
             let uris: Vec<String> = batch.iter().map(|id| format!("spotify:track:{id}")).collect();
             let resp = self
                 .http
-                .put(format!("https://api.spotify.com/v1/playlists/{playlist_id}/tracks"))
+                // POST appends; PUT would replace the playlist's existing items.
+                .post(format!("https://api.spotify.com/v1/playlists/{playlist_id}/tracks"))
                 .bearer_auth(&self.access_token)
                 .header("Accept", "application/json")
                 .header("User-Agent", UA)
