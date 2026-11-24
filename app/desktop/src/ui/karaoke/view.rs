@@ -372,13 +372,12 @@ impl View {
                 .iter()
                 .enumerate()
                 .map(|(i, l)| {
-                    let agent = if l.instrumental { nearest_agent(lyrics, i) } else { l.agent.clone() };
                     let roman = f.roman.get(i).and_then(|r| r.as_ref()).map(|r| match r {
                         Roman::Timed(p, t) => Roman::Timed(p, t),
                         Roman::Text(t) => Roman::Text(t),
                     });
                     let trans = f.trans.get(i).copied().flatten();
-                    build_block(fonts, cfg, l, i, width, roman, trans, agent.as_deref())
+                    build_block(fonts, cfg, l, i, width, roman, trans)
                 })
                 .collect()
         });
@@ -441,6 +440,3 @@ fn same_lines(l: &Layout, blocks: &[Block]) -> bool {
     l.blocks.iter().zip(blocks).all(|(a, b)| a.line == b.line && a.start == b.start && a.words.len() == b.words.len())
 }
 
-fn nearest_agent(l: &Lyrics, i: usize) -> Option<String> {
-    l.lines[i + 1..].iter().chain(l.lines[..i].iter().rev()).find(|x| !x.instrumental && x.agent.is_some()).and_then(|x| x.agent.clone())
-}

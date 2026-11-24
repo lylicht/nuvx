@@ -36,6 +36,7 @@ fun Modifier.liveMenuFrost(state: HazeState, fill: Color): Modifier =
 
 private const val LIVE_FROST_INPUT_SCALE = 0.10f
 
-const val MENU_FROST_ALPHA = 0.80f
+// Pop-ups are opaque: frost behind a menu made its text hard to read over busy pages.
+const val MENU_FROST_ALPHA = 1f
 
 val MenuFrostDark = Color(0xFF1C1C1E)

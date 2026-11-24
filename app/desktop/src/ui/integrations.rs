@@ -96,6 +96,23 @@ impl App {
         }
     }
 
+    /// Counts the playing song in the recap cards once it has played as long as a scrobble needs.
+    pub(super) fn record_listening(&mut self) {
+        if self.listened == Some(self.generation) || !self.playing() || self.buffering {
+            return;
+        }
+        let Some(t) = self.playing_track().filter(|t| !crate::radio::is_station(&t.id)) else { return };
+        let pos = self.audio.status.position();
+        let dur = Duration::from_millis(self.audio.status.duration_ms.load(Ordering::Relaxed));
+        if dur >= Duration::from_secs(30) && pos >= (dur / 2).min(Duration::from_secs(240)) {
+            let t = t.clone();
+            self.listened = Some(self.generation);
+            let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap_or_default().as_secs();
+            // shortcut: counts the whole song's length as listened; track real play time if recaps need exact minutes.
+            crate::listening::record(&t, dur.as_millis() as u64, now);
+        }
+    }
+
     pub(super) fn lastfm_sign_in(&mut self) {
         if self.lastfm_busy.swap(true, Ordering::Relaxed) {
             return;

@@ -863,6 +863,12 @@
     <string name="pin">Pin</string>
     <string name="unpin">Unpin</string>
     <string name="rename">Rename</string>
+    <string name="earlier_versions">Earlier versions</string>
+    <string name="playlist_version_restored">Earlier version restored</string>
+    <plurals name="playlist_version">
+        <item quantity="one">%1$s · %2$d song</item>
+        <item quantity="other">%1$s · %2$d songs</item>
+    </plurals>
     <string name="downloading">Downloading</string>
     <string name="delete_playlist">Delete playlist</string>
     <string name="delete_download">Delete download</string>

@@ -21,6 +21,7 @@ impl App {
         crate::downloads::init(backend.data_dir(), &get("download_dir").unwrap_or_default());
         crate::downloads::set_limit_gb(get("download_limit_gb").and_then(|v| v.parse().ok()).filter(|g| crate::downloads::LIMIT_CHOICES.contains(g)).unwrap_or(0));
         crate::lastfm::init(backend.data_dir());
+        crate::listening::init(backend.data_dir());
         let logged_in = backend.is_logged_in();
         backend.set_high_quality(get("high_quality").is_none_or(|v| v == "1"));
         let hires_source = get("hires_source").unwrap_or_default();
@@ -53,6 +54,7 @@ impl App {
             lastfm_busy: Default::default(),
             lastfm_result: Default::default(),
             scrobble: None,
+            listened: None,
             resume_at: None,
             resume_counts: false,
             listened_at: 0,

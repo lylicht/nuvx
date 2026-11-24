@@ -7,6 +7,9 @@ import android.os.Build
 import android.provider.Settings
 import androidx.core.content.FileProvider
 import com.licht.nuvx.BuildConfig
+import com.licht.nuvx.core.compareReleaseOrder
+import com.licht.nuvx.core.releaseIsNewer
+import com.licht.nuvx.core.isOldBuild as coreIsOldBuild
 import com.licht.nuvx.data.settings.AppSettings
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -202,11 +205,9 @@ object AppUpdateChecker {
 
 }
 
-// Releases from before the licht line stay on GitHub as pre-releases named "old". They are other apps
-// with other package IDs and higher version numbers, so no updater may ever offer them.
-internal fun isOldBuild(name: String?, tag: String, prerelease: Boolean): Boolean =
-    name?.contains(Regex("\\bold\\b", RegexOption.IGNORE_CASE)) == true ||
-        prerelease && !tag.startsWith("nightly.")
+// Release rules live in nuvx-core (core/rust/nuvx-core/src/release.rs), shared with the desktop updater and pinned
+// by core/contracts/update-order.json. Pre-licht releases ("old" pre-releases) are never offered.
+internal fun isOldBuild(name: String?, tag: String, prerelease: Boolean): Boolean = coreIsOldBuild(name, tag, prerelease)
 
 // The best release to offer: a stable release beats any nightly, then the higher version, then the later nightly build.
 internal fun selectUpdate(
@@ -217,23 +218,7 @@ internal fun selectUpdate(
     allowNightly: Boolean,
 ): AppUpdateChecker.ReleaseCandidate? = candidates
     .filter { isNewerRelease(it.version, it.tag, it.publishedAt, currentVersion, currentTag, currentBuildTime, allowNightly) }
-    .maxWithOrNull(
-        compareBy<AppUpdateChecker.ReleaseCandidate> { it.tag.startsWith("v") }
-            .thenComparator { a, b -> compareCore(a.version, b.version) }
-            .thenBy { nightlyBuild(it.tag)?.first ?: 0L }
-            .thenBy { nightlyBuild(it.tag)?.second ?: 0L }
-            .thenBy { it.publishedAt },
-    )
-
-private fun compareCore(a: String, b: String): Int {
-    val left = a.substringBefore('-').split('.').map { it.toLongOrNull() ?: 0L }
-    val right = b.substringBefore('-').split('.').map { it.toLongOrNull() ?: 0L }
-    for (index in 0 until maxOf(left.size, right.size)) {
-        val order = left.getOrElse(index) { 0L }.compareTo(right.getOrElse(index) { 0L })
-        if (order != 0) return order
-    }
-    return 0
-}
+    .maxWithOrNull { a, b -> compareReleaseOrder(a.version, a.tag, a.publishedAt, b.version, b.tag, b.publishedAt) }
 
 internal fun isNewerRelease(
     candidateVersion: String,
@@ -243,38 +228,15 @@ internal fun isNewerRelease(
     currentTag: String,
     currentBuildTime: String,
     allowNightly: Boolean = currentTag.startsWith("nightly."),
-): Boolean {
-    if (candidateTag.startsWith("nightly.") && !allowNightly) return false
-    val candidateParts = candidateVersion.substringBefore('-').split('.').map { it.toLongOrNull() ?: 0L }
-    val currentParts = currentVersion.substringBefore('-').split('.').map { it.toLongOrNull() ?: 0L }
-    for (index in 0 until maxOf(candidateParts.size, currentParts.size)) {
-        val candidate = candidateParts.getOrElse(index) { 0L }
-        val current = currentParts.getOrElse(index) { 0L }
-        if (candidate != current) return candidate > current
-    }
-    if (currentTag.startsWith("nightly.")) {
-        // Stable -> nightly -> nightly 2 -> stable 2: the stable build of the version these nightlies led up to
-        // comes next, with nightlies on or off.
-        if (!candidateTag.startsWith("nightly.")) return currentBuildTime.isNotEmpty() && candidatePublishedAt > currentBuildTime
-        val candidateBuild = nightlyBuild(candidateTag) ?: return false
-        val currentBuild = nightlyBuild(currentTag) ?: return false
-        return candidateBuild.first > currentBuild.first ||
-            candidateBuild.first == currentBuild.first && candidateBuild.second > currentBuild.second
-    }
-    return candidateTag != currentTag && (currentBuildTime.isEmpty() || candidatePublishedAt > currentBuildTime)
-}
+): Boolean = releaseIsNewer(
+    candidateVersion, candidateTag, candidatePublishedAt, currentVersion, currentTag, currentBuildTime, allowNightly,
+)
 
 internal fun versionFromApkAsset(name: String, prefix: String): String? {
     if (!name.startsWith(prefix, ignoreCase = true)) return null
     val suffix = name.drop(prefix.length).removeSuffix(".apk").removeSuffix(".APK")
     return Regex("^\\d+\\.\\d+\\.\\d+(?:-nightly\\.\\d+\\.\\d+)?(?=-|$)")
         .find(suffix)?.value
-}
-
-private fun nightlyBuild(tag: String): Pair<Long, Long>? {
-    val parts = tag.removePrefix("nightly.").split('.')
-    if (parts.size != 2) return null
-    return (parts[0].toLongOrNull() ?: return null) to (parts[1].toLongOrNull() ?: return null)
 }
 
 internal fun selectApkAssetUrl(

@@ -3410,6 +3410,24 @@ internal fun NuvxApp(
                         playlistArtworkPicker.launch(arrayOf("image/*"))
                     }
                 },
+                versions = playlist?.takeIf { it.browseId.startsWith("local:playlist:") }
+                    ?.let { com.licht.nuvx.data.spotify.LocalPlaylistStore.versions(it.playlistId) }
+                    .orEmpty(),
+                onRestoreVersion = playlist?.takeIf { it.browseId.startsWith("local:playlist:") }?.let { p ->
+                    { index: Int ->
+                        browseActions = null
+                        if (viewModel.restorePlaylistVersion(p, index)) {
+                            scope.launch {
+                                val result = snackbars.showSnackbar(
+                                    message = context.getString(R.string.playlist_version_restored),
+                                    actionLabel = context.getString(R.string.undo),
+                                )
+                                // The state just replaced is now the newest version.
+                                if (result == SnackbarResult.ActionPerformed) viewModel.restorePlaylistVersion(p, 0)
+                            }
+                        }
+                    }
+                },
                 onReorder = playlist?.let { p ->
                     {
                         browseActions = null

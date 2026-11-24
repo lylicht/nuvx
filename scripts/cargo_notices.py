@@ -155,7 +155,7 @@ def cell(value):
 
 def render_notices(target_packages, license_texts, package_notices, notices=None):
     lines = [
-        "# Nuvx desktop Cargo dependency notices",
+        "# Nuvx Cargo dependency notices",
         "",
         "Generated from the locked Cargo dependency graph for each listed target. Cargo license expressions, authors, and repositories are reproduced as package metadata; Cargo authors are not asserted to be copyright holders. Package license, notice, and copyright files are reproduced from the resolved crate source when present. An empty source notice file list means none was found in the package root or its LICENSES directory; declared SPDX texts appear below. SPDX texts use SPDX License List Data v3.29.0; the Ubuntu font text comes from the repository's epaint font notice.",
         "",
@@ -193,9 +193,13 @@ def render_notices(target_packages, license_texts, package_notices, notices=None
 
 
 def main():
+    global MANIFEST, TARGETS
     parser = argparse.ArgumentParser()
     parser.add_argument("--output", type=Path, default=ROOT / "app" / "desktop" / "assets" / "licenses" / "cargo-notices.txt")
+    parser.add_argument("--manifest", type=Path, default=MANIFEST, help="Cargo.toml of the shipped crate")
+    parser.add_argument("--targets", default=",".join(TARGETS), help="comma-separated Rust targets it ships for")
     args = parser.parse_args()
+    MANIFEST, TARGETS = args.manifest.resolve(), tuple(args.targets.split(","))
     subprocess.run(["cargo", "fetch", "--locked", "--manifest-path", str(MANIFEST)], check=True)
     target_packages = {target: collect_target_packages(target) for target in TARGETS}
     notices, package_notice_ids, license_texts = collect_notices(target_packages)

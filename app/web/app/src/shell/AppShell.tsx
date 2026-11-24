@@ -180,15 +180,6 @@ export function AppShell() {
       <div className="relative min-h-0 overflow-hidden">
         <Sidebar />
         <MobileTopBar />
-        <a
-          href="https://guns.lol/lylicht"
-          target="_blank"
-          rel="noopener noreferrer"
-          aria-label="licht on Guns.lol"
-          className="absolute top-4 right-5 z-[calc(var(--z-web-chrome)-2)] block max-sm:right-3.5"
-        >
-          <img src="/licht-signature.png" width="92" height="30" alt="licht" className="app-licht-signature" />
-        </a>
         <main
           id="scrollable-page"
           tabIndex={-1}

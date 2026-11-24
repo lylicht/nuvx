@@ -144,25 +144,10 @@ fun Modifier.iosMenuPanel(
     rimOverride: Color? = null,
     castsShadow: Boolean = true,
 ): Modifier {
-    val reduceDynamicBlur by AppSettings.reduceDynamicBlur.collectAsStateWithLifecycle()
-    val plain by AppSettings.disableBlendEffects.collectAsStateWithLifecycle()
-    val blurs = translucent && !reduceDynamicBlur
-    val backdropFrost = blurs && backdrop != null && isGlassSupported()
-    val hazeFrost = blurs && !backdropFrost && hazeState != null
-    val fill = fillOverride ?: if (backdropFrost || hazeFrost) {
-        colors.fill.copy(alpha = if (!colors.dark) 0.72f else if (plain) 0.80f else 0.60f)
-    } else {
-        colors.fill
-    }
+    // Pop-ups are always opaque (no frost or see-through fill), so menus stay readable on any page.
+    val fill = (fillOverride ?: colors.fill).copy(alpha = 1f)
     val shadowed = if (castsShadow) iosMenuShadow() else this
-    val surface = if (hazeFrost) {
-        val style = remember(colors, fill) { menuFrost(colors.fill, alpha = fill.alpha) }
-        shadowed.clip(IosMenuShape).optimizedHazeEffect(state = hazeState, style = style)
-    } else if (backdropFrost) {
-        shadowed.menuBackdropFrost(backdrop, IosMenuShape, fill)
-    } else {
-        shadowed.clip(IosMenuShape).background(fill)
-    }
+    val surface = shadowed.clip(IosMenuShape).background(fill)
     return surface
         .clip(IosMenuShape)
         .border(0.5.dp, rimOverride ?: colors.rim, IosMenuShape)

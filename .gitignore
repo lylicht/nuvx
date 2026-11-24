@@ -65,3 +65,4 @@ keystore.properties
 
 # Local release/emulator scratch (signing keys, AVDs, logs)
 /work/
+/app/android/legal-assets/licenses/cargo-notices.txt

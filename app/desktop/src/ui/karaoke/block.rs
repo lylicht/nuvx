@@ -1,14 +1,16 @@
 use super::*;
 
 #[allow(clippy::too_many_arguments)]
-pub(super) fn build_block(fonts: &mut FontsView<'_>, cfg: &Cfg, l: &Line, index: usize, width: f32, roman: Option<Roman>, trans: Option<&str>, agent: Option<&str>) -> Block {
+pub(super) fn build_block(fonts: &mut FontsView<'_>, cfg: &Cfg, l: &Line, index: usize, width: f32, roman: Option<Roman>, trans: Option<&str>) -> Block {
     let em = cfg.size;
     let rtl = crate::bidi::rtl_base(&l.text);
-    let align = match agent {
-        Some("v2" | "v3") => Align::Right,
-        Some("v1000") => Align::Center,
-        _ if cfg.centered => Align::Center,
-        _ => Align::Left,
+    // Sides come from nuvx-core (Android's rule, core/contracts/lyrics-ttml.json); gaps sit on the left like Android.
+    let align = if l.right {
+        Align::Right
+    } else if cfg.centered {
+        Align::Center
+    } else {
+        Align::Left
     };
     let align = match align {
         Align::Left if rtl => Align::Right,
@@ -41,7 +43,7 @@ pub(super) fn build_block(fonts: &mut FontsView<'_>, cfg: &Cfg, l: &Line, index:
     let (main, bg): (Vec<Tok>, Vec<Tok>) = toks.into_iter().partition(|t| !t.bg);
     let joined = |toks: &[Tok]| toks.iter().map(|t| t.text.as_str()).collect::<String>();
     let font = cfg.main_font(&joined(&main));
-    let f = flow(fonts, main, &font, content_w, line_h, align, rtl);
+    let f = flow(fonts, main, &font, content_w, line_h, align, rtl, l.explicit_spacing);
     for w in f.words {
         block.words.push(Word { pos: w.pos + vec2(0.0, y), ..w });
     }
@@ -52,7 +54,7 @@ pub(super) fn build_block(fonts: &mut FontsView<'_>, cfg: &Cfg, l: &Line, index:
         let base = block.words.len();
         let g0 = block.groups.len();
         let font = cfg.bg_font(&joined(&bg));
-        let f = flow(fonts, bg, &font, content_w, line_h, align, rtl);
+        let f = flow(fonts, bg, &font, content_w, line_h, align, rtl, l.explicit_spacing);
         for w in f.words {
             block.words.push(Word { pos: w.pos + vec2(0.0, y), group: w.group + g0, ..w });
         }
@@ -69,7 +71,7 @@ pub(super) fn build_block(fonts: &mut FontsView<'_>, cfg: &Cfg, l: &Line, index:
                 let toks: Vec<Tok> = parts.iter().flat_map(split_part).collect();
                 let font = cfg.roman_font(text);
                 let lh = fonts.row_height(&font);
-                let f = flow(fonts, toks, &font, inner_w, lh, Align::Left, false);
+                let f = flow(fonts, toks, &font, inner_w, lh, Align::Left, false, false);
                 (DecoBody::Timed { words: f.words, groups: f.groups }, vec2(f.width, f.height))
             }
             Roman::Text(t) => {

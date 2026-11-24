@@ -11,6 +11,9 @@ on:
       - "core/shared/**"
       - "core/sharedUi/**"
       - "core/contracts/**"
+      - "core/rust/nuvx-core/**"
+      - "core/rust/nuvx-ffi/**"
+      - ".github/actions/setup-rust-android/**"
       - "core/sync/fixtures/**"
       - "core/sync/src/**"
       - "core/third_party/maven/**"
@@ -50,6 +53,7 @@ jobs:
       - uses: android-actions/setup-android@v4.0.4
       - name: Install Android SDK packages
         run: sdkmanager "platforms;android-37.0" "build-tools;37.0.0" "ndk;30.0.16248370" "cmake;3.22.1"
+      - uses: ./.github/actions/setup-rust-android
       - name: Unit tests (phone app, shared, shared UI)
         run: bash gradlew :app:testProdDebugUnitTest :shared:jvmTest :sharedUi:jvmTest
       - name: Upload test reports on failure

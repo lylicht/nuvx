@@ -84,7 +84,10 @@ jobs:
       if: matrix.language == 'swift'
       with:
         xcode-version: latest-stable
-    - uses: actions/setup-java@v5
+    # The Android app build (java-kotlin autobuild) compiles core/rust/nuvx-ffi with cargo-ndk.
+    - uses: ./.github/actions/setup-rust-android
+      if: matrix.language == 'java-kotlin'
+    - uses: actions/setup-java@v6
       if: matrix.language == 'swift'
       with:
         distribution: temurin

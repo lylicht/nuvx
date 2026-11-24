@@ -10,3 +10,4 @@ app/android/mobile/src/main/java/androidx/media3/decoder/ffmpeg/*.java,Java,main
 core/shared/**,Kotlin Multiplatform,main,1.5.1,no,n/a,n/a,models/repositories,NOT_APPLICABLE,n/a,hand-written golden vectors + UniFFI,no Kotlin bridge
 core/apple/** app/ios/**,Swift,main,1.5.1,no,n/a,n/a,iOS app,NOT_APPLICABLE,n/a,hand-written golden vectors + C ABI,no Swift bridge
 app/desktop/**,Rust,main,n/a,n/a,n/a,n/a,desktop app,NOT_APPLICABLE,n/a,cargo test,already Rust; consolidate into the core instead
+core/rust/nuvx-ffi (Android bridge),Kotlin,main,n/a,no (rust-anything has no Kotlin bridge),yes,none,loudness gain export,UNIFFI_KOTLIN,PASS,JVM contract test through host lib + emulator instrumented test,core/contracts/loudness-gain.json,hand-written UniFFI exports; generated Kotlin is rebuilt by Gradle from the .so

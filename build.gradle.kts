@@ -3,13 +3,13 @@ buildscript {
         classpath("com.android.tools.build:gradle:9.5.2") {
             exclude(group = "com.google.guava", module = "guava")
         }
-        classpath("com.google.guava:guava:33.7.2-jre")
+        classpath("com.google.guava:guava:33.8.0-android")
     }
 
     configurations.classpath {
         // shortcut: force AGP 9.5.2's other vulnerable transitives; remove when a stable AGP release updates them.
         resolutionStrategy.force(
-            "org.apache.commons:commons-lang3:3.18.0",
+            "org.apache.commons:commons-lang3:3.22.0",
             "org.apache.httpcomponents:httpclient:4.5.14",
             "org.apache.httpcomponents:httpmime:4.5.14",
             "org.bouncycastle:bcpkix-jdk18on:1.87",
@@ -21,7 +21,7 @@ buildscript {
     }
 }
 
-extra["nuvxVersionCode"] = providers.gradleProperty("nuvx.nightlyBaseCode").map(String::toInt).getOrElse(5)
+extra["nuvxVersionCode"] = providers.gradleProperty("nuvx.nightlyBaseCode").map(String::toInt).getOrElse(6)
 extra["nuvxVersionName"] = providers.gradleProperty("nuvx.nightlyBaseName").getOrElse("1.0.4")
 
 extra["nuvxBetaSuffix"] = providers.gradleProperty("nuvx.nightlySuffix").getOrElse("")
@@ -38,7 +38,7 @@ plugins {
 allprojects {
     configurations.configureEach {
         resolutionStrategy.force(
-            "org.apache.commons:commons-lang3:3.18.0",
+            "org.apache.commons:commons-lang3:3.22.0",
             "org.apache.httpcomponents:httpclient:4.5.14",
             "org.apache.httpcomponents:httpmime:4.5.14",
             "org.bouncycastle:bcpkix-jdk18on:1.87",

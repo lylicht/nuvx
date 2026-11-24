@@ -1,0 +1,87 @@
+# Independent rebuild: decisions
+
+Each decision: what, why, what it costs, who decided. Newest last. Background: `docs/provenance/PROVENANCE.md`.
+
+## R1. Specification and implementation are separated (2026-11-22, owner request; process by Claude)
+
+The current tree is about half BitChord code (GPL-3.0), and the agent that ran the migration so far has read it. So:
+
+- **Spec side** (may read the old code): writes behaviour specifications only, in `docs/rebuild/spec/`: what the
+  user sees and does, inputs and outputs, edge cases, as prose, tables and test cases. No code, no internal structure,
+  no identifiers copied from the old sources.
+- **Implementation side** (fresh agents or people): works only from `docs/rebuild/spec/`, public standards and public
+  documentation. Must not open the nuvx app sources, BitChord or Convx. Every implementation task brief says so.
+- New code lives in its own tree, `rebuild/`, and imports nothing from the existing apps or `core/`.
+
+This is a documented two-team process, not a certified clean-room. Rust written earlier in the migration from
+BitChord-derived Kotlin (see the provenance report) is derived and is not reused in `rebuild/`.
+
+## R2. YouTube Music access: keep the current method (2026-11-22, owner)
+
+YouTube Music has no official API for search, browsing or playback. The owner chose to keep using YouTube Music's
+web client interface (InnerTube), as nuvx does today, rather than limit the app to official APIs (which would mean no
+YouTube Music playback). Consequences:
+
+- This goes against YouTube's terms of service and can break whenever YouTube changes it; the app must fail
+  gracefully and the client must be easy to update.
+- No circumvention of DRM or of signed-in access the user does not have.
+
+**Update (2026-11-22, owner):** the YouTube Music client is **InnerTubeX**
+(https://github.com/MetrolistGroup/innertubex, GPL-3.0, MetrolistGroup), used as a library dependency, not copied
+or translated. It is not BitChord or Convx code, so R1 is not affected; the rebuild stays GPL-3.0 as nuvx is.
+InnerTubeX is Kotlin Multiplatform with Android, JVM desktop and iOS targets only:
+
+| Platform | How the Rust app reaches it | State |
+|---|---|---|
+| Android | JNI from the Rust app into the bundled Kotlin library | planned |
+| iOS | its KMP framework through a thin Swift bridge | planned |
+| Windows, Linux, macOS | the desktop app bundles a Java runtime and calls InnerTubeX through JNI | decided (owner): accepts ~50–100 MB and a slower start |
+| Web | an owner-run relay server runs InnerTubeX and serves the web app | decided (owner): needs a JVM-capable host the owner controls (a Cloudflare Worker cannot run it; e.g. the existing Oracle server) |
+
+The bundled runtime's size and start-up time are measured in step 8 and reported before release.
+
+## R3. UI framework: Dioxus 0.7 with the webview renderer, DOM on the web (2026-11-22, Claude)
+
+Requirements: one shared UI codebase for Windows, Linux, macOS, Android, iOS and web; keep nuvx's look (glass
+panels, blur, motion, typographic lyrics); native media controls through platform glue.
+
+| | Dioxus 0.7 | Slint 1.17 | egui 0.36 |
+|---|---|---|---|
+| Android / iOS | Supported (CLI, system webview) | Supported / iOS tech preview | Supported / not official |
+| Web | DOM | Canvas | Canvas |
+| nuvx's glass, blur, motion | CSS (`backdrop-filter`, transitions): close match | Limited effects | Hand-drawn |
+| One UI codebase everywhere | Yes | Yes | Yes |
+
+Chosen: **Dioxus 0.7 stable** (`dioxus` 0.7.9 at the time of writing), webview renderer on desktop and mobile, DOM
+renderer on the web. Its native renderer (Blitz) is experimental and is not used. Costs and risks: a system webview on
+every platform (memory, start-up time; to be measured on a low-end Android phone before mobile work goes far); audio,
+media sessions and background playback stay native (Rust audio engine plus thin platform glue), not in the webview.
+Re-evaluate if webview performance on Android fails the measured budget.
+
+Sources: Dioxus releases (https://github.com/DioxusLabs/dioxus/releases), dioxus 0.7.9 docs
+(https://docs.rs/crate/dioxus/latest), Slint 1.15 and 1.17 release notes (https://slint.dev/blog/slint-1.15-released,
+https://slint.dev/blog/slint-1.17-released), eframe docs (https://docs.rs/crate/eframe/latest).
+
+## R4. AutoMix models are downloadable, not bundled (2026-11-22, owner)
+
+The AutoMix analysis models (Beat This! beat tracker, about 22 MB, and the open-unmix vocals model, about 9 MB in
+ONNX form; MIT licensed) are not shipped inside the apps. Today they add about 31 MB to every Android and web build
+and about 44 MB to iOS.
+
+- Served from storage the owner controls (proposed: release assets on the nuvx GitHub repository, versioned with the
+  app), each with its MIT license text next to it.
+- The app pins each model's URL, byte size and SHA-256; a download is used only after its checksum matches. Partial
+  downloads resume; a mismatch deletes the file and reports the failure.
+- Downloaded on demand when the user turns AutoMix (or another feature needing a model) on, after showing the size;
+  stored in the app's data folder; removable from settings. Without the models, AutoMix is off and everything else
+  works.
+- The web app fetches the same files on demand and keeps them in browser storage.
+- Platform formats (for example Core ML on iOS) are separate downloads with their own pins.
+
+## R1 update. Implementation in the main session (2026-11-22, owner)
+
+The owner asked for no subagents: everything is built in the main session. That session wrote the specs and has
+read the nuvx sources and BitChord's code (provenance audit, feature inventory), so from plan step 4 on the
+implementer is **not** someone who never saw the old code. Code is still written from the specs and public APIs,
+not copied or translated, and each `rebuild/PROVENANCE.md` says who wrote what. The rebuild must not be described as
+a two-team or clean-room implementation.

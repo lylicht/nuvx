@@ -1,5 +1,6 @@
 package com.licht.nuvx.data.lyrics
 
+import com.licht.nuvx.core.parseLrcLines
 import com.licht.nuvx.data.Http
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -67,47 +68,8 @@ object LrcLib {
         }
     }
 
-    fun parseLrc(lrc: String): List<LyricLine> {
-        val all = lrc.lineSequence().mapNotNull { line ->
-            val match = STAMP.find(line) ?: return@mapNotNull null
-            val (minutes, seconds, fraction) = match.destructured
-            val fractionMs = when (fraction.length) {
-                2 -> fraction.toLong() * 10
-                3 -> fraction.toLong()
-                else -> 0L
-            }
-            val body = line.substring(match.range.last + 1)
-            val (text, alignment) = stripAlignmentMarker(body)
-            LyricLine(
-                timeMs = minutes.toLong() * 60_000 + seconds.toLong() * 1_000 + fractionMs,
-                text = text.replace(WORD_STAMP, "").trim(),
-                words = parseWordRuns(text),
-                alignment = alignment,
-            )
-        }.sortedBy { it.timeMs }.toList()
-
-        val kept = all.filterIndexed { index, line ->
-            if (!line.isGap) return@filterIndexed true
-            val next = all.getOrNull(index + 1) ?: return@filterIndexed true
-            next.timeMs - line.timeMs >= MIN_GAP_MS
-        }
-
-        val first = kept.firstOrNull() ?: return kept
-        return if (!first.isGap && first.timeMs >= MIN_GAP_MS) {
-            listOf(LyricLine(0L, "")) + kept
-        } else {
-            kept
-        }
-    }
-
-    private fun stripAlignmentMarker(body: String): Pair<String, LyricAlignment> {
-        if (body.startsWith(ALIGNMENT_MARKER)) {
-            return body.substringAfter(ALIGNMENT_MARKER) to LyricAlignment.End
-        }
-        return body to LyricAlignment.Start
-    }
-
-    private const val ALIGNMENT_MARKER = "<R>"
+    // One LRC parser for every app: nuvx-core (core/contracts/lyrics-lrc.json, lyrics-gaps.json) through nuvx-ffi.
+    fun parseLrc(lrc: String): List<LyricLine> = parseLrcLines(lrc).map { it.toLyricLine() }
 
     private fun String.clean(): String = this
         .replace(NOISE, " ")
@@ -116,32 +78,6 @@ object LrcLib {
         .trim()
         .ifBlank { this }
 
-    private fun parseWordRuns(body: String): List<LyricWord> {
-        val marks = WORD_STAMP.findAll(body).toList()
-        if (marks.isEmpty()) return emptyList()
-        val runs = marks.mapIndexed { index, mark ->
-            val until = marks.getOrNull(index + 1)?.range?.first ?: body.length
-            msOf(mark) to body.substring(mark.range.last + 1, until)
-        }
-        return wordsFromRuns(
-            runs.mapIndexed { index, (startMs, text) ->
-                TimedRun(startMs, runs.getOrNull(index + 1)?.first ?: startMs, text)
-            },
-        )
-    }
-
-    private fun msOf(mark: MatchResult): Long {
-        val (minutes, seconds, fraction) = mark.destructured
-        val fractionMs = when (fraction.length) {
-            2 -> fraction.toLong() * 10
-            3 -> fraction.toLong()
-            else -> 0L
-        }
-        return minutes.toLong() * 60_000 + seconds.toLong() * 1_000 + fractionMs
-    }
-
-    private val STAMP = Regex("""\[(\d{1,2}):(\d{2})[.:](\d{2,3})]""")
-    private val WORD_STAMP = Regex("""<(\d{1,3}):(\d{2})[.:](\d{2,3})>""")
     private val NOISE = Regex(
         """\((?:from|feat\.?|official|lyrical|video|audio|remix)[^)]*\)|\[[^]]*]|""" +
             """\b(?:official (?:video|audio|music video)|lyrical|full song|4k video)\b""",

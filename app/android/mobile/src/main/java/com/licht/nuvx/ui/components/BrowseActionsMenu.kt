@@ -50,6 +50,8 @@ fun BrowseActionsMenu(
     onRename: ((String) -> Unit)? = null,
     onSetArtwork: (() -> Unit)? = null,
     onReorder: (() -> Unit)? = null,
+    versions: List<com.licht.nuvx.data.spotify.PlaylistVersion> = emptyList(),
+    onRestoreVersion: ((Int) -> Unit)? = null,
     onExport: (() -> Unit)? = null,
     onExportCsv: (() -> Unit)? = null,
     onDelete: (() -> Unit)? = null,
@@ -59,6 +61,7 @@ fun BrowseActionsMenu(
 ) {
     var renaming by remember { mutableStateOf(startRenaming) }
     var confirmingDelete by remember { mutableStateOf(false) }
+    var showingVersions by remember { mutableStateOf(false) }
     var confirmingDeleteDownload by remember { mutableStateOf(false) }
 
     val playlist = target.playlist
@@ -148,6 +151,23 @@ fun BrowseActionsMenu(
             }
             onReorder?.let {
                 ActionRow(SfIcons.Reorder, stringResource(R.string.reorder_songs), onClick = it)
+            }
+            if (onRestoreVersion != null && versions.isNotEmpty()) {
+                ActionRow(
+                    SfIcons.History,
+                    stringResource(R.string.earlier_versions),
+                    value = versions.size.toString(),
+                ) { showingVersions = !showingVersions }
+                if (showingVersions) {
+                    val now = System.currentTimeMillis()
+                    versions.forEachIndexed { i, v ->
+                        ActionRow(
+                            icon = SfIcons.Undo,
+                            label = androidx.compose.ui.res.pluralStringResource(R.plurals.playlist_version, v.songs.size, v.title, v.songs.size),
+                            value = android.text.format.DateUtils.getRelativeTimeSpanString(v.savedAt, now, android.text.format.DateUtils.MINUTE_IN_MILLIS).toString(),
+                        ) { onRestoreVersion(i) }
+                    }
+                }
             }
             onExport?.let {
                 ActionRow(SfIcons.Share, stringResource(R.string.export_playlist), onClick = it)
