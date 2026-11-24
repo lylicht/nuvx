@@ -6,7 +6,11 @@ import com.licht.nuvx.data.innertube.Innertube
 import com.licht.nuvx.data.innertube.InnertubeParser
 import com.licht.nuvx.data.model.SearchResult
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonArray
@@ -48,6 +52,7 @@ object SpotifyImport {
         val artists: String,
         val durationMs: Long,
         val album: String?,
+        val id: String? = null,
     )
 
 
@@ -326,6 +331,66 @@ object SpotifyImport {
         if (response.status !in 200..299) error("Spotify answered ${response.status}.")
         val body = response.body ?: error("Spotify sent an empty answer.")
         return json.parseToJsonElement(body).jsonObject
+    }
+
+    /** Spotify's web-player token has the write scopes, so the public Web API
+     * can be used without a second OAuth flow (issue #369). */
+    private suspend fun write(url: String, body: String?): Boolean {
+        val token = SpotifyToken.accessToken()
+            ?: error("Add your Spotify sp_dc cookie in Settings › Spotify Canvas first.")
+        val response = Http.requestRaw(
+            url,
+            "PUT",
+            body,
+            mapOf(
+                "Authorization" to "Bearer $token",
+                "Accept" to "application/json",
+                "Content-Type" to "application/json",
+                "User-Agent" to UA,
+            ),
+        )
+        if (response.status == 401 || response.status == 403) {
+            error("Spotify refused the session. Update the sp_dc cookie in Settings and try again.")
+        }
+        return response.status in 200..299
+    }
+
+    private val trackIdPattern = Regex("^[A-Za-z0-9]+$")
+
+    suspend fun searchTracks(query: String): List<Track> {
+        val root = api("$API/search", mapOf("q" to query, "type" to "track", "limit" to "10"))
+        val items = root["tracks"]?.jsonObject?.get("items") as? JsonArray ?: return emptyList()
+        return items.mapNotNull { element ->
+            val item = element as? JsonObject ?: return@mapNotNull null
+            val id = item["id"]?.jsonPrimitive?.contentOrNull?.takeIf(trackIdPattern::matches) ?: return@mapNotNull null
+            val title = item["name"]?.jsonPrimitive?.contentOrNull?.trim()?.takeIf { it.isNotEmpty() } ?: return@mapNotNull null
+            val artists = (item["artists"] as? JsonArray)
+                ?.mapNotNull { (it as? JsonObject)?.get("name")?.jsonPrimitive?.contentOrNull }
+                ?.joinToString(", ")
+                .orEmpty()
+            val duration = item["duration_ms"]?.jsonPrimitive?.longOrNull ?: 0L
+            val album = (item["album"] as? JsonObject)?.get("name")?.jsonPrimitive?.contentOrNull
+            Track(title, artists, duration, album, id)
+        }
+    }
+
+    suspend fun addToPlaylist(playlistId: String, trackIds: List<String>) {
+        if (!trackIdPattern.matches(playlistId)) error("Invalid Spotify playlist")
+        val uris = trackIds.filter(trackIdPattern::matches).map { "spotify:track:$it" }
+        if (uris.isEmpty()) return
+        for (batch in uris.chunked(100)) {
+            val body = buildJsonObject { put("uris", JsonArray(batch.map(::JsonPrimitive))) }.toString()
+            if (!write("$API/playlists/$playlistId/tracks", body)) error("Spotify could not add the songs.")
+        }
+    }
+
+    suspend fun saveTracks(trackIds: List<String>) {
+        val ids = trackIds.filter(trackIdPattern::matches)
+        if (ids.isEmpty()) return
+        for (batch in ids.chunked(50)) {
+            val url = "$API/me/tracks?ids=${batch.joinToString(",")}"
+            if (!write(url, null)) error("Spotify could not save the songs.")
+        }
     }
 
 
