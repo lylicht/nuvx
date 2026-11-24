@@ -155,3 +155,75 @@ pub fn fallback_query(seed_title: Option<&str>, seed_artist: Option<&str>) -> Op
         .join(" ");
     if query.is_empty() { None } else { Some(query) }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::model::{Link, Shelf, ShelfKind, Track};
+
+    fn track(id: &str, title: &str, artist: &str) -> Track {
+        Track {
+            id: id.into(),
+            title: title.into(),
+            artists: vec![Link { name: artist.into(), id: None }],
+            album: None,
+            duration: None,
+            thumbs: vec![],
+            track_nr: None,
+            plays: None,
+            music_video: false,
+        }
+    }
+
+    fn shelf(tracks: Vec<Track>) -> Shelf {
+        Shelf {
+            title: "Home".into(),
+            strapline: None,
+            strap_thumb: None,
+            kind: ShelfKind::Songs { tracks, rows: 1 },
+        }
+    }
+
+    #[test]
+    fn empty_profile_disables_topical_filter() {
+        let profile = TasteProfile::default();
+        assert!(keep(false, false, true, "Anything", "Nobody", &profile));
+    }
+
+    #[test]
+    fn hide_explicit_drops_only_badged_items() {
+        let profile = TasteProfile::default();
+        assert!(!keep(true, true, false, "Song", "Artist", &profile));
+        assert!(keep(false, true, false, "Song", "Artist", &profile));
+        assert!(keep(true, false, false, "Song", "Artist", &profile));
+    }
+
+    #[test]
+    fn profile_matches_artist_and_title_tokens() {
+        let profile = TasteProfile::from_tracks(&[track("1", "Morning recitation", "Reciter")]);
+        assert!(matches_profile("Evening recitation", "Someone else", &profile));
+        assert!(matches_profile("Unrelated title", "Reciter", &profile));
+        assert!(!matches_profile("Unrelated title", "Another artist", &profile));
+    }
+
+    #[test]
+    fn filters_shelves_and_drops_empty_ones() {
+        let profile = TasteProfile::from_tracks(&[track("1", "Morning recitation", "Reciter")]);
+        let shelves = vec![
+            shelf(vec![track("2", "Other thing", "Someone else")]),
+            shelf(vec![track("3", "More recitation", "Reciter")]),
+        ];
+        let kept = filter_shelves(shelves, false, true, &profile);
+        assert_eq!(kept.len(), 1);
+        match &kept[0].kind {
+            ShelfKind::Songs { tracks, .. } => assert_eq!(tracks[0].id, "3"),
+            ShelfKind::Cards(_) => panic!("expected songs"),
+        }
+    }
+
+    #[test]
+    fn both_filters_off_passes_everything_through() {
+        let shelves = vec![shelf(vec![track("1", "A", "B")])];
+        assert_eq!(filter_shelves(shelves.clone(), false, false, &TasteProfile::default()), shelves);
+    }
+}
