@@ -2,13 +2,17 @@ package com.licht.nuvx
 
 import com.licht.nuvx.ui.icons.SfIcons
 import android.Manifest
+import android.app.Activity
+import android.content.Context
 import android.content.Intent
+import android.content.IntentSender
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.compose.animation.AnimatedContent
@@ -114,6 +118,7 @@ import com.licht.nuvx.data.model.UserPlaylist
 import com.licht.nuvx.data.model.EntityType
 import com.licht.nuvx.data.model.SearchHistoryEntity
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import com.licht.nuvx.data.model.durationMillis
@@ -1235,6 +1240,7 @@ internal fun NuvxApp(
             Toast.makeText(context, context.getString(R.string.storage_required_read), Toast.LENGTH_SHORT).show()
         }
     }
+    val requestLocalDeletePermission = rememberLocalDeleteRequester(scope, context, viewModel)
     val mediaPermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
         Manifest.permission.READ_MEDIA_AUDIO
     } else {
@@ -1784,7 +1790,7 @@ internal fun NuvxApp(
                                         isDevice -> { selected -> deleteLocalTargets = selected }
                                         else -> null
                                     },
-                                    onAddToPlaylist = if (isDevice) { selected ->
+                                    onAddToPlaylist = if (isDownloads || isCache || isDevice) { selected ->
                                         offlinePlaylistTargets = selected
                                     } else null,
                                     onUpload = if (isDownloads &&
@@ -3270,15 +3276,15 @@ internal fun NuvxApp(
             onDeleteDismiss = { deleteLocalTargets = emptyList() },
             onDeleteConfirm = { targets ->
                 scope.launch {
-                    var failed = false
-                    targets.forEach { song ->
-                        if (LocalMediaRepository.delete(context, song)) {
-                            OfflinePlaylists.removeSong(song)
-                            // Download-backed rows appear in local:all with their download id as videoId.
-                            if (Downloads.saved.value.containsKey(song.videoId)) Downloads.delete(context, song.videoId)
-                        } else failed = true
+                    val outcome = LocalMediaRepository.deleteAll(context, targets)
+                    commitDeletedSongs(context, outcome.deleted)
+                    val sender = outcome.permissionRequired
+                    if (sender != null && outcome.pending.isNotEmpty()) {
+                        requestLocalDeletePermission(sender, outcome.pending)
                     }
-                    if (failed) Toast.makeText(context, R.string.delete_local_songs_failed, Toast.LENGTH_SHORT).show()
+                    if (outcome.failed.isNotEmpty()) {
+                        Toast.makeText(context, R.string.delete_local_songs_failed, Toast.LENGTH_SHORT).show()
+                    }
                     viewModel.reloadLocalDetail("local:all")
                 }
             },
@@ -3908,6 +3914,46 @@ internal fun NuvxApp(
             onAddonLeftOutDismiss = { addonLeftOutOfDownload = null },
         )
 
+    }
+}
+
+@Composable
+private fun rememberLocalDeleteRequester(
+    scope: CoroutineScope,
+    context: Context,
+    viewModel: MainViewModel,
+): (IntentSender, List<Song>) -> Unit {
+    var pending by remember { mutableStateOf<List<Song>>(emptyList()) }
+    val launcher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartIntentSenderForResult(),
+    ) { result ->
+        val targets = pending
+        pending = emptyList()
+        if (result.resultCode != Activity.RESULT_OK) {
+            Toast.makeText(context, R.string.delete_local_songs_failed, Toast.LENGTH_SHORT).show()
+            return@rememberLauncherForActivityResult
+        }
+        scope.launch {
+            val retry = LocalMediaRepository.deleteAll(context, targets, requestPermission = false)
+            commitDeletedSongs(context, retry.deleted)
+            if (retry.failed.isNotEmpty()) {
+                Toast.makeText(context, R.string.delete_local_songs_failed, Toast.LENGTH_SHORT).show()
+            }
+            viewModel.reloadLocalDetail("local:all")
+        }
+    }
+    return { sender, targets ->
+        pending = targets
+        launcher.launch(IntentSenderRequest.Builder(sender).build())
+    }
+}
+
+/** Removes successfully deleted songs from nuvx-owned playlists and downloads. */
+private fun commitDeletedSongs(context: Context, songs: List<Song>) {
+    songs.forEach { song ->
+        OfflinePlaylists.removeSong(song)
+        // Download-backed rows appear in local:all with their download id as videoId.
+        if (Downloads.saved.value.containsKey(song.videoId)) Downloads.delete(context, song.videoId)
     }
 }
 
