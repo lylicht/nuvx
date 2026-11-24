@@ -154,4 +154,4 @@ pub fn fallback_query(seed_title: Option<&str>, seed_artist: Option<&str>) -> Op
         .collect::<Vec<_>>()
         .join(" ");
     if query.is_empty() { None } else { Some(query) }
-  }
+}
