@@ -151,6 +151,8 @@ export interface BridgeMethods {
   };
   'spotify.searchTracks': { params: { query: string }; result: SpotifyTrack[] };
   'spotify.canvas': { params: { trackId: string }; result: { url: string | null } };
+  'spotify.addToPlaylist': { params: { playlistId: string; trackIds: string[] }; result: { added: number } };
+  'spotify.saveTracks': { params: { trackIds: string[] }; result: { saved: number } };
   'discord.state': { params: Record<string, never>; result: DiscordState };
   'discord.connect': { params: Record<string, never>; result: Record<string, never> };
   'discord.disconnect': { params: Record<string, never>; result: DiscordState };

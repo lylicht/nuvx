@@ -1,9 +1,9 @@
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSyncExternalStore } from 'react';
 import type { SpotifyTrack } from '@nuvx/shared/bridge';
 import type { Track } from '@/data/music/types';
 import { useSpotifyAuth, useSpotifySignedIn } from '@/extension/useSpotifyAuth';
-import { fetchSpotifyPlaylistInfo, fetchSpotifyPlaylists, fetchSpotifyTracks, matchToYouTube, pendingTrack } from './api';
+import { addToSpotifyPlaylist, fetchSpotifyPlaylistInfo, fetchSpotifyPlaylists, fetchSpotifyTracks, matchToYouTube, pendingTrack, saveSpotifyTracks } from './api';
 
 export function useSpotifyPlaylists() {
   const signedIn = useSpotifySignedIn();
@@ -23,6 +23,20 @@ export function useSpotifyPlaylistInfo(playlistId: string) {
     enabled: signedIn && !!playlistId,
     staleTime: 5 * 60_000,
   });
+}
+
+/** Write actions for issue #369: save to Liked Songs or add to a playlist. */
+export function useSpotifyWrites() {
+  const queryClient = useQueryClient();
+  const save = useMutation({
+    mutationFn: (trackIds: string[]) => saveSpotifyTracks(trackIds),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['spotify', 'data', 'liked'] }),
+  });
+  const add = useMutation({
+    mutationFn: ({ playlistId, trackIds }: { playlistId: string; trackIds: string[] }) => addToSpotifyPlaylist(playlistId, trackIds),
+    onSuccess: (_result, vars) => void queryClient.invalidateQueries({ queryKey: ['spotify', 'data', 'playlist', vars.playlistId] }),
+  });
+  return { save, add };
 }
 
 const MATCH_PARALLELISM = 6;

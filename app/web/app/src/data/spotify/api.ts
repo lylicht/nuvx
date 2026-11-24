@@ -103,3 +103,32 @@ export async function fetchCanvas(track: { videoId: string; title: string; artis
   if (canvases.size > 200) canvases.delete(canvases.keys().next().value!);
   return url;
 }
+
+export function addToSpotifyPlaylist(playlistId: string, trackIds: string[]): Promise<{ added: number }> {
+  return bridge().call('spotify.addToPlaylist', { playlistId, trackIds }, { timeoutMs: 30_000 });
+}
+
+export function saveSpotifyTracks(trackIds: string[]): Promise<{ saved: number }> {
+  return bridge().call('spotify.saveTracks', { trackIds }, { timeoutMs: 30_000 });
+}
+
+/** A Spotify row keeps its ID in the videoId; everything else is looked up by
+ * title and artist so the currently-playing song can be saved too. */
+export async function spotifyTrackId(track: Pick<Track, 'videoId' | 'title' | 'artists'>): Promise<string | null> {
+  if (track.videoId.startsWith('spotify:')) return track.videoId.slice('spotify:'.length);
+  const query = [track.title, track.artists[0]?.name].filter((s) => s?.trim()).join(' ');
+  if (!query) return null;
+  const hits = await bridge().call('spotify.searchTracks', { query }, { timeoutMs: 20_000 });
+  const target = { title: track.title, artist: track.artists.map((a) => a.name).join(', '), durationSec: null, album: null };
+  const pick = best(
+    hits.map((h) => ({
+      title: h.title,
+      artist: h.artist,
+      durationSec: h.durationMs > 0 ? Math.round(h.durationMs / 1000) : null,
+      album: h.album,
+      id: h.id,
+    })),
+    target,
+  );
+  return pick?.id ?? hits[0]?.id ?? null;
+}

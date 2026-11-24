@@ -34,6 +34,7 @@ export default defineConfig({
       'https://open.spotify.com/*',
       'https://accounts.spotify.com/*',
       'https://api-partner.spotify.com/*',
+      'https://api.spotify.com/*',
       'https://clienttoken.spotify.com/*',
       'https://open.spotifycdn.com/*',
       ...matchPatternsFor(SITE_ORIGINS),

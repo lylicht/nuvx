@@ -491,6 +491,54 @@ export async function canvas(trackId: string): Promise<string | null> {
   return parseCanvas(await gql('canvas', { trackUri: `spotify:track:${trackId}` }));
 }
 
+const API = 'https://api.spotify.com/v1';
+
+/** Spotify's web-player token carries the playlist/library write scopes, so
+ * the public Web API can be used without a second OAuth flow. */
+async function write(path: string, init: RequestInit, retried = false): Promise<void> {
+  const bearer = await accessToken();
+  const response = await fetch(`${API}${path}`, {
+    ...init,
+    method: 'PUT',
+    headers: {
+      Authorization: `Bearer ${bearer.token}`,
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+      ...init.headers,
+    },
+  });
+  if (response.status === 401 && !retried) {
+    invalidateTokens();
+    return write(path, init, true);
+  }
+  if (!response.ok) {
+    const detail = await response.text().catch(() => '');
+    throw new Error(`Spotify write failed (${response.status})${detail ? `: ${detail.slice(0, 200)}` : ''}`);
+  }
+}
+
+const trackUris = (ids: string[]) => ids.filter((id) => /^[A-Za-z0-9]+$/.test(id)).map((id) => `spotify:track:${id}`);
+
+export async function addToPlaylist(playlistId: string, trackIds: string[]): Promise<number> {
+  if (!/^[A-Za-z0-9]+$/.test(playlistId)) throw new Error('Invalid Spotify playlist');
+  const uris = trackUris(trackIds);
+  if (!uris.length) return 0;
+  for (let offset = 0; offset < uris.length; offset += 100) {
+    await write(`/playlists/${encodeURIComponent(playlistId)}/tracks`, { body: JSON.stringify({ uris: uris.slice(offset, offset + 100) }) });
+  }
+  return uris.length;
+}
+
+export async function saveTracks(trackIds: string[]): Promise<number> {
+  const ids = trackIds.filter((id) => /^[A-Za-z0-9]+$/.test(id));
+  if (!ids.length) return 0;
+  for (let offset = 0; offset < ids.length; offset += 50) {
+    const batch = ids.slice(offset, offset + 50).join(',');
+    await write(`/me/tracks?ids=${encodeURIComponent(batch)}`, { body: undefined });
+  }
+  return ids.length;
+}
+
 interface Prefs {
   connected: boolean;
 }
