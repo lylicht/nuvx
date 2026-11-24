@@ -104,7 +104,7 @@ kotlin {
             dependsOn(commonMain.get())
             kotlin.srcDir(nuvxFfiKotlin.flatMap { it.outputDir })
             dependencies {
-                compileOnly("net.java.dev.jna:jna:5.17.0")
+                compileOnly("net.java.dev.jna:jna:5.19.1")
                 compileOnly("com.microsoft.onnxruntime:onnxruntime:1.32.0")
                 api("io.ktor:ktor-client-core:3.6.1")
                 api("io.ktor:ktor-client-okhttp:3.6.1")
@@ -122,10 +122,10 @@ kotlin {
         jvmMain.get().dependsOn(jvmSharedMain)
 
         androidMain.dependencies {
-            implementation("net.java.dev.jna:jna:5.17.0@aar")
+            implementation("net.java.dev.jna:jna:5.19.1@aar")
         }
         jvmMain.dependencies {
-            implementation("net.java.dev.jna:jna:5.17.0")
+            implementation("net.java.dev.jna:jna:5.19.1")
         }
         commonMain.dependencies {
             implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.13.0")
