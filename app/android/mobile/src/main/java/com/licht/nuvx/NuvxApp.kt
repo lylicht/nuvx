@@ -3190,102 +3190,39 @@ internal fun NuvxApp(
             }
         }
 
-        if (playlistTarget != null || creatingPlaylist) {
-            val target = playlistTarget
-            val dismiss = {
-                playlistTarget = null
-                creatingPlaylist = false
-            }
-            PlaylistPickerSheet(
-                playlists = playlists + localPlaylists.map { playlist ->
-                    UserPlaylist(
-                        playlistId = playlist.browseId,
-                        title = playlist.title,
-                        subtitle = context.resources.getQuantityString(R.plurals.song_count_plural, playlist.songs.size, playlist.songs.size),
-                        thumbnailUrl = com.licht.nuvx.data.PlaylistArtworkStore.get(context, playlist.browseId)
-                            ?: playlist.songs.firstNotNullOfOrNull { it.thumbnailUrl },
-                    )
-                },
-                loading = playlistsLoading,
-                song = target,
-                startCreating = target == null,
-                signedIn = signedIn,
-                onDismiss = dismiss,
-                onAdd = { picked ->
-                    target?.let { song ->
-                        viewModel.addToPlaylists(picked, song) { added, alreadyThere, failed ->
-                            showQueueNotice(
-                                when {
-                                    added > 1 -> context.resources.getQuantityString(
-                                        R.plurals.added_to_playlists_notice, added, added,
-                                    )
-                                    added == 1 -> context.getString(R.string.song_added_to_playlist)
-                                    alreadyThere > 0 && failed == 0 ->
-                                        context.getString(R.string.song_already_in_playlist)
-                                    else -> context.getString(R.string.failed)
-                                },
-                            )
-                        }
-                    }
-                },
-                onCreate = { title, privacy ->
-                    viewModel.createPlaylist(title, privacy, target)
-                },
-            )
-        }
-
-        if (offlinePlaylistTarget != null || creatingOfflinePlaylist) {
-            val target = offlinePlaylistTarget
-            val dismiss = {
-                offlinePlaylistTarget = null
-                creatingOfflinePlaylist = false
-            }
-            val choices = remember(offlinePlaylists, playlistArtworkVersion) {
-                offlinePlaylists.map { playlist ->
-                    UserPlaylist(
-                        playlistId = playlist.id,
-                        title = playlist.title,
-                        subtitle = context.resources.getQuantityString(
-                            R.plurals.song_count_plural,
-                            playlist.songs.size,
-                            playlist.songs.size,
-                        ),
-                        thumbnailUrl = com.licht.nuvx.data.PlaylistArtworkStore.get(context, playlist.browseId)
-                            ?: playlist.songs.firstNotNullOfOrNull { it.thumbnailUrl }.takeUnless { playlist.isLiked },
-                    )
-                }
-            }
-            PlaylistPickerSheet(
-                playlists = choices,
-                loading = false,
-                song = target,
-                startCreating = target == null,
-                offline = true,
-                onDismiss = dismiss,
-                onAdd = { picked ->
-                    target?.let { song ->
-                        val result = OfflinePlaylists.add(picked.mapTo(HashSet()) { it.playlistId }, listOf(song))
-                        showQueueNotice(
-                            when {
-                                result.added > 1 -> context.resources.getQuantityString(
-                                    R.plurals.added_to_playlists_notice, result.added, result.added,
-                                )
-                                result.added == 1 -> context.getString(R.string.song_added_to_playlist)
-                                result.alreadyThere > 0 -> context.getString(R.string.song_already_in_playlist)
-                                else -> context.getString(R.string.failed)
-                            },
-                        )
-                    }
-                },
-                onCreate = { title, _ ->
-                    OfflinePlaylists.create(title, listOfNotNull(target))
-                    if (target != null) showQueueNotice(context.getString(R.string.song_added_to_playlist))
-                },
-            )
-        }
-
         // Kept in a separate composable so NuvxApp stays under the JVM 64 KB method limit.
         LocalLibraryWriteDialogs(
+            playlistTarget = playlistTarget,
+            creatingPlaylist = creatingPlaylist,
+            playlists = playlists,
+            localPlaylists = localPlaylists,
+            playlistsLoading = playlistsLoading,
+            signedIn = signedIn,
+            onPlaylistDismiss = {
+                playlistTarget = null
+                creatingPlaylist = false
+            },
+            onPlaylistAdd = { picked, song ->
+                viewModel.addToPlaylists(picked, song) { added, alreadyThere, failed ->
+                    showQueueNotice(
+                        when {
+                            added > 1 -> context.resources.getQuantityString(
+                                R.plurals.added_to_playlists_notice, added, added,
+                            )
+                            added == 1 -> context.getString(R.string.song_added_to_playlist)
+                            alreadyThere > 0 && failed == 0 -> context.getString(R.string.song_already_in_playlist)
+                            else -> context.getString(R.string.failed)
+                        },
+                    )
+                }
+            },
+            onPlaylistCreate = { title, privacy, song -> viewModel.createPlaylist(title, privacy, song) },
+            offlineSingleTarget = offlinePlaylistTarget,
+            creatingOfflinePlaylist = creatingOfflinePlaylist,
+            onOfflineSingleDismiss = {
+                offlinePlaylistTarget = null
+                creatingOfflinePlaylist = false
+            },
             spotifyTarget = spotifyTarget,
             spotifyPlaylists = spotifyPlaylists,
             spotifyLoading = spotifyPlaylistsLoading,
@@ -3980,6 +3917,18 @@ internal fun NuvxApp(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun LocalLibraryWriteDialogs(
+    playlistTarget: Song?,
+    creatingPlaylist: Boolean,
+    playlists: List<UserPlaylist>,
+    localPlaylists: List<com.licht.nuvx.data.spotify.LocalPlaylist>,
+    playlistsLoading: Boolean,
+    signedIn: Boolean,
+    onPlaylistDismiss: () -> Unit,
+    onPlaylistAdd: (List<UserPlaylist>, Song) -> Unit,
+    onPlaylistCreate: (String, com.licht.nuvx.data.model.PlaylistPrivacy, Song?) -> Unit,
+    offlineSingleTarget: Song?,
+    creatingOfflinePlaylist: Boolean,
+    onOfflineSingleDismiss: () -> Unit,
     spotifyTarget: Song?,
     spotifyPlaylists: List<SpotifyPlaylist>,
     spotifyLoading: Boolean,
@@ -3997,6 +3946,74 @@ private fun LocalLibraryWriteDialogs(
     onDeleteConfirm: (List<Song>) -> Unit,
 ) {
     val context = LocalContext.current
+
+    if (playlistTarget != null || creatingPlaylist) {
+        val target = playlistTarget
+        PlaylistPickerSheet(
+            playlists = playlists + localPlaylists.map { playlist ->
+                UserPlaylist(
+                    playlistId = playlist.browseId,
+                    title = playlist.title,
+                    subtitle = context.resources.getQuantityString(R.plurals.song_count_plural, playlist.songs.size, playlist.songs.size),
+                    thumbnailUrl = com.licht.nuvx.data.PlaylistArtworkStore.get(context, playlist.browseId)
+                        ?: playlist.songs.firstNotNullOfOrNull { it.thumbnailUrl },
+                )
+            },
+            loading = playlistsLoading,
+            song = target,
+            startCreating = target == null,
+            signedIn = signedIn,
+            onDismiss = onPlaylistDismiss,
+            onAdd = { picked -> target?.let { song -> onPlaylistAdd(picked, song) } },
+            onCreate = { title, privacy -> onPlaylistCreate(title, privacy, target) },
+        )
+    }
+
+    if (offlineSingleTarget != null || creatingOfflinePlaylist) {
+        val target = offlineSingleTarget
+        val choices = remember(offlinePlaylists, artworkVersion) {
+            offlinePlaylists.map { playlist ->
+                UserPlaylist(
+                    playlistId = playlist.id,
+                    title = playlist.title,
+                    subtitle = context.resources.getQuantityString(
+                        R.plurals.song_count_plural,
+                        playlist.songs.size,
+                        playlist.songs.size,
+                    ),
+                    thumbnailUrl = com.licht.nuvx.data.PlaylistArtworkStore.get(context, playlist.browseId)
+                        ?: playlist.songs.firstNotNullOfOrNull { it.thumbnailUrl }.takeUnless { playlist.isLiked },
+                )
+            }
+        }
+        PlaylistPickerSheet(
+            playlists = choices,
+            loading = false,
+            song = target,
+            startCreating = target == null,
+            offline = true,
+            onDismiss = onOfflineSingleDismiss,
+            onAdd = { picked ->
+                target?.let { song ->
+                    val result = OfflinePlaylists.add(picked.mapTo(HashSet()) { it.playlistId }, listOf(song))
+                    showNotice(
+                        when {
+                            result.added > 1 -> context.resources.getQuantityString(
+                                R.plurals.added_to_playlists_notice, result.added, result.added,
+                            )
+                            result.added == 1 -> context.getString(R.string.song_added_to_playlist)
+                            result.alreadyThere > 0 -> context.getString(R.string.song_already_in_playlist)
+                            else -> context.getString(R.string.failed)
+                        },
+                    )
+                }
+            },
+            onCreate = { title, _ ->
+                OfflinePlaylists.create(title, listOfNotNull(target))
+                if (target != null) showNotice(context.getString(R.string.song_added_to_playlist))
+            },
+        )
+    }
 
     spotifyTarget?.let { target ->
         SpotifyPlaylistPickerSheet(
