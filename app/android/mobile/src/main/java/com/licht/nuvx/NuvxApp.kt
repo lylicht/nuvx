@@ -3949,7 +3949,7 @@ private fun rememberLocalDeleteRequester(
 }
 
 /** Removes successfully deleted songs from nuvx-owned playlists and downloads. */
-private fun commitDeletedSongs(context: Context, songs: List<Song>) {
+private suspend fun commitDeletedSongs(context: Context, songs: List<Song>) {
     songs.forEach { song ->
         OfflinePlaylists.removeSong(song)
         // Download-backed rows appear in local:all with their download id as videoId.
