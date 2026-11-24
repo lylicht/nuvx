@@ -142,7 +142,11 @@ kotlin {
 
 extensions.configure<LibraryExtension> {
     namespace = "com.licht.nuvx.shared"
-    compileSdk = 37
+    compileSdk {
+        version = release(37) {
+            minorApiLevel = 1
+        }
+    }
     defaultConfig {
         consumerProguardFiles("consumer-rules.pro")
     }

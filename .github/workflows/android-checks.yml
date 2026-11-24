@@ -52,7 +52,7 @@ jobs:
           node-version: 24
       - uses: android-actions/setup-android@v4.0.4
       - name: Install Android SDK packages
-        run: sdkmanager "platforms;android-37.0" "build-tools;37.0.0" "ndk;30.0.16248370" "cmake;3.22.1"
+        run: sdkmanager "platforms;android-37.0" "platforms;android-37.1" "build-tools;37.0.0" "ndk;30.0.16248370" "cmake;3.22.1"
       - uses: ./.github/actions/setup-rust-android
       - name: Unit tests (phone app, shared, shared UI)
         run: bash gradlew :app:testProdDebugUnitTest :shared:jvmTest :sharedUi:jvmTest

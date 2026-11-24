@@ -36,7 +36,7 @@ jobs:
           cache-read-only: ${{ github.event_name == 'pull_request' }}
       - uses: android-actions/setup-android@v4.0.4
       - name: Install Android SDK packages
-        run: sdkmanager "platforms;android-37.0" "build-tools;37.0.0" "ndk;30.0.16248370" "cmake;3.22.1"
+        run: sdkmanager "platforms;android-37.0" "platforms;android-37.1" "build-tools;37.0.0" "ndk;30.0.16248370" "cmake;3.22.1"
       - uses: ./.github/actions/setup-rust-android
       - name: Build the debug app and its instrumented tests
         run: bash gradlew :app:assembleProdDebug :app:assembleProdDebugAndroidTest :app:assembleDevDebug

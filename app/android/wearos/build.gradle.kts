@@ -25,7 +25,11 @@ val androidVersionName = providers.gradleProperty("nuvx.androidVersionName")
 
 extensions.configure<ApplicationExtension> {
     namespace = "com.licht.nuvx.wear"
-    compileSdk = 37
+    compileSdk {
+        version = release(37) {
+            minorApiLevel = 1
+        }
+    }
 
     defaultConfig {
         applicationId = "com.licht.nuvx"

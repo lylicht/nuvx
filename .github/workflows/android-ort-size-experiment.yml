@@ -25,7 +25,7 @@ jobs:
       - uses: gradle/actions/setup-gradle@v6
       - uses: android-actions/setup-android@v4.0.4
       - name: Install Android SDK and emulator image
-        run: sdkmanager "platforms;android-37.0" "build-tools;37.0.0" "ndk;30.0.16248370" "cmake;3.22.1" "system-images;android-36;google_apis;x86_64"
+        run: sdkmanager "platforms;android-37.0" "platforms;android-37.1" "build-tools;37.0.0" "ndk;30.0.16248370" "cmake;3.22.1" "system-images;android-36;google_apis;x86_64"
       - uses: ./.github/actions/setup-rust-android
       - name: Fetch pinned ONNX Runtime build tools
         env:
