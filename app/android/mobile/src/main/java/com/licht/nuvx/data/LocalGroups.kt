@@ -170,7 +170,14 @@ object LocalGroups {
     }
 }
 
-private fun artistKey(name: String): String = name.trim().lowercase(Locale.ROOT)
+private val FEATURE_SUFFIX = Regex("""\s+(?:feat\.?|ft\.?|featuring)\s+""", RegexOption.IGNORE_CASE)
+
+private fun artistKey(name: String): String = name
+    .split(FEATURE_SUFFIX, limit = 2)
+    .first()
+    .trim()
+    .trim(',', ';')
+    .lowercase(Locale.ROOT)
 
 fun Song.matchesSearch(query: String): Boolean =
     title.contains(query, ignoreCase = true) ||

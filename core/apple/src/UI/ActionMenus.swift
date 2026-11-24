@@ -27,6 +27,13 @@ struct SongActionButtons: View {
             toast.queueNotice("Added to queue: \(entry.title)")
         }
         Button("Start Radio") { controller.playRadio(entry) }
+        if !PlatformSettings.shared.getString(key: "spotify_spdc_token", default: "").isEmpty {
+            Button("Add to Spotify…") {
+                appModel.playlistPicker = PlaylistPickerRequest(
+                    videoId: entry.videoId ?? "", title: entry.title, artist: entry.artist, spotify: true,
+                )
+            }
+        }
         if auth.signedIn, let vid = entry.videoId {
             Divider()
             Button(SongRatingActions.likeTitle(vid)) {
@@ -37,13 +44,6 @@ struct SongActionButtons: View {
             }
             Button("Add to Playlist…") {
                 appModel.playlistPicker = PlaylistPickerRequest(videoId: vid, title: entry.title)
-            }
-            if !PlatformSettings.shared.getString(key: "spotify_spdc_token", default: "").isEmpty {
-                Button("Add to Spotify…") {
-                    appModel.playlistPicker = PlaylistPickerRequest(
-                        videoId: vid, title: entry.title, artist: entry.artist, spotify: true,
-                    )
-                }
             }
             if playlistOwned, let setVideoId, let playlistBrowseId {
                 Button("Remove from Playlist", role: .destructive) {
@@ -595,6 +595,7 @@ private final class SpotifyBridgeCallback: SpotifyImportBridgeResultCallback {
 struct PlaylistPickerView: View {
     let request: PlaylistPickerRequest
     @Environment(\.dismiss) private var dismiss
+    @Environment(ToastCenter.self) private var toast
     @State private var playlists: [UserPlaylistDTO] = []
     @State private var title = ""
     @State private var privacy = "PRIVATE"
@@ -749,6 +750,7 @@ struct PlaylistPickerView: View {
         if let message {
             error = message
         } else {
+            toast.show("Added to Spotify")
             dismiss()
         }
     }

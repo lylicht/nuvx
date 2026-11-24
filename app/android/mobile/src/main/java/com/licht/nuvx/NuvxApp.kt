@@ -86,7 +86,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
-import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.Dp
@@ -3302,8 +3301,8 @@ internal fun NuvxApp(
                 title = { Text(stringResource(R.string.delete)) },
                 text = {
                     Text(
-                        pluralStringResource(
-                            R.plurals.song_count_plural,
+                        context.resources.getQuantityString(
+                            R.plurals.delete_local_songs_confirmation,
                             targets.size,
                             targets.size,
                         ),
@@ -3318,7 +3317,8 @@ internal fun NuvxApp(
                                 if (LocalMediaRepository.delete(context, song)) OfflinePlaylists.removeSong(song)
                                 else failed = true
                             }
-                            if (failed) Toast.makeText(context, R.string.delete_download_failed, Toast.LENGTH_SHORT).show()
+                            if (failed) Toast.makeText(context, R.string.delete_local_songs_failed, Toast.LENGTH_SHORT).show()
+                            viewModel.reloadLocalDetail("local:all")
                         }
                     }) { Text(stringResource(R.string.delete)) }
                 },

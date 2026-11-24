@@ -875,6 +875,11 @@
     <string name="delete_playlist_confirmation">Delete “%1$s”? Tap again to confirm.</string>
     <string name="delete_download_confirmation">Remove “%1$s” from this device? Tap again to confirm.</string>
     <string name="delete_download_failed">Couldn’t delete the download. Try again.</string>
+    <plurals name="delete_local_songs_confirmation">
+        <item quantity="one">Delete this song from your device? This cannot be undone.</item>
+        <item quantity="other">Delete %1$d songs from your device? This cannot be undone.</item>
+    </plurals>
+    <string name="delete_local_songs_failed">Couldn’t delete some songs. Try again.</string>
     <string name="running">Running</string>
     <string name="automix_enabled_subtitle">Times and blends every transition from the tracks themselves. Turn it off if the phone gets hot or playback stutters.</string>
     <string name="automix_disabled_subtitle">Times and blends transitions automatically, without a slider. Performance may vary on slower devices.</string>
