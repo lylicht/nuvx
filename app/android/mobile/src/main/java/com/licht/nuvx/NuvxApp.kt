@@ -284,6 +284,7 @@ import com.licht.nuvx.ui.screens.LocalFolder
 import com.licht.nuvx.ui.screens.LocalFolderState
 import com.licht.nuvx.ui.screens.LocalFolderTab
 import com.licht.nuvx.data.LocalGroups
+import com.licht.nuvx.data.OfflinePlaylist
 import com.licht.nuvx.data.OfflinePlaylists
 import com.licht.nuvx.data.toGroup
 import com.licht.nuvx.data.settings.LibraryViewType
@@ -3233,48 +3234,6 @@ internal fun NuvxApp(
             )
         }
 
-        spotifyTarget?.let { target ->
-            SpotifyPlaylistPickerSheet(
-                song = target,
-                playlists = spotifyPlaylists.filter { it.id != SpotifyLibrary.LIKED_ID },
-                loading = spotifyPlaylistsLoading,
-                error = spotifyPickerError,
-                saving = spotifySaving,
-                onDismiss = { spotifyTarget = null },
-                onPick = { playlistId ->
-                    if (!spotifySaving) scope.launch {
-                        spotifySaving = true
-                        spotifyPickerError = null
-                        try {
-                            val trackId = SpotifyWrite.trackIdFor(target)
-                            if (trackId == null) {
-                                spotifyPickerError = context.getString(R.string.spotify_track_not_found)
-                                return@launch
-                            }
-                            val added = if (playlistId == null) {
-                                SpotifyWrite.saveTracks(listOf(trackId))
-                            } else {
-                                SpotifyWrite.addToPlaylist(playlistId, listOf(trackId))
-                            }
-                            if (added > 0) {
-                                showQueueNotice(context.getString(R.string.spotify_added))
-                                spotifyTarget = null
-                            } else {
-                                spotifyPickerError = context.getString(R.string.spotify_add_failed)
-                            }
-                        } catch (e: CancellationException) {
-                            throw e
-                        } catch (e: Exception) {
-                            spotifyPickerError = e.message?.takeIf { it.isNotBlank() }
-                                ?: context.getString(R.string.spotify_add_failed)
-                        } finally {
-                            spotifySaving = false
-                        }
-                    }
-                },
-            )
-        }
-
         if (offlinePlaylistTarget != null || creatingOfflinePlaylist) {
             val target = offlinePlaylistTarget
             val dismiss = {
@@ -3325,90 +3284,68 @@ internal fun NuvxApp(
             )
         }
 
-        if (offlinePlaylistTargets.isNotEmpty()) {
-            val targets = offlinePlaylistTargets
-            val dismiss = { offlinePlaylistTargets = emptyList() }
-            val choices = remember(offlinePlaylists, playlistArtworkVersion) {
-                offlinePlaylists.map { playlist ->
-                    UserPlaylist(
-                        playlistId = playlist.id,
-                        title = playlist.title,
-                        subtitle = context.resources.getQuantityString(
-                            R.plurals.song_count_plural,
-                            playlist.songs.size,
-                            playlist.songs.size,
-                        ),
-                        thumbnailUrl = com.licht.nuvx.data.PlaylistArtworkStore.get(context, playlist.browseId)
-                            ?: playlist.songs.firstNotNullOfOrNull { it.thumbnailUrl }.takeUnless { playlist.isLiked },
-                    )
-                }
-            }
-            PlaylistPickerSheet(
-                playlists = choices,
-                loading = false,
-                songs = targets,
-                offline = true,
-                onDismiss = dismiss,
-                onAdd = { picked ->
-                    val result = OfflinePlaylists.add(picked.mapTo(HashSet()) { it.playlistId }, targets)
-                    showQueueNotice(
-                        when {
-                            result.added > 1 -> context.resources.getQuantityString(
-                                R.plurals.added_to_playlists_notice, result.added, result.added,
-                            )
-                            result.added == 1 -> context.getString(R.string.song_added_to_playlist)
-                            result.alreadyThere > 0 -> context.getString(R.string.song_already_in_playlist)
-                            else -> context.getString(R.string.failed)
-                        },
-                    )
-                    dismiss()
-                },
-                onCreate = { title, _ ->
-                    OfflinePlaylists.create(title, targets)
-                    showQueueNotice(context.getString(R.string.song_added_to_playlist))
-                    dismiss()
-                },
-            )
-        }
-
-        if (deleteLocalTargets.isNotEmpty()) {
-            val targets = deleteLocalTargets
-            AlertDialog(
-                onDismissRequest = { deleteLocalTargets = emptyList() },
-                title = { Text(stringResource(R.string.delete)) },
-                text = {
-                    Text(
-                        context.resources.getQuantityString(
-                            R.plurals.delete_local_songs_confirmation,
-                            targets.size,
-                            targets.size,
-                        ),
-                    )
-                },
-                confirmButton = {
-                    TextButton(onClick = {
-                        deleteLocalTargets = emptyList()
-                        scope.launch {
-                            var failed = false
-                            targets.forEach { song ->
-                                if (LocalMediaRepository.delete(context, song)) {
-                                    OfflinePlaylists.removeSong(song)
-                                    // Download-backed rows appear in local:all with their download id as videoId.
-                                    if (Downloads.saved.value.containsKey(song.videoId)) Downloads.delete(context, song.videoId)
-                                } else failed = true
-                            }
-                            if (failed) Toast.makeText(context, R.string.delete_local_songs_failed, Toast.LENGTH_SHORT).show()
-                            viewModel.reloadLocalDetail("local:all")
+        // Kept in a separate composable so NuvxApp stays under the JVM 64 KB method limit.
+        LocalLibraryWriteDialogs(
+            spotifyTarget = spotifyTarget,
+            spotifyPlaylists = spotifyPlaylists,
+            spotifyLoading = spotifyPlaylistsLoading,
+            spotifyError = spotifyPickerError,
+            spotifySaving = spotifySaving,
+            onSpotifyDismiss = { spotifyTarget = null },
+            onSpotifyPick = { playlistId ->
+                if (!spotifySaving) scope.launch {
+                    spotifySaving = true
+                    spotifyPickerError = null
+                    try {
+                        val target = spotifyTarget ?: return@launch
+                        val trackId = SpotifyWrite.trackIdFor(target)
+                        if (trackId == null) {
+                            spotifyPickerError = context.getString(R.string.spotify_track_not_found)
+                            return@launch
                         }
-                    }) { Text(stringResource(R.string.delete)) }
-                },
-                dismissButton = {
-                    TextButton(onClick = { deleteLocalTargets = emptyList() }) {
-                        Text(stringResource(R.string.cancel))
+                        val added = if (playlistId == null) {
+                            SpotifyWrite.saveTracks(listOf(trackId))
+                        } else {
+                            SpotifyWrite.addToPlaylist(playlistId, listOf(trackId))
+                        }
+                        if (added > 0) {
+                            showQueueNotice(context.getString(R.string.spotify_added))
+                            spotifyTarget = null
+                        } else {
+                            spotifyPickerError = context.getString(R.string.spotify_add_failed)
+                        }
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        spotifyPickerError = e.message?.takeIf { it.isNotBlank() }
+                            ?: context.getString(R.string.spotify_add_failed)
+                    } finally {
+                        spotifySaving = false
                     }
-                },
-            )
-        }
+                }
+            },
+            offlineTargets = offlinePlaylistTargets,
+            offlinePlaylists = offlinePlaylists,
+            artworkVersion = playlistArtworkVersion,
+            showNotice = showQueueNotice,
+            onOfflineDismiss = { offlinePlaylistTargets = emptyList() },
+            deleteTargets = deleteLocalTargets,
+            onDeleteDismiss = { deleteLocalTargets = emptyList() },
+            onDeleteConfirm = { targets ->
+                scope.launch {
+                    var failed = false
+                    targets.forEach { song ->
+                        if (LocalMediaRepository.delete(context, song)) {
+                            OfflinePlaylists.removeSong(song)
+                            // Download-backed rows appear in local:all with their download id as videoId.
+                            if (Downloads.saved.value.containsKey(song.videoId)) Downloads.delete(context, song.videoId)
+                        } else failed = true
+                    }
+                    if (failed) Toast.makeText(context, R.string.delete_local_songs_failed, Toast.LENGTH_SHORT).show()
+                    viewModel.reloadLocalDetail("local:all")
+                }
+            },
+        )
 
         if (showSpotifyImportDialog) {
             BackHandler { showSpotifyImportDialog = false }
@@ -4034,6 +3971,116 @@ internal fun NuvxApp(
             onAddonLeftOutDismiss = { addonLeftOutOfDownload = null },
         )
 
+    }
+}
+
+/** Spotify add-to-library, bulk offline playlist add and local song deletion.
+ * Split out of [NuvxApp] because Compose's generated entry point otherwise
+ * exceeds the JVM 64 KB method limit. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun LocalLibraryWriteDialogs(
+    spotifyTarget: Song?,
+    spotifyPlaylists: List<SpotifyPlaylist>,
+    spotifyLoading: Boolean,
+    spotifyError: String?,
+    spotifySaving: Boolean,
+    onSpotifyDismiss: () -> Unit,
+    onSpotifyPick: (String?) -> Unit,
+    offlineTargets: List<Song>,
+    offlinePlaylists: List<OfflinePlaylist>,
+    artworkVersion: Int,
+    showNotice: (String) -> Unit,
+    onOfflineDismiss: () -> Unit,
+    deleteTargets: List<Song>,
+    onDeleteDismiss: () -> Unit,
+    onDeleteConfirm: (List<Song>) -> Unit,
+) {
+    val context = LocalContext.current
+
+    spotifyTarget?.let { target ->
+        SpotifyPlaylistPickerSheet(
+            song = target,
+            playlists = spotifyPlaylists.filter { it.id != SpotifyLibrary.LIKED_ID },
+            loading = spotifyLoading,
+            error = spotifyError,
+            saving = spotifySaving,
+            onDismiss = onSpotifyDismiss,
+            onPick = onSpotifyPick,
+        )
+    }
+
+    if (offlineTargets.isNotEmpty()) {
+        val targets = offlineTargets
+        val choices = remember(offlinePlaylists, artworkVersion) {
+            offlinePlaylists.map { playlist ->
+                UserPlaylist(
+                    playlistId = playlist.id,
+                    title = playlist.title,
+                    subtitle = context.resources.getQuantityString(
+                        R.plurals.song_count_plural,
+                        playlist.songs.size,
+                        playlist.songs.size,
+                    ),
+                    thumbnailUrl = com.licht.nuvx.data.PlaylistArtworkStore.get(context, playlist.browseId)
+                        ?: playlist.songs.firstNotNullOfOrNull { it.thumbnailUrl }.takeUnless { playlist.isLiked },
+                )
+            }
+        }
+        PlaylistPickerSheet(
+            playlists = choices,
+            loading = false,
+            songs = targets,
+            offline = true,
+            onDismiss = onOfflineDismiss,
+            onAdd = { picked ->
+                val result = OfflinePlaylists.add(picked.mapTo(HashSet()) { it.playlistId }, targets)
+                showNotice(
+                    when {
+                        result.added > 1 -> context.resources.getQuantityString(
+                            R.plurals.added_to_playlists_notice, result.added, result.added,
+                        )
+                        result.added == 1 -> context.getString(R.string.song_added_to_playlist)
+                        result.alreadyThere > 0 -> context.getString(R.string.song_already_in_playlist)
+                        else -> context.getString(R.string.failed)
+                    },
+                )
+                onOfflineDismiss()
+            },
+            onCreate = { title, _ ->
+                OfflinePlaylists.create(title, targets)
+                showNotice(context.getString(R.string.song_added_to_playlist))
+                onOfflineDismiss()
+            },
+        )
+    }
+
+    if (deleteTargets.isNotEmpty()) {
+        val targets = deleteTargets
+        AlertDialog(
+            onDismissRequest = onDeleteDismiss,
+            title = { Text(stringResource(R.string.delete)) },
+            text = {
+                Text(
+                    context.resources.getQuantityString(
+                        R.plurals.delete_local_songs_confirmation,
+                        targets.size,
+                        targets.size,
+                    ),
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    onDeleteDismiss()
+                    onDeleteConfirm(targets)
+                }) { Text(stringResource(R.string.delete)) }
+            },
+            dismissButton = {
+                TextButton(onClick = onDeleteDismiss) {
+                    Text(stringResource(R.string.cancel))
+                }
+            },
+        )
     }
 }
 
