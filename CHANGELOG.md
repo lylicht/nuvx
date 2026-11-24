@@ -6,6 +6,7 @@ Every nuvx release, newest first. Downloads and checksums are on each version's 
 
 ## Unreleased
 
+- **Content controls on all four platforms:** Settings now offers *Hide explicit content* and *Keep recommendations on-topic*, filtering Home and autoplay using your own listening history. Thanks @vantom0101 for #365.
 - **Community invitations are no longer automatic** on Android and iOS: remove the unsolicited Discord / Telegram pop-up on app launch or tab changes; manual community links in Settings and optional onboarding buttons remain.
 - **1.0.4 in-place update:** Android release version code 6 and iOS build 6 upgrade prior installed versions with the same package and bundle identifiers. Keep existing signed Android release pipeline.
 
