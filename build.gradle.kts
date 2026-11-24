@@ -9,7 +9,7 @@ buildscript {
     configurations.classpath {
         // shortcut: force AGP 9.5.2's other vulnerable transitives; remove when a stable AGP release updates them.
         resolutionStrategy.force(
-            "org.apache.commons:commons-lang3:3.18.0",
+            "org.apache.commons:commons-lang3:3.22.0",
             "org.apache.httpcomponents:httpclient:4.5.14",
             "org.apache.httpcomponents:httpmime:4.5.14",
             "org.bouncycastle:bcpkix-jdk18on:1.87",
@@ -38,7 +38,7 @@ plugins {
 allprojects {
     configurations.configureEach {
         resolutionStrategy.force(
-            "org.apache.commons:commons-lang3:3.18.0",
+            "org.apache.commons:commons-lang3:3.22.0",
             "org.apache.httpcomponents:httpclient:4.5.14",
             "org.apache.httpcomponents:httpmime:4.5.14",
             "org.bouncycastle:bcpkix-jdk18on:1.87",

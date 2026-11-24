@@ -211,7 +211,7 @@ dependencies {
     implementation(project(":sharedUi"))
     compileOnly("org.checkerframework:checker-qual:3.43.0")
 
-    val composeBom = platform("androidx.compose:compose-bom:2026.09.00")
+    val composeBom = platform("androidx.compose:compose-bom:2026.11.01")
     implementation(composeBom)
     implementation("androidx.compose.foundation:foundation:1.12.1")
     implementation("androidx.compose.ui:ui")
@@ -291,7 +291,7 @@ dependencies {
     implementation("org.bouncycastle:bcpkix-jdk18on:1.87")
 
     // nuvx-core's bindings (from :shared) load Rust through JNA; the jar carries host natives for unit tests.
-    testImplementation("net.java.dev.jna:jna:5.17.0")
+    testImplementation("net.java.dev.jna:jna:5.19.1")
     testImplementation("junit:junit:4.13.2")
     testImplementation("com.squareup.okhttp3:mockwebserver:5.5.1")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.11.0")
