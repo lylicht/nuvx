@@ -148,7 +148,7 @@ On Windows, use `gradlew.bat`. For signing release builds, see [keystore.propert
 | Shared code | [Rust core](core/rust/nuvx-core) · [Kotlin](core/shared) · [Compose UI](core/sharedUi) · [Native audio](core/native) |
 | Discord bot | [Bot setup](core/discord-bot/README.md) |
 | Listen Together server | [Cloudflare Worker](core/worker/README.md) |
-| Project assets | [Canvases](core/canvas/README.md) · [Website](core/website) · [Brand](core/brand/README.md) · [Third-party libraries](core/third_party/README.md) |
+| Project assets | [Canvases](core/canvas/README.md) · [Website](core/website) · [Brand](core/brand/README.md) · [Third-party licenses](docs/licenses/LICENSES.md) |
 
 ---
 
