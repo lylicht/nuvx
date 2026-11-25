@@ -169,7 +169,7 @@ fun GlassNavBar(
                     onNext = onNext,
                     onPrevious = onPrevious,
                     onDismiss = onDismissMiniPlayer,
-                    dismissThreshold = if (isInline) 24.dp else 96.dp,
+                    dismissThreshold = 96.dp,
                     onExpand = onExpand,
                     controlsLocked = controlsLocked,
                     onBlockedControl = onBlockedControl,
