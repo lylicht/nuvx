@@ -16,6 +16,7 @@ internal class PlayerPresentationSettingsController {
     val fullBleedDetailArtwork = MutableStateFlow(false)
     val playerTheme = MutableStateFlow(PlayerTheme.DEFAULT)
     val lastPlayerScreen = MutableStateFlow(LastPlayerScreen.MAIN)
+    val showTotalDuration = MutableStateFlow(false)
 
     fun initialize(prefs: SharedPreferences) {
         this.prefs = prefs
@@ -40,6 +41,7 @@ internal class PlayerPresentationSettingsController {
                 prefs.getString(KEY_LAST_PLAYER_SCREEN, null) ?: LastPlayerScreen.MAIN.name,
             )
         }.getOrDefault(LastPlayerScreen.MAIN)
+        showTotalDuration.value = prefs.getBoolean(KEY_SHOW_TOTAL_DURATION, false)
     }
 
     fun normalizeSignatureApiUrl(raw: String): String = raw.trim().trimEnd('/').take(500)
@@ -96,6 +98,11 @@ internal class PlayerPresentationSettingsController {
         prefs.edit().putString(KEY_LAST_PLAYER_SCREEN, value.name).apply()
     }
 
+    fun setShowTotalDuration(value: Boolean) {
+        showTotalDuration.value = value
+        prefs.edit().putBoolean(KEY_SHOW_TOTAL_DURATION, value).apply()
+    }
+
     private companion object {
         const val KEY_ANIMATED_CANVAS = "animated_canvas"
         const val KEY_CANVAS_OVER_CELLULAR = "canvas_over_cellular"
@@ -108,5 +115,6 @@ internal class PlayerPresentationSettingsController {
         const val KEY_PLAYER_THEME = "player_theme"
         const val KEY_LEGACY_MESH_GRADIENT = "legacy_mesh_gradient"
         const val KEY_LAST_PLAYER_SCREEN = "last_player_screen"
+        const val KEY_SHOW_TOTAL_DURATION = "show_total_duration"
     }
 }
