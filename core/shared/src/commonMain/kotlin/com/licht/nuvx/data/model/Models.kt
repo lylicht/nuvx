@@ -17,6 +17,7 @@ data class Song(
     val artist: String,
     val thumbnailUrl: String?,
     val durationText: String? = null,
+    val plays: String? = null,
     val artistId: String? = null,
     val artists: List<ArtistRef> = emptyList(),
     val albumId: String? = null,

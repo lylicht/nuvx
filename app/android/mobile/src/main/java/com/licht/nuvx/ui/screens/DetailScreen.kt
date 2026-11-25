@@ -549,6 +549,7 @@ fun DetailScreen(
                                                 downloadedTint = downloadedTint,
                                                 isCurrent = isCurrentRow(song),
                                                 isPlaying = isCurrentRow(song) && isPlaying,
+                                                showPlays = true,
                                             )
                                         }
                                     }
@@ -589,6 +590,7 @@ fun DetailScreen(
                             isPlaying = isCurrent && isPlaying,
                             activeTint = palette.accent,
                             searchPlayingStyle = true,
+                            showPlays = numbered,
                         )
                         if (position < matches.lastIndex) {
                             HorizontalDivider(
