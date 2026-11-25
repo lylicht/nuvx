@@ -2701,6 +2701,12 @@ internal fun NuvxApp(
                         },
                         onNext = { controller?.seekToNextMediaItem() },
                         onPrevious = { controller?.seekToPrevious() },
+                        onDismissMiniPlayer = {
+                            if (controlsLocked) showHostOnlyNotice() else controller?.let { active ->
+                                active.stop()
+                                active.clearMediaItems()
+                            }
+                        },
                         onExpand = if (reducePlayerMotion) {
                             { showNowPlaying = true }
                         } else {
@@ -2733,6 +2739,12 @@ internal fun NuvxApp(
                             },
                             onNext = { controller?.seekToNextMediaItem() },
                             onPrevious = { controller?.seekToPrevious() },
+                            onDismiss = {
+                                if (controlsLocked) showHostOnlyNotice() else controller?.let { active ->
+                                    active.stop()
+                                    active.clearMediaItems()
+                                }
+                            },
                             onExpand = if (reducePlayerMotion) {
                                 { showNowPlaying = true }
                             } else {
