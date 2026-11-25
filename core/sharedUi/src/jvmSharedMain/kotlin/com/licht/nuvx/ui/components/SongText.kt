@@ -1,7 +1,9 @@
 package com.licht.nuvx.ui.components
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.border
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -54,6 +56,7 @@ fun ExplicitSongTitle(
     modifier: Modifier = Modifier,
     badgeColor: Color = color,
     fadeOverflow: Boolean = false,
+    marquee: Boolean = false,
 ) {
     Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
         if (song.isExplicit == true) {
@@ -61,7 +64,7 @@ fun ExplicitSongTitle(
             Spacer(Modifier.width(6.dp))
         }
         if (fadeOverflow) {
-            FadingLine(text = song.title, style = style, color = color, modifier = Modifier.weight(1f, fill = false))
+            FadingLine(text = song.title, style = style, color = color, modifier = Modifier.weight(1f, fill = false), marquee = marquee)
         } else {
             Text(
                 text = song.title,
@@ -75,8 +78,21 @@ fun ExplicitSongTitle(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun FadingLine(text: String, style: TextStyle, color: Color, modifier: Modifier = Modifier) {
+fun FadingLine(text: String, style: TextStyle, color: Color, modifier: Modifier = Modifier, marquee: Boolean = false) {
+    if (marquee) {
+        Text(
+            text = text,
+            style = style,
+            color = color,
+            maxLines = 1,
+            softWrap = false,
+            overflow = TextOverflow.Clip,
+            modifier = modifier.basicMarquee(),
+        )
+        return
+    }
     var overflowing by remember { mutableStateOf(false) }
     Text(
         text = text,

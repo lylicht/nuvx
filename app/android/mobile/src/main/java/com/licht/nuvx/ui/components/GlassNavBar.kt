@@ -357,11 +357,13 @@ private fun GlassNowPlaying(
                     color = contentColor,
                     badgeColor = secondary,
                     fadeOverflow = true,
+                    marquee = true,
                 )
                 FadingLine(
                     text = song.artist,
                     style = artistStyle,
                     color = secondary,
+                    marquee = true,
                 )
             }
             if (isLoading) {

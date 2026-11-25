@@ -340,11 +340,13 @@ fun MiniPlayer(
                     color = MaterialTheme.colorScheme.onBackground,
                     badgeColor = MaterialTheme.colorScheme.onSurfaceVariant,
                     fadeOverflow = true,
+                    marquee = true,
                 )
                 FadingLine(
                     text = song.artist,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    marquee = true,
                 )
             }
             if (isLoading) {
