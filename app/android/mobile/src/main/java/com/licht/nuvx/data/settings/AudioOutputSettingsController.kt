@@ -24,6 +24,8 @@ internal class AudioOutputSettingsController {
     val dolbyAtmos = MutableStateFlow(true)
     val directSourceStream = MutableStateFlow(false)
     val spatialAudio = MutableStateFlow(true)
+    val karaokeEnabled = MutableStateFlow(false)
+    val karaokeVocalLevel = MutableStateFlow(0f)
 
     fun initialize(prefs: SharedPreferences) {
         this.prefs = prefs
@@ -55,6 +57,8 @@ internal class AudioOutputSettingsController {
             KEY_SPATIAL_AUDIO,
             defaultSpatialAudioEnabled(BuildConfig.APPLICATION_ID),
         )
+        karaokeEnabled.value = prefs.getBoolean(KEY_KARAOKE_ENABLED, false)
+        karaokeVocalLevel.value = prefs.getFloat(KEY_KARAOKE_VOCAL_LEVEL, 0f).coerceIn(0f, 1f)
     }
 
     fun setOutputPcmMode(value: OutputPcmMode) {
@@ -112,6 +116,16 @@ internal class AudioOutputSettingsController {
         prefs.edit().putBoolean(KEY_SPATIAL_AUDIO, value).apply()
     }
 
+    fun setKaraokeEnabled(value: Boolean) {
+        karaokeEnabled.value = value
+        prefs.edit().putBoolean(KEY_KARAOKE_ENABLED, value).apply()
+    }
+
+    fun setKaraokeVocalLevel(value: Float) {
+        karaokeVocalLevel.value = value.coerceIn(0f, 1f)
+        prefs.edit().putFloat(KEY_KARAOKE_VOCAL_LEVEL, karaokeVocalLevel.value).apply()
+    }
+
     private companion object {
         const val KEY_OUTPUT_PCM_MODE = "output_pcm_mode"
         const val KEY_PREFER_USB_DAC = "prefer_usb_dac"
@@ -124,6 +138,8 @@ internal class AudioOutputSettingsController {
         const val KEY_DOLBY_ATMOS = "dolby_atmos"
         const val KEY_DIRECT_SOURCE_STREAM = "direct_source_stream"
         const val KEY_SPATIAL_AUDIO = "spatial_audio"
+        const val KEY_KARAOKE_ENABLED = "karaoke_enabled"
+        const val KEY_KARAOKE_VOCAL_LEVEL = "karaoke_vocal_level"
         const val KEY_TV_SPATIAL_AUDIO = "tv_spatial_audio"
     }
 }
