@@ -11,6 +11,7 @@ import com.licht.nuvx.data.listentogether.ListenTogether
 import com.licht.nuvx.data.listentogether.partyQueueIndexOf
 import com.licht.nuvx.data.model.PlaybackSourceType
 import com.licht.nuvx.data.model.Song
+import com.licht.nuvx.data.model.DetailLoadId
 import com.licht.nuvx.data.model.TopPick
 import com.licht.nuvx.data.model.isUnresolvedSpotify
 import com.licht.nuvx.playback.BoundedQueuePlanner
@@ -43,6 +44,8 @@ internal class MainPlaybackStarter(
         source: QueueSource,
         boundedContext: Boolean = false,
         continuationToken: String? = null,
+        detailLoadId: DetailLoadId? = null,
+        replaceUpcomingQueue: Boolean = false,
     ) {
         if (allSongs.getOrNull(allIndex)?.isUnresolvedSpotify == true) return
         val songs = allSongs.filterNot { it.isUnresolvedSpotify }
@@ -75,7 +78,14 @@ internal class MainPlaybackStarter(
             } else {
                 val bounded = boundedContext || songs.size > BoundedQueuePlanner.MAX_PHYSICAL_CONTEXT
                 if (bounded && !CastController.state.value.casting) {
-                    c.playBoundedContext(songs, index, source, continuationToken)
+                    c.playBoundedContext(
+                        songs,
+                        index,
+                        source,
+                        continuationToken,
+                        detailLoadId = detailLoadId,
+                        replaceUpcomingQueue = replaceUpcomingQueue,
+                    )
                 } else {
                     val result = QueueCoordinator.buildContextQueue(
                         currentTimeline = currentTimeline,
@@ -83,6 +93,7 @@ internal class MainPlaybackStarter(
                         newContextSongs = songs,
                         selectedIndex = index,
                         contextSource = source,
+                        replaceUpcomingQueue = replaceUpcomingQueue,
                     )
                     c.playSongs(result.timeline, result.startIndex)
                 }

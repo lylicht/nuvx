@@ -8,6 +8,16 @@ import java.net.Socket
 class TvAuthServerSocketTest {
 
     @Test
+    fun originMustMatchTheLocalServerHostAndPort() {
+        assertEquals(true, TvAuthServer.isAllowedOrigin("http://192.168.1.10:8765", "192.168.1.10:8765", "192.168.1.10", 8765))
+        assertEquals(true, TvAuthServer.isAllowedOrigin("http://localhost:8765", "localhost:8765", "192.168.1.10", 8765))
+        assertEquals(false, TvAuthServer.isAllowedOrigin("http://evil.example:8765", "evil.example:8765", "192.168.1.10", 8765))
+        assertEquals(false, TvAuthServer.isAllowedOrigin("https://192.168.1.10:8765", "192.168.1.10:8765", "192.168.1.10", 8765))
+        assertEquals(false, TvAuthServer.isAllowedOrigin("http://192.168.1.10:9999", "192.168.1.10:9999", "192.168.1.10", 8765))
+        assertEquals(false, TvAuthServer.isAllowedOrigin("http://192.168.1.10.attacker.example:8765", "192.168.1.10.attacker.example:8765", "192.168.1.10", 8765))
+    }
+
+    @Test
     fun clientsBeyondTheConnectionLimitAreClosed() {
         ServerSocket(0).use { server ->
             val clients = List(5) {

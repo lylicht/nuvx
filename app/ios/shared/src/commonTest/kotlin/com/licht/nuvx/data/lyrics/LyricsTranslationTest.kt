@@ -14,6 +14,22 @@ import kotlin.test.assertTrue
 
 class LyricsTranslationTest {
 
+    @Test
+    fun `Arabic answer without private use markers splits on ordered counters`() {
+        assertEquals(
+            listOf("سأحبك دائما", "لا تبكي الليلة", "[جوقة]"),
+            LyricsTranslation.splitMarked("سأحبك دائما\n0001\nلا تبكي الليلة\n0002\n[جوقة]"),
+        )
+    }
+
+    @Test
+    fun `four digit lyric is preserved between bare counters`() {
+        assertEquals(
+            listOf("الحفلة", "1999", "لا أندم على شيء"),
+            LyricsTranslation.splitMarked("الحفلة\n0001\n1999\n0002\nلا أندم على شيء"),
+        )
+    }
+
     private fun line(text: String, words: Int = 0) = LyricLineDto(
         timeMs = 0,
         text = text,

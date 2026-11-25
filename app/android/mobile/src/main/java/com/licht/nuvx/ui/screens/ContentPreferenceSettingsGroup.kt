@@ -17,6 +17,7 @@ internal fun ContentPreferenceSettingsGroup(
     hideHomeVideos: Boolean,
     hideTopPicks: Boolean,
     hideHomeMoods: Boolean,
+    hideTrending: Boolean,
     squareVideoThumbnails: Boolean,
     classicSearch: Boolean,
     hideExplicit: Boolean,
@@ -150,6 +151,21 @@ internal fun ContentPreferenceSettingsGroup(
                     )
                 },
                 onClick = { AppSettings.setHideHomeMoods(!hideHomeMoods) },
+            )
+        }
+        val hideTrendingTitle = stringResource(R.string.hide_trending)
+        row(hideTrendingTitle, "trending", "feed", "home", "recommendations") {
+            SettingsRow(
+                icon = SfIcons.VisibilityOff,
+                title = hideTrendingTitle,
+                subtitle = stringResource(R.string.hide_trending_subtitle),
+                trailing = {
+                    IosSwitch(
+                        checked = hideTrending,
+                        onCheckedChange = AppSettings::setHideTrending,
+                    )
+                },
+                onClick = { AppSettings.setHideTrending(!hideTrending) },
             )
         }
         val squareVideoThumbnailsTitle = stringResource(R.string.square_video_thumbnails)

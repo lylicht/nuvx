@@ -24,6 +24,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Slider
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -107,6 +109,8 @@ fun AudioPipelineDialog(
     val eqPreset by AppSettings.equalizerPreset.collectAsStateWithLifecycle()
     val spatialAudio by AppSettings.spatialAudio.collectAsStateWithLifecycle()
     val loudnessNormalization by AppSettings.loudnessNormalization.collectAsStateWithLifecycle()
+    val karaokeEnabled by AppSettings.karaokeEnabled.collectAsStateWithLifecycle()
+    val karaokeVocalLevel by AppSettings.karaokeVocalLevel.collectAsStateWithLifecycle()
 
     val context = LocalContext.current
     val density = LocalDensity.current
@@ -356,6 +360,37 @@ fun AudioPipelineDialog(
                 PipelineRow(stringResource(R.string.pipeline_stereo_expand), stereoExpandText)
                 PipelineRow(stringResource(R.string.pipeline_buffers), buffersText)
                 PipelineRow(stringResource(R.string.pipeline_output_api), outputStatus.sink.ifBlank { "AAudio" })
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(stringResource(R.string.karaoke_title), style = MaterialTheme.typography.bodyMedium)
+                        Text(
+                            when {
+                                bitPerfect.active -> stringResource(R.string.karaoke_unavailable_bitperfect)
+                                nerdStats?.channels != 2 -> stringResource(R.string.karaoke_available_stereo)
+                                karaokeEnabled -> stringResource(R.string.karaoke_active_description)
+                                else -> stringResource(R.string.karaoke_description)
+                            },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    Switch(
+                        checked = karaokeEnabled,
+                        onCheckedChange = AppSettings::setKaraokeEnabled,
+                        enabled = !bitPerfect.active,
+                    )
+                }
+                if (karaokeEnabled && !bitPerfect.active) {
+                    Text(stringResource(R.string.karaoke_vocal_level), style = MaterialTheme.typography.bodySmall)
+                    Slider(
+                        value = karaokeVocalLevel,
+                        onValueChange = AppSettings::setKaraokeVocalLevel,
+                        valueRange = 0f..1f,
+                    )
+                }
                 PipelineRow(
                     stringResource(R.string.pipeline_bit_exact),
                     bitExactVerdict(

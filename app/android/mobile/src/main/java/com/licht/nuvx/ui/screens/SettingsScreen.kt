@@ -97,6 +97,7 @@ import com.licht.nuvx.ui.components.isGlassSupported
 import com.licht.nuvx.ui.components.MessageState
 import com.licht.nuvx.ui.components.SearchField
 import com.licht.nuvx.ui.components.thumbnailBorder
+import com.licht.nuvx.ui.components.dismissKeyboardOnScroll
 import com.licht.nuvx.ui.performance.resolvePerformanceRefreshRate
 import com.licht.nuvx.ui.performance.supportedPerformanceRefreshRates
 import com.licht.nuvx.data.model.Account
@@ -160,7 +161,9 @@ fun SettingsScreen(
     val wifiQuality by AppSettings.audioQualityWifi.collectAsStateWithLifecycle()
     val cellularQuality by AppSettings.audioQualityCellular.collectAsStateWithLifecycle()
     val metered by AppSettings.meteredConnection.collectAsStateWithLifecycle()
+    val networkTransport by AppSettings.networkTransport.collectAsStateWithLifecycle()
     val crossfade by AppSettings.crossfadeSeconds.collectAsStateWithLifecycle()
+    val sleepTimerFadeOut by AppSettings.sleepTimerFadeOutSeconds.collectAsStateWithLifecycle()
     val smartFade by AppSettings.smartFadeEnabled.collectAsStateWithLifecycle()
     val automixPerformance by AppSettings.automixPerformanceMode.collectAsStateWithLifecycle()
     val skipSilence by AppSettings.skipSilence.collectAsStateWithLifecycle()
@@ -168,6 +171,7 @@ fun SettingsScreen(
     val directSourceStream by AppSettings.directSourceStream.collectAsStateWithLifecycle()
     val dolbyAtmosSupported = DeviceCodecs.playsDolbyAtmos
     val spatialAudio by AppSettings.spatialAudio.collectAsStateWithLifecycle()
+    val hapticFeedbackEnabled by AppSettings.hapticFeedbackEnabled.collectAsStateWithLifecycle()
     val nerdStats by AppSettings.showNerdStats.collectAsStateWithLifecycle()
     val listenTogetherButton by AppSettings.showListenTogetherButton.collectAsStateWithLifecycle()
     val hideRadioTab by AppSettings.hideRadioTab.collectAsStateWithLifecycle()
@@ -228,6 +232,7 @@ fun SettingsScreen(
     val hideHomeVideos by AppSettings.hideHomeVideos.collectAsStateWithLifecycle()
     val hideTopPicks by AppSettings.hideTopPicks.collectAsStateWithLifecycle()
     val hideHomeMoods by AppSettings.hideHomeMoods.collectAsStateWithLifecycle()
+    val hideTrending by AppSettings.hideTrending.collectAsStateWithLifecycle()
     val hideExplicit by AppSettings.hideExplicit.collectAsStateWithLifecycle()
     val focusedFeed by AppSettings.focusedFeed.collectAsStateWithLifecycle()
     val smartVersionAlignment by AppSettings.smartVersionAlignment.collectAsStateWithLifecycle()
@@ -350,6 +355,7 @@ fun SettingsScreen(
     Column(
         modifier = modifier
             .fillMaxWidth()
+            .dismissKeyboardOnScroll()
             .verticalScroll(scrollState)
             .padding(contentPadding),
     ) {
@@ -491,7 +497,7 @@ fun SettingsScreen(
                 search = search,
                 downloadQuality = downloadQuality,
                 wifiOnlyDownloads = wifiOnlyDownloads,
-                metered = metered,
+                networkTransport = networkTransport,
                 exportDownloads = exportDownloads,
                 syncDownloadedPlaylists = syncDownloadedPlaylists,
                 onOpenChoice = onOpenChoice,
@@ -513,9 +519,11 @@ fun SettingsScreen(
             loudnessOffOnSpeaker = loudnessOffOnSpeaker,
             smartFade = smartFade,
             crossfade = crossfade,
+            sleepTimerFadeOut = sleepTimerFadeOut,
             automixPerformance = automixPerformance,
             skipSilence = skipSilence,
             spatialAudio = spatialAudio,
+            hapticFeedbackEnabled = hapticFeedbackEnabled,
             playingDolbyAtmos = playingDolbyAtmos,
             swipeToPlayNext = swipeToPlayNext,
             dontRepeatSuggestions = dontRepeatSuggestions,
@@ -536,6 +544,7 @@ fun SettingsScreen(
                 hideHomeVideos = hideHomeVideos,
                 hideTopPicks = hideTopPicks,
                 hideHomeMoods = hideHomeMoods,
+                hideTrending = hideTrending,
                 squareVideoThumbnails = squareVideoThumbnails,
                 classicSearch = classicSearch,
                 hideExplicit = hideExplicit,
@@ -820,8 +829,7 @@ fun SettingsScreen(
     }
 
     if (showLastfmLoginDialog) {
-        var usernameInput by remember { mutableStateOf("") }
-        var passwordInput by remember { mutableStateOf("") }
+        var lastfmToken by rememberSaveable { mutableStateOf<String?>(null) }
         var lastfmError by remember { mutableStateOf<String?>(null) }
         var lastfmLoading by remember { mutableStateOf(false) }
         AlertDialog(
@@ -829,6 +837,13 @@ fun SettingsScreen(
             title = { Text(stringResource(R.string.lastfm_login)) },
             text = {
                 Column {
+                    Text(
+                        text = stringResource(
+                            if (lastfmToken != null) R.string.lastfm_oauth_waiting else R.string.lastfm_oauth_description,
+                        ),
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.padding(bottom = 8.dp),
+                    )
                     if (lastfmError != null) {
                         Text(
                             text = lastfmError!!,
@@ -837,21 +852,6 @@ fun SettingsScreen(
                             modifier = Modifier.padding(bottom = 8.dp),
                         )
                     }
-                    OutlinedTextField(
-                        value = usernameInput,
-                        onValueChange = { usernameInput = it },
-                        label = { Text(stringResource(R.string.username)) },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    OutlinedTextField(
-                        value = passwordInput,
-                        onValueChange = { passwordInput = it },
-                        label = { Text(stringResource(R.string.password)) },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
                 }
             },
             confirmButton = {
@@ -865,16 +865,29 @@ fun SettingsScreen(
                                     apiKey = AppSettings.lastfmApiKey.value,
                                     secret = AppSettings.lastfmSecret.value,
                                 )
-                                LastFM.getMobileSession(usernameInput.trim(), passwordInput)
-                                    .onSuccess { auth ->
-                                        AppSettings.setLastfmSessionKey(auth.session.key)
-                                        AppSettings.setLastfmUsername(auth.session.name)
-                                        AppSettings.setLastfmEnabled(true)
-                                        showLastfmLoginDialog = false
+                                if (lastfmToken == null) {
+                                    val token = LastFM.getToken().getOrThrow().token
+                                    lastfmToken = token
+                                    context.startActivity(
+                                        Intent(Intent.ACTION_VIEW, Uri.parse(LastFM.getAuthUrl(token)))
+                                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                                    )
+                                } else {
+                                    LastFM.getSession(lastfmToken!!)
+                                        .onSuccess { auth ->
+                                            AppSettings.setLastfmSessionKey(auth.session.key)
+                                            AppSettings.setLastfmUsername(auth.session.name)
+                                            AppSettings.setLastfmEnabled(true)
+                                            showLastfmLoginDialog = false
+                                        }
+                                        .onFailure { e ->
+                                            lastfmError = if (e is LastFM.LastFmException && (e.code == 14 || e.code == 4)) {
+                                                context.getString(R.string.lastfm_oauth_error_pending)
+                                            } else {
+                                                e.message ?: context.getString(R.string.login_failed)
+                                            }
                                     }
-                                    .onFailure { e ->
-                                        lastfmError = e.message ?: context.getString(R.string.login_failed)
-                                    }
+                                }
                             } catch (e: Exception) {
                                 lastfmError = e.message ?: context.getString(R.string.login_failed)
                             } finally {
@@ -882,9 +895,15 @@ fun SettingsScreen(
                             }
                         }
                     },
-                    enabled = !lastfmLoading && usernameInput.isNotBlank() && passwordInput.isNotBlank(),
+                    enabled = !lastfmLoading,
                 ) {
-                    Text(stringResource(if (lastfmLoading) R.string.signing_in else R.string.sign_in))
+                    Text(
+                        stringResource(
+                            if (lastfmLoading) R.string.signing_in
+                            else if (lastfmToken == null) R.string.lastfm_authorize_in_browser
+                            else R.string.lastfm_complete_connection,
+                        ),
+                    )
                 }
             },
             dismissButton = {

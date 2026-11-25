@@ -9,6 +9,7 @@ import androidx.compose.ui.res.stringResource
 import com.licht.nuvx.R
 import com.licht.nuvx.data.settings.AppSettings
 import com.licht.nuvx.data.settings.DownloadQuality
+import com.licht.nuvx.data.settings.NetworkTransport
 import com.licht.nuvx.ui.icons.SfIcons
 
 @Composable
@@ -16,7 +17,7 @@ internal fun DownloadSettingsGroup(
     search: SettingsSearch,
     downloadQuality: DownloadQuality,
     wifiOnlyDownloads: Boolean,
-    metered: Boolean?,
+    networkTransport: NetworkTransport,
     exportDownloads: Boolean,
     syncDownloadedPlaylists: Boolean,
     onOpenChoice: (SettingsChoiceKind) -> Unit,
@@ -48,7 +49,10 @@ internal fun DownloadSettingsGroup(
                 title = downloadWifiOnlyTitle,
                 checked = wifiOnlyDownloads,
                 onCheckedChange = AppSettings::setWifiOnlyDownloads,
-                badge = stringResource(R.string.blocking).takeIf { wifiOnlyDownloads && metered == true },
+                badge = stringResource(R.string.blocking).takeIf {
+                    wifiOnlyDownloads && networkTransport != NetworkTransport.WIFI &&
+                        networkTransport != NetworkTransport.OFFLINE
+                },
             )
         }
         val exportDownloadsTitle = stringResource(R.string.export_compatible_downloads)

@@ -1494,6 +1494,12 @@
         <item quantity="one">Delete this song from your device? This cannot be undone.</item>
         <item quantity="other">Delete %1$d songs from your device? This cannot be undone.</item>
     </plurals>
+    <string name="remember_shuffle_across_queues">Ghi nho che do phat ngau nhien cho hang doi moi</string>
+    <string name="remember_shuffle_across_queues_subtitle">Giu phat ngau nhien khi bat dau album hoac danh sach phat khac</string>
+    <string name="haptic_feedback">Phản hồi xúc giác</string>
+    <string name="haptic_feedback_subtitle">Rung khi dùng các nút điều khiển và khi phát bị tạm dừng, tiếp tục hoặc chuyển bài.</string>
+    <string name="hide_trending">Ẩn đề xuất thịnh hành</string>
+    <string name="hide_trending_subtitle">Xóa bài hát và mục cộng đồng thịnh hành khỏi Trang chủ</string>
     <string name="preserve_album_transitions">Phát album liền mạch</string>
     <string name="preserve_album_transitions_subtitle">Tránh chuyển tiếp AutoMix giữa các bài liên tiếp trong cùng album.</string>
 </resources>

@@ -177,6 +177,7 @@ internal class BoundedQueueController(
             queueWindow = window,
             preservedUserQueue = userQueue,
             repeatAll = repeatAll,
+            replaceUpcomingQueue = request.replaceUpcomingQueue,
         )
 
         canonicalJob?.cancel()

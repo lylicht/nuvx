@@ -21,6 +21,7 @@ internal class PlaybackRenderersFactory(
     private val outputRouter: PlaybackOutputRouter,
     private val activeFilter: () -> TransitionFilterProcessor,
     private val spatial: SpatialAudioProcessor,
+    private val vocalReduction: VocalReductionProcessor,
     private val equalizer: EqualizerProcessor,
     private val transition: TransitionFilterProcessor,
     private val loudness: LoudnessProcessor,
@@ -71,7 +72,13 @@ internal class PlaybackRenderersFactory(
             )
             .build()
 
-        val dspChain = DspChain(spatial, equalizer, transition, loudness)
+        val dspChain = DspChain(
+            spatial = spatial,
+            equalizer = equalizer,
+            transition = transition,
+            loudness = loudness,
+            vocalReduction = vocalReduction,
+        )
         val precision = PrecisionAudioSink(
             delegate = defaultSink,
             dspChain = dspChain,

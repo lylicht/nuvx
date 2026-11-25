@@ -1554,6 +1554,12 @@
         <item quantity="one">Delete this song from your device? This cannot be undone.</item>
         <item quantity="other">Delete %1$d songs from your device? This cannot be undone.</item>
     </plurals>
+    <string name="remember_shuffle_across_queues">在不同佇列間記住隨機播放</string>
+    <string name="remember_shuffle_across_queues_subtitle">開始播放其他專輯或播放清單時保持隨機播放</string>
+    <string name="haptic_feedback">觸覺回饋</string>
+    <string name="haptic_feedback_subtitle">操作控制時，以及播放暫停、繼續或切換歌曲時震動。</string>
+    <string name="hide_trending">隱藏熱門趨勢推薦</string>
+    <string name="hide_trending_subtitle">從首頁移除熱門歌曲和社群內容</string>
     <string name="preserve_album_transitions">專輯不間斷播放</string>
     <string name="preserve_album_transitions_subtitle">避免同一專輯連續曲目之間出現 AutoMix 淡入淡出。</string>
 </resources>

@@ -1516,6 +1516,12 @@
         <item quantity="one">Delete this song from your device? This cannot be undone.</item>
         <item quantity="other">Delete %1$d songs from your device? This cannot be undone.</item>
     </plurals>
+    <string name="remember_shuffle_across_queues">Ricorda la modalita casuale nelle nuove code</string>
+    <string name="remember_shuffle_across_queues_subtitle">Mantieni la riproduzione casuale quando avvii un altro album o una playlist</string>
+    <string name="haptic_feedback">Feedback aptico</string>
+    <string name="haptic_feedback_subtitle">Vibra quando usi i controlli e quando la riproduzione si mette in pausa, riprende o cambia brano.</string>
+    <string name="hide_trending">Nascondi i consigli di tendenza</string>
+    <string name="hide_trending_subtitle">Rimuove da Home i brani e le sezioni community di tendenza</string>
     <string name="preserve_album_transitions">Mantieni gli album senza interruzioni</string>
     <string name="preserve_album_transitions_subtitle">Evita le dissolvenze AutoMix tra brani consecutivi dello stesso album.</string>
 </resources>

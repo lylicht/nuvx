@@ -8,6 +8,8 @@ import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.exoplayer.upstream.BandwidthMeter
+import android.os.Build
+import com.licht.nuvx.data.settings.AppSettings
 
 @UnstableApi
 internal class PlaybackPlayerFactory(
@@ -18,6 +20,7 @@ internal class PlaybackPlayerFactory(
 ) {
     fun build(
         spatial: SpatialAudioProcessor,
+        vocalReduction: VocalReductionProcessor,
         equalizer: EqualizerProcessor,
         filter: TransitionFilterProcessor,
         loudness: LoudnessProcessor,
@@ -29,6 +32,7 @@ internal class PlaybackPlayerFactory(
                 outputRouter = outputRouter,
                 activeFilter = activeFilter,
                 spatial = spatial,
+                vocalReduction = vocalReduction,
                 equalizer = equalizer,
                 transition = filter,
                 loudness = loudness,
@@ -36,7 +40,10 @@ internal class PlaybackPlayerFactory(
         )
         .setMediaSourceFactory(mediaSourceFactory())
         .setLoadControl(farBufferingLoadControl())
-        .setAudioAttributes(AUDIO_ATTRIBUTES, ownsSession)
+        .setAudioAttributes(
+            AUDIO_ATTRIBUTES,
+            ownsSession && (AppSettings.audioFocusOption.value.requestsFocus || Build.VERSION.SDK_INT < Build.VERSION_CODES.S),
+        )
         .setHandleAudioBecomingNoisy(ownsSession)
         // Holds a Wi-Fi lock while playing: the buffer refills from the network in the background, and a dozing radio stalls it.
         .setWakeMode(C.WAKE_MODE_NETWORK)
@@ -65,7 +72,10 @@ internal class PlaybackPlayerFactory(
         }
 
     fun setSessionOwner(target: ExoPlayer, owns: Boolean) {
-        target.setAudioAttributes(AUDIO_ATTRIBUTES, owns)
+        target.setAudioAttributes(
+            AUDIO_ATTRIBUTES,
+            owns && (AppSettings.audioFocusOption.value.requestsFocus || Build.VERSION.SDK_INT < Build.VERSION_CODES.S),
+        )
         target.setHandleAudioBecomingNoisy(owns)
     }
 

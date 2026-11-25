@@ -40,6 +40,7 @@ data class Song(
     val playbackSourceType: PlaybackSourceType? = null,
     val playbackSourceId: String? = null,
     val feedbackToken: String? = null,
+    val plays: String? = null,
 ) {
     val fromAutoplay: Boolean get() = queueTier == QueueTier.AUTOPLAY
 
@@ -266,6 +267,16 @@ fun List<HomeShelf>.withoutVideos(): List<HomeShelf> = mapNotNull { shelf ->
     if (items.isEmpty()) null else shelf.copy(items = items)
 }
 
+/** Removes Home sections that are explicitly labeled as trending recommendations. */
+fun List<HomeShelf>.withoutTrending(): List<HomeShelf> = filterNot { shelf ->
+    val title = shelf.title.trim()
+    listOf(
+        "trending", "trends", "tendencias", "tendances", "פופולרי עכשיו", "ट्रेंडिंग",
+        "sedang tren", "tendenze", "急上昇", "인기 급상승", "trendy", "em alta",
+        "в тренде", "trendler", "thịnh hành", "热门趋势", "熱門趨勢",
+    ).any { title.contains(it, ignoreCase = true) }
+}
+
 fun shelfLayoutFor(title: String, items: List<ShelfItem>, fromList: Boolean): ShelfLayout {
     if (items.isEmpty()) return ShelfLayout.CARDS
     val first = items.first()
@@ -320,6 +331,9 @@ data class LibraryPage(
         get() = likedSongs.isEmpty() && librarySongs.isEmpty() && shelves.isEmpty()
 }
 
+/** Process-local identity for one detail load, separate from the collection browse ID. */
+class DetailLoadId
+
 data class DetailPage(
     val browseId: String,
     val title: String,
@@ -335,6 +349,7 @@ data class DetailPage(
     val subscriberCountText: String? = null,
     val monthlyListenerCount: String? = null,
     val subscription: SubscriptionState? = null,
+    val detailLoadId: DetailLoadId? = null,
 )
 
 data class LibraryState(

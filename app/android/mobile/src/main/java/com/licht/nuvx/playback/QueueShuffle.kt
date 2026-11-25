@@ -137,10 +137,11 @@ object QueueShuffle {
         AppSettings.setShuffleEnabled(true)
     }
 
-    /** Play (not Shuffle) starts the list in order: shuffle from an earlier queue must not carry over (issue #329). */
+    /** Play starts in order unless the user asked to carry shuffle into the next queue. */
     fun disableForNextQueue() {
         original = emptyList()
         clearCanonicalContext()
+        if (AppSettings.rememberShuffleAcrossQueues.value) return
         _enabled.value = false
         AppSettings.setShuffleEnabled(false)
     }

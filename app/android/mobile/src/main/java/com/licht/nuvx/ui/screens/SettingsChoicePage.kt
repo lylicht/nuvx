@@ -3,6 +3,7 @@ package com.licht.nuvx.ui.screens
 import com.licht.nuvx.R
 import com.licht.nuvx.data.settings.AppFont
 import com.licht.nuvx.data.settings.AppSettings
+import com.licht.nuvx.data.settings.AudioFocusOption
 import com.licht.nuvx.data.settings.AutomixPerformanceMode
 import com.licht.nuvx.data.settings.AudioQuality
 import com.licht.nuvx.data.settings.BitPerfectMode
@@ -79,6 +80,7 @@ enum class SettingsChoiceKind(@param:StringRes val title: Int) {
     AUTOMIX_PERFORMANCE(R.string.automix_performance),
     BIT_PERFECT(R.string.bit_perfect_output),
     FONT(R.string.font),
+    AUDIO_FOCUS(R.string.audio_focus),
 }
 
 @Composable
@@ -208,6 +210,20 @@ fun SettingsChoicePage(
                     onChosen()
                 }
             }
+
+            SettingsChoiceKind.AUDIO_FOCUS -> {
+                val selected by AppSettings.audioFocusOption.collectAsStateWithLifecycle()
+                ChoiceGroup(
+                    options = AudioFocusOption.entries,
+                    selected = selected,
+                    label = { stringResource(if (it.requestsFocus) R.string.audio_focus_auto_pause else R.string.audio_focus_keep_playing) },
+                    detail = { stringResource(if (it.requestsFocus) R.string.audio_focus_auto_pause_subtitle else R.string.audio_focus_keep_playing_subtitle) },
+                    footer = stringResource(R.string.audio_focus_footer),
+                ) { option ->
+                    AppSettings.setAudioFocusOption(option)
+                    onChosen()
+                }
+            }
         }
         Spacer(Modifier.height(32.dp))
     }
@@ -238,7 +254,9 @@ internal fun <T> ChoiceGroup(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clickable(enabled = available) {
-                        haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        if (com.licht.nuvx.ui.haptics.HapticsSettings.enabled) {
+                            haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        }
                         onSelect(option)
                     }
                     .alpha(if (available) 1f else 0.45f)

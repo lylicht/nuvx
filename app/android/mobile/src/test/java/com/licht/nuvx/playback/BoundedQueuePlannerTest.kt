@@ -47,6 +47,21 @@ class BoundedQueuePlannerTest {
     }
 
     @Test
+    fun `explicit collection play drops preserved user queue`() {
+        val context = songs(4, "context-")
+        val plan = BoundedQueuePlanner.buildInitialPlan(
+            snapshot(context),
+            selectedIndex = 0,
+            queueWindow = QueueWindow(context.size).startAt(0),
+            preservedUserQueue = listOf(song("old-queued")),
+            replaceUpcomingQueue = true,
+        )
+
+        assertTrue(plan.userQueue.isEmpty())
+        assertEquals(context.map(Song::videoId), plan.materializedSongs().map(Song::videoId))
+    }
+
+    @Test
     fun `top up reaches target only below low water and is idempotent`() {
         val window = QueueWindow(80).startAt(0)
         val desired = window.upcoming(WINDOW_AHEAD, repeatAll = false)

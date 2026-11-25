@@ -6,12 +6,14 @@ import com.licht.nuvx.playback.EqualizerProcessor
 import com.licht.nuvx.playback.LoudnessProcessor
 import com.licht.nuvx.playback.SpatialAudioProcessor
 import com.licht.nuvx.playback.TransitionFilterProcessor
+import com.licht.nuvx.playback.VocalReductionProcessor
 
 class DspChain(
     val spatial: SpatialAudioProcessor = SpatialAudioProcessor(),
     val equalizer: EqualizerProcessor = EqualizerProcessor(),
     val transition: TransitionFilterProcessor = TransitionFilterProcessor(),
     val loudness: LoudnessProcessor = LoudnessProcessor(),
+    val vocalReduction: VocalReductionProcessor = VocalReductionProcessor(),
 ) : FloatAudioProcessor {
 
     private var currentSampleRate: Int = 0
@@ -19,6 +21,7 @@ class DspChain(
 
     override fun configure(sampleRate: Int, channelCount: Int) {
         this.currentSampleRate = sampleRate
+        vocalReduction.configure(sampleRate, channelCount)
         spatial.configure(sampleRate, channelCount)
         equalizer.configure(sampleRate, channelCount)
         transition.configure(sampleRate, channelCount)
@@ -52,6 +55,7 @@ class DspChain(
             }
         }
 
+        vocalReduction.process(block)
         spatial.process(block)
         equalizer.process(block)
         transition.process(block)
@@ -62,6 +66,7 @@ class DspChain(
     @Suppress("DEPRECATION")
     override fun flush() {
         spatial.flush()
+        vocalReduction.flush()
         equalizer.flush()
         transition.flush()
         loudness.flush()
@@ -70,6 +75,7 @@ class DspChain(
     override fun reset() {
         processCounter = 0L
         spatial.reset()
+        vocalReduction.reset()
         equalizer.reset()
         transition.reset()
         loudness.reset()
