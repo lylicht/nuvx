@@ -1359,8 +1359,6 @@
     <string name="diwali_title">nuvx mengucapkan Selamat Hari Diwali</string>
     <string name="diwali_subtitle">Semoga festival cahaya ini memenuhi rumahmu dengan kebahagiaan dan harimu dengan musik.</string>
     <string name="diwali_cta">Ayo Rayakan</string>
-    <string name="excor_fallback">Cadangan eXcor</string>
-    <string name="excor_fallback_subtitle">Jika InnerTube tidak menemukan stream, coba eXcor sebelum ekstraktor yang lebih lambat</string>
     <string name="radio">Radio</string>
     <string name="search_stations">Cari stasiun</string>
     <string name="couldnt_load_radio">Tidak dapat memuat stasiun</string>

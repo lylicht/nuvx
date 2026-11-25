@@ -1385,8 +1385,6 @@
     <string name="diwali_title">nuvx מאחלת לך דיוואלי שמח</string>
     <string name="diwali_subtitle">שחג האורות הזה ימלא את ביתך בשמחה ואת ימיך במוזיקה.</string>
     <string name="diwali_cta">בואו נחגוג</string>
-    <string name="excor_fallback">גיבוי eXcor</string>
-    <string name="excor_fallback_subtitle">כש-InnerTube לא מוצא זרם, לנסות את eXcor לפני המחלץ האיטי יותר</string>
     <string name="radio">רדיו</string>
     <string name="search_stations">חיפוש תחנות</string>
     <string name="couldnt_load_radio">לא ניתן לטעון תחנות</string>
