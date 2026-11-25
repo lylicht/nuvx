@@ -11,6 +11,8 @@ class TrackMatcherBracketedTitleTest {
         videoId = "x",
         title = title,
         artist = artist,
+        thumbnailUrl = null,
+        fromAutoplay = false,
     )
 
     @Test
