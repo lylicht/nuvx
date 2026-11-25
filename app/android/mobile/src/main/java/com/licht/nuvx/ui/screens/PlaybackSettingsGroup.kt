@@ -61,6 +61,16 @@ internal fun PlaybackSettingsGroup(
         header = stringResource(R.string.playback),
         footer = stringResource(R.string.bit_perfect_bypassed_footer).takeIf { bitPerfectReady },
     ) {
+        val rememberShuffle by AppSettings.rememberShuffleAcrossQueues.collectAsStateWithLifecycle()
+        val rememberShuffleTitle = stringResource(R.string.remember_shuffle_across_queues)
+        row(rememberShuffleTitle, "shuffle", "queue", "playlist") {
+            SettingsSubRow(
+                title = rememberShuffleTitle,
+                subtitle = stringResource(R.string.remember_shuffle_across_queues_subtitle),
+                checked = rememberShuffle,
+                onCheckedChange = AppSettings::setRememberShuffleAcrossQueues,
+            )
+        }
         val outputPrecisionTitle = stringResource(R.string.output_precision)
         row(outputPrecisionTitle, "pcm", "bit depth", "sample rate", "dac") {
             SettingsRow(
