@@ -849,9 +849,7 @@ object ListenTogether {
 
     private fun wsBase(): String {
         val base = activePartyServerBase ?: effectiveIdleServerBase()
-        return resolveHttpBase(base)
-            .replaceFirst("https://", "wss://")
-            .replaceFirst("http://", "ws://")
+        return ListenTogetherServerUrl.webSocketBase(resolveHttpBase(base))
     }
 
     const val CODE_LENGTH = 6

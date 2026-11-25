@@ -3,6 +3,14 @@ package com.licht.nuvx.data.listentogether
 import java.net.URI
 
 internal object ListenTogetherServerUrl {
+    fun webSocketBase(httpBase: String): String {
+        val uri = URI(httpBase)
+        val host = uri.host?.lowercase() ?: return ""
+        val local = host == "localhost" || host == "127.0.0.1" || host == "::1" || host == "10.0.2.2"
+        val scheme = if (local && uri.scheme.equals("http", ignoreCase = true)) "ws" else "wss"
+        return URI(scheme, null, uri.host, uri.port, uri.path, null, null).toASCIIString().trimEnd('/')
+    }
+
     fun parseAndNormalizeServerUrl(raw: String): ServerUrlValidationResult {
         val trimmed = raw.trim()
         if (trimmed.isEmpty()) return ServerUrlValidationResult.Valid("")
