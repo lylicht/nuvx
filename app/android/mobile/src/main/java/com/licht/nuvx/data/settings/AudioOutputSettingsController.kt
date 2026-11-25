@@ -13,7 +13,6 @@ val LOUDNESS_TARGET_RANGE = -20..-10
 internal class AudioOutputSettingsController {
     private lateinit var prefs: SharedPreferences
 
-    val excorFallback = MutableStateFlow(true)
     val outputPcmMode = MutableStateFlow(OutputPcmMode.PCM_16)
     val preferUsbDac = MutableStateFlow(false)
     val bitPerfectMode = MutableStateFlow(BitPerfectMode.OFF)
@@ -31,7 +30,6 @@ internal class AudioOutputSettingsController {
     }
 
     fun read() {
-        excorFallback.value = prefs.getBoolean(KEY_EXCOR_FALLBACK, true)
         outputPcmMode.value = runCatching {
             OutputPcmMode.valueOf(
                 prefs.getString(KEY_OUTPUT_PCM_MODE, OutputPcmMode.PCM_16.name)
@@ -57,11 +55,6 @@ internal class AudioOutputSettingsController {
             KEY_SPATIAL_AUDIO,
             defaultSpatialAudioEnabled(BuildConfig.APPLICATION_ID),
         )
-    }
-
-    fun setExcorFallback(value: Boolean) {
-        excorFallback.value = value
-        prefs.edit().putBoolean(KEY_EXCOR_FALLBACK, value).apply()
     }
 
     fun setOutputPcmMode(value: OutputPcmMode) {
@@ -120,7 +113,6 @@ internal class AudioOutputSettingsController {
     }
 
     private companion object {
-        const val KEY_EXCOR_FALLBACK = "excor_fallback"
         const val KEY_OUTPUT_PCM_MODE = "output_pcm_mode"
         const val KEY_PREFER_USB_DAC = "prefer_usb_dac"
         const val KEY_BIT_PERFECT_MODE = "bit_perfect_mode"

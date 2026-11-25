@@ -131,8 +131,6 @@ object AppSettings {
     val advancedAutomix = transitionSettings.advancedAutomix
     val skipSilence = transitionSettings.skipSilence
 
-    val excorFallback = audioOutputSettings.excorFallback
-
     val outputPcmMode = audioOutputSettings.outputPcmMode
 
     val preferUsbDac = audioOutputSettings.preferUsbDac
@@ -524,8 +522,6 @@ object AppSettings {
 
     fun setAutomixPerformanceMode(value: AutomixPerformanceMode) = transitionSettings.setAutomixPerformanceMode(value)
     fun setAdvancedAutomix(value: Boolean) = transitionSettings.setAdvancedAutomix(value)
-
-    fun setExcorFallback(value: Boolean) = audioOutputSettings.setExcorFallback(value)
 
     fun setSkipSilence(value: Boolean) = transitionSettings.setSkipSilence(value)
 

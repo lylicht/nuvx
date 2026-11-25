@@ -70,7 +70,6 @@ fun TvSettingsScreen(
     val crossfade by AppSettings.crossfadeSeconds.collectAsState()
     val autoplay by AppSettings.autoplay.collectAsState()
     val skipSilence by AppSettings.skipSilence.collectAsState()
-    val excorFallback by AppSettings.excorFallback.collectAsState()
     val youtubeSearch by AppSettings.youtubeSearch.collectAsState()
     val createPlaylistsLocally by AppSettings.createPlaylistsLocally.collectAsState()
     val nightlyUpdates by AppSettings.nightlyUpdates.collectAsState()
@@ -184,15 +183,6 @@ fun TvSettingsScreen(
                     onClick = { AppSettings.setSkipSilence(!skipSilence) },
                 )
             }
-            item {
-                TvListRow(
-                    title = "eXcor Fallback",
-                    value = onOff(excorFallback),
-                    onFocused = { blurb = "Uses eXcor when InnerTubeX cannot resolve a playable stream." },
-                    onClick = { AppSettings.setExcorFallback(!excorFallback) },
-                )
-            }
-
             item { TvListHeader("Content") }
             item {
                 TvListRow(

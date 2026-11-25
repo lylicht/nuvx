@@ -1299,8 +1299,6 @@
     <string name="diwali_title">nuvx chúc bạn một lễ Diwali vui vẻ</string>
     <string name="diwali_subtitle">Mong lễ hội ánh sáng này mang niềm vui đến ngôi nhà bạn và âm nhạc đến mỗi ngày của bạn.</string>
     <string name="diwali_cta">Cùng ăn mừng</string>
-    <string name="excor_fallback">Dự phòng eXcor</string>
-    <string name="excor_fallback_subtitle">Khi InnerTube không tìm thấy luồng, thử eXcor trước trình trích xuất chậm hơn</string>
     <string name="radio">Radio</string>
     <string name="search_stations">Tìm đài</string>
     <string name="couldnt_load_radio">Không tải được đài</string>

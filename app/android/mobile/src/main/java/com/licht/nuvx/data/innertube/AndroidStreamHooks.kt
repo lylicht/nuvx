@@ -50,7 +50,6 @@ object AndroidStreamHooks {
             )
         }
         StreamResolver.maxKbps = { AppSettings.effectiveAudioQuality.maxKbps }
-        StreamResolver.fallbackEngine = { ExcorFallback.takeIf { AppSettings.excorFallback.value } }
         InnerTubeXResolver.debugLogging = BuildConfig.DEBUG
     }
 

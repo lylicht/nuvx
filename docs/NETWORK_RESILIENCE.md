@@ -113,7 +113,7 @@ A local client that accepts a trusted proxy configuration can provide Nuvx a **s
 
 ## Remaining work and release gates
 
-1. **Android coverage audit:** verify OkHttp/Coil/Media3/Ktor, WebView auth, native eXcor fallback, DRM/casting, private LAN exceptions, and DNS behavior in Direct/Orbot/Local SOCKS5. Verify Android system VPN mode with and without per-app exclusions; check tunnels survive app restart and network changes
+1. **Android coverage audit:** verify OkHttp/Coil/Media3/Ktor, WebView auth, DRM/casting, private LAN exceptions, and DNS behavior in Direct/Orbot/Local SOCKS5. Verify Android system VPN mode with and without per-app exclusions; check tunnels survive app restart and network changes
 2. **Desktop audit:** test proxy auth, all network clients and platform behavior on Windows, Linux and macOS; address any unproxied child processes, WebViews and native decoders
 3. **iOS app:** add Network page/status and opt-in local proxy only if **all** NSURLSession/Ktor/native media/login paths can be protected; otherwise direct users to system VPN. Validate on a real device
 4. **TV/Auto/Wear:** explicit settings + tests by device; do not assume Android phone coverage also covers cast receivers or standalone devices

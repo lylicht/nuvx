@@ -1337,8 +1337,6 @@
     <string name="diwali_title">nuvx Diwali bayramınızı kutlar</string>
     <string name="diwali_subtitle">Bu ışık bayramı evinizi neşeyle, günlerinizi müzikle doldursun.</string>
     <string name="diwali_cta">Hadi Kutlayalım</string>
-    <string name="excor_fallback">eXcor yedeği</string>
-    <string name="excor_fallback_subtitle">InnerTube akış bulamazsa daha yavaş çıkarıcıdan önce eXcor\'u dene</string>
     <string name="radio">Radyo</string>
     <string name="search_stations">İstasyon ara</string>
     <string name="couldnt_load_radio">İstasyonlar yüklenemedi</string>

@@ -177,6 +177,23 @@ impl Client {
         Ok(Self { http, access_token, client_token, client_version, hashes })
     }
 
+    /// Confirm a saved sp_dc cookie is actually accepted before the login
+    /// window exits. No playlist fetch or JavaScript bundle scan is needed.
+    pub(crate) async fn verify_sign_in(sp_dc: &str) -> Result<()> {
+        let http = crate::proxy::apply(reqwest::Client::builder())
+            .user_agent(UA)
+            .connect_timeout(std::time::Duration::from_secs(5))
+            .timeout(std::time::Duration::from_secs(20))
+            .build()?;
+        let resp = http.get("https://open.spotify.com").send().await?.error_for_status()?;
+        let device_id = resp.headers().get_all("set-cookie").iter()
+            .filter_map(|v| v.to_str().ok()?.strip_prefix("sp_t=")?.split(';').next().map(str::to_owned))
+            .next()
+            .unwrap_or_default();
+        access_token(&http, Some(sp_dc), &device_id).await?;
+        Ok(())
+    }
+
     fn hash(&self, operation: &str) -> Result<&str> {
         self.hashes.ops.get(operation).map(String::as_str).ok_or_else(|| anyhow!("couldn't find Spotify's {operation} query"))
     }

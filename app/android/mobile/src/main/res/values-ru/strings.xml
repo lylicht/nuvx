@@ -1409,8 +1409,6 @@
     <string name="diwali_title">nuvx поздравляет вас с Дивали</string>
     <string name="diwali_subtitle">Пусть этот праздник огней наполнит ваш дом радостью, а дни — музыкой.</string>
     <string name="diwali_cta">Отпразднуем</string>
-    <string name="excor_fallback">Резервный eXcor</string>
-    <string name="excor_fallback_subtitle">Если InnerTube не нашёл поток, попробовать eXcor перед более медленным извлечением</string>
     <string name="radio">Радио</string>
     <string name="search_stations">Поиск станций</string>
     <string name="couldnt_load_radio">Не удалось загрузить станции</string>

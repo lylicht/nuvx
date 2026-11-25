@@ -1360,8 +1360,6 @@
     <string name="diwali_title">nuvx からハッピー・ディワリ</string>
     <string name="diwali_subtitle">光の祭りが、あなたの家を喜びで、毎日を音楽で満たしますように。</string>
     <string name="diwali_cta">お祝いしよう</string>
-    <string name="excor_fallback">eXcor フォールバック</string>
-    <string name="excor_fallback_subtitle">InnerTube でストリームが見つからない場合、低速な抽出の前に eXcor を試します</string>
     <string name="radio">ラジオ</string>
     <string name="search_stations">放送局を検索</string>
     <string name="couldnt_load_radio">放送局を読み込めませんでした</string>

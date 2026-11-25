@@ -1365,8 +1365,6 @@
     <string name="diwali_title">nuvx ขอให้คุณมีความสุขในเทศกาลดิวาลี</string>
     <string name="diwali_subtitle">ขอให้เทศกาลแห่งแสงสว่างนี้เติมบ้านของคุณด้วยความสุข และเติมวันของคุณด้วยเสียงเพลง</string>
     <string name="diwali_cta">มาฉลองกัน</string>
-    <string name="excor_fallback">eXcor สำรอง</string>
-    <string name="excor_fallback_subtitle">เมื่อ InnerTube หาสตรีมไม่พบ ให้ลองใช้ eXcor ก่อนตัวดึงข้อมูลที่ช้ากว่า</string>
     <string name="radio">วิทยุ</string>
     <string name="search_stations">ค้นหาสถานี</string>
     <string name="couldnt_load_radio">โหลดสถานีไม่ได้</string>

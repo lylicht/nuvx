@@ -56,15 +56,6 @@ object StreamResolver {
     @Volatile
     var maxKbps: () -> Int = { Int.MAX_VALUE }
 
-    interface FallbackEngine {
-        suspend fun stream(videoId: String, maxKbps: Int): Stream?
-
-        fun headersFor(url: String): Map<String, String>?
-    }
-
-    @Volatile
-    var fallbackEngine: () -> FallbackEngine? = { null }
-
 
     private const val TAG = "nuvx"
 
@@ -223,7 +214,6 @@ object StreamResolver {
                     if (!isLiveUrl(found.url)) found
                     else timed("$videoId live HLS") { liveHlsStream(videoId) } ?: found
                 }
-                ?: fallbackEngine()?.let { engine -> timed("$videoId fallback engine") { fallbackStream(engine, videoId) } }
                 ?: run {
                     TrackLog.w(TAG, "InnerTubeX found no usable stream for $videoId; falling back to extraction")
                     timed("$videoId newPipeStream") { newPipeStream(videoId, ::pickForQuality) }
@@ -360,25 +350,7 @@ object StreamResolver {
     }
 
     fun mediaHeadersFor(url: String): Map<String, String> =
-        fallbackEngine()?.headersFor(url) ?: InnerTubeXResolver.headersFor(url) ?: PlayerClient.forStreamUrl(url).mediaHeaders()
-
-    private suspend fun fallbackStream(engine: FallbackEngine, videoId: String): Stream? {
-        val found = try {
-            engine.stream(videoId, maxKbps())
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            TrackLog.w(TAG, "fallback engine failed for $videoId: ${e.javaClass.name}: ${e.message}")
-            null
-        } ?: return null
-        val verdict = timed("$videoId fallback engine probe") { probe(found.url, found.mimeType) }
-        if (verdict != Probe.OK) {
-            TrackLog.w(TAG, "fallback engine's stream for $videoId failed its probe: $verdict")
-            return null
-        }
-        TrackLog.d(TAG, "resolved $videoId via the fallback engine @ ${found.kbps}kbps")
-        return found
-    }
+        InnerTubeXResolver.headersFor(url) ?: PlayerClient.forStreamUrl(url).mediaHeaders()
 
     private const val INNERTUBEX_ATTEMPTS = 3
 
