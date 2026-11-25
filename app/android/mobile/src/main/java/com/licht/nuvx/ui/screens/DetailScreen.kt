@@ -7,6 +7,7 @@ import com.licht.nuvx.R
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
@@ -25,11 +26,13 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -347,6 +350,17 @@ fun DetailScreen(
     }
 
     val searchStop = with(LocalDensity.current) { topBarContentPadding().roundToPx() }
+    val density = LocalDensity.current
+    val keyboardReserveTarget = if (searching) {
+        with(density) { WindowInsets.ime.getBottom(this).toDp() }
+    } else {
+        0.dp
+    }
+    val keyboardReserve by animateDpAsState(
+        targetValue = keyboardReserveTarget,
+        label = "detail search keyboard reserve",
+    )
+    val searchScope = rememberCoroutineScope()
     LaunchedEffect(searching) {
         if (searching) {
             focusSearch = true
@@ -419,7 +433,10 @@ fun DetailScreen(
                         onQueryChange = { query = it },
                         onClose = closeSearch,
                         autoFocus = focusSearch,
-                        onFocused = { focusSearch = false },
+                        onFocused = {
+                            focusSearch = false
+                            searchScope.launch { listState.animateScrollToItem(SEARCH_ITEM_INDEX, -searchStop) }
+                        },
                         palette = palette,
                         type = page.type,
                     )
@@ -664,6 +681,11 @@ fun DetailScreen(
                 }
             }
             if (isArtist) aboutItem()
+            if (searching) {
+                item(key = "detail-search-ime-reserve") {
+                    Spacer(Modifier.height(keyboardReserve))
+                }
+            }
         }
 
                 if (folder != null && folderState != null && folderState.selecting) {
