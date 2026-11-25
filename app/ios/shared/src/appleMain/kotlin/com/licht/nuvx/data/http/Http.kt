@@ -309,7 +309,9 @@ actual object Http {
                 requestTimeoutMillis = timeoutMillis
                 connectTimeoutMillis = 20_000
             }
-            val explicitContentType = requestHeaders.firstOrNull { it.key.equals("Content-Type", ignoreCase = true) }?.value
+            val explicitContentType = requestHeaders.entries.firstOrNull { entry ->
+                entry.key.equals("Content-Type", ignoreCase = true)
+            }?.value
             requestHeaders.forEach { (key, value) ->
                 if (!key.equals("Content-Type", ignoreCase = true)) header(key, value)
             }
