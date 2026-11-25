@@ -297,6 +297,7 @@ fun NowPlayingScreen(
 
     StatusBarIcons(dark = false)
     val hideStatusBar by PlayerSettings.hideStatusBar.collectAsStateWithLifecycle()
+    val keepScreenOnInPlayer by PlayerSettings.keepScreenOnInPlayer.collectAsStateWithLifecycle()
     HideStatusBar(hideStatusBar)
 
     val playerHaze = remember { HazeState() }
@@ -325,11 +326,12 @@ fun NowPlayingScreen(
 
     val spotifyCanvasAutoHide by PlayerSettings.spotifyCanvasAutoHide.collectAsStateWithLifecycle()
     val mixing by PlayerSettings.smartMixInProgress.collectAsStateWithLifecycle()
+    val fullBleedArt by PlayerSettings.fullBleedArtwork.collectAsStateWithLifecycle()
     val videoMode = showsMusicVideo(song)
     val squareVideo = videoMode && VideoThumbnails.square
     val canvas = rememberCanvasArtwork(song)?.takeUnless { videoMode }?.let {
         val tall = it.portraitUrl
-        if (tall != null && playerFillsWindow(windowWidth)) {
+        if (tall != null && fullBleedArt && playerFillsWindow(windowWidth)) {
             it.copy(url = tall, fallbackUrl = it.url, portraitUrl = null)
         } else it
     }
@@ -459,7 +461,7 @@ fun NowPlayingScreen(
         showRevertCue = false
     }
 
-    KeepScreenOn(enabled = lyricsOpen)
+    KeepScreenOn(enabled = lyricsOpen || keepScreenOnInPlayer)
 
     PlayerBackHandler(enabled = sideways && (videoMode || fullscreenRequested), onBack = exitFullscreen)
 
@@ -566,7 +568,6 @@ fun NowPlayingScreen(
             )
         }
     }
-    val fullBleedArt by PlayerSettings.fullBleedArtwork.collectAsStateWithLifecycle()
     val spotifyCanvasOnPhone = canvas?.source == CanvasSource.SPOTIFY &&
         playerFillsWindow(windowWidth)
     val heroMode = !videoMode && (
@@ -1487,6 +1488,7 @@ fun NowPlayingScreen(
                                     onClick = openPlaybackOrigin,
                                     textAlign = TextAlign.Center,
                                     contentPadding = PaddingValues(start = PLAYER_GUTTER, end = PLAYER_GUTTER, bottom = 1.dp),
+                                    backdropLuminance = artTopLuminance ?: 0f,
                                     modifier = Modifier
                                         .align(Alignment.BottomCenter)
                                         .graphicsLayer { alpha = (1f - p()) * spotifyChromeAlpha },

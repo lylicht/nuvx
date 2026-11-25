@@ -37,6 +37,7 @@ mod motion;
 mod tidal;
 mod opus;
 mod preset;
+mod presence;
 mod radio;
 mod material;
 mod shader;
@@ -107,6 +108,9 @@ fn main() -> eframe::Result {
     update::clean_portable();
     stream::init_dev_hooks();
     proxy::init(&data_dir());
+    // Count this desktop process while it is running; child login windows and
+    // forwarded secondary launches return before this point.
+    let presence = presence::Presence::start(&data_dir());
 
     let background = std::env::var_os("NUVX_BACKGROUND").is_some();
     let mut viewport = egui::ViewportBuilder::default()
@@ -225,6 +229,8 @@ fn main() -> eframe::Result {
             )))
         }),
     );
+    // Send the final offline presence ping before returning from the app.
+    drop(presence);
     if run.is_err() && renderer == renderer::Renderer::Wgpu {
         log::error!("renderer: {} failed to start; switching back to OpenGL", renderer::api_name());
         let _ = renderer::save(&data_dir(), renderer::Renderer::OpenGl);

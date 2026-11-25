@@ -83,6 +83,7 @@ internal fun PlayerScrubber(
                 .offset(y = -SCRUBBER_LABEL_LIFT),
         ) {
             val timeColor = chromeWhite(0.55f)
+            val showTotalDuration by PlayerSettings.showTotalDuration.collectAsStateWithLifecycle()
             Row(
                 modifier = Modifier.fillMaxWidth().additiveChrome(LocalPlayerChrome.current),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -93,9 +94,14 @@ internal fun PlayerScrubber(
                     color = timeColor,
                 )
                 Text(
-                    text = "-" + formatTime(durationMs - (shown * durationMs).toLong()),
+                    text = if (showTotalDuration) formatTime(durationMs)
+                    else "-" + formatTime(durationMs - (shown * durationMs).toLong()),
                     style = MaterialTheme.typography.labelMedium,
                     color = timeColor,
+                    modifier = Modifier.clickable(
+                        indication = null,
+                        interactionSource = remember { MutableInteractionSource() },
+                    ) { PlayerSettings.setShowTotalDuration(!showTotalDuration) },
                 )
             }
             Box(

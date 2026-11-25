@@ -78,13 +78,20 @@ object Http {
         chain.proceed(request)
     }
 
-    val client: OkHttpClient = OkHttpClient.Builder()
+    private val baseClient: OkHttpClient = OkHttpClient.Builder()
         .connectTimeout(20, TimeUnit.SECONDS)
         .readTimeout(30, TimeUnit.SECONDS)
         .retryOnConnectionFailure(true)
         .dispatcher(Dispatcher().apply { maxRequestsPerHost = 16 })
         .connectionPool(ConnectionPool(16, 5, TimeUnit.MINUTES))
-        .addInterceptor(webDavInterceptor)
         .apply { if (USAGE_LOGGING_ENABLED) addNetworkInterceptor(usageInterceptor) }
+        .build()
+
+    /** Shared HTTP transport with no ambient WebDAV credentials. */
+    val transportClient: OkHttpClient = baseClient
+
+    /** WebDAV requests use this wrapper to attach the configured server credential. */
+    val client: OkHttpClient = baseClient.newBuilder()
+        .addInterceptor(webDavInterceptor)
         .build()
 }

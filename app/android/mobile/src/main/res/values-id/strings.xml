@@ -1554,4 +1554,10 @@
         <item quantity="one">Delete this song from your device? This cannot be undone.</item>
         <item quantity="other">Delete %1$d songs from your device? This cannot be undone.</item>
     </plurals>
+    <string name="remember_shuffle_across_queues">Ingat mode acak di antrean berikutnya</string>
+    <string name="remember_shuffle_across_queues_subtitle">Tetap acak saat memulai album atau playlist lain</string>
+    <string name="haptic_feedback">Umpan balik haptik</string>
+    <string name="haptic_feedback_subtitle">Bergetar saat kontrol digunakan dan saat pemutaran dijeda, dilanjutkan, atau berganti lagu.</string>
+    <string name="hide_trending">Sembunyikan rekomendasi tren</string>
+    <string name="hide_trending_subtitle">Hapus lagu dan bagian komunitas yang sedang tren dari Beranda</string>
 </resources>

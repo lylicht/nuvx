@@ -4,6 +4,7 @@ import android.provider.Settings
 import com.licht.nuvx.ui.player.PlayerBackHandler
 import com.licht.nuvx.ui.player.additiveChrome
 import com.licht.nuvx.ui.utils.containSheetGestures
+import com.licht.nuvx.ui.utils.sheetGuardedClickable
 import com.licht.nuvx.ui.components.backdrop.Backdrop
 import com.licht.nuvx.ui.components.backdrop.drawBackdrop
 import com.licht.nuvx.ui.components.backdrop.effects.blur
@@ -16,7 +17,6 @@ import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -226,7 +226,7 @@ fun RowScope.IosMenuQuickAction(
             .fillMaxHeight()
             .clip(RoundedCornerShape(16.dp))
             .background(if (pressed) colors.pressed else Color.Transparent)
-            .clickable(interactionSource = interaction, indication = null, enabled = enabled, onClick = onClick)
+            .sheetGuardedClickable(interactionSource = interaction, indication = null, enabled = enabled, onClick = onClick)
             .padding(horizontal = 4.dp, vertical = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
@@ -277,7 +277,7 @@ fun IosMenuRow(
             .background(if (pressed) colors.pressed else Color.Transparent)
             .then(
                 if (onClick != null) {
-                    Modifier.clickable(
+                    Modifier.sheetGuardedClickable(
                         interactionSource = interaction,
                         indication = null,
                         enabled = enabled,
@@ -410,7 +410,7 @@ fun <T : Any> IosMenuPopover(
                     .fillMaxSize()
                     .graphicsLayer { alpha = progress.value.coerceIn(0f, 1f) }
                     .background(scrim)
-                    .clickable(
+                    .sheetGuardedClickable(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null,
                         enabled = open,

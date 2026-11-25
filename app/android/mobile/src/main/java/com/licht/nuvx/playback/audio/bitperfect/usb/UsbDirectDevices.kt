@@ -21,10 +21,12 @@ import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbManager
 import android.os.Build
 import android.util.Log
+import java.security.MessageDigest
 
 internal object UsbDirectDevices {
 
     private const val TAG = "UsbDirectDevices"
+    private const val VOLUME_PREFS = "nuvx_usb_volume"
 
     private var appContext: Context? = null
     private var permissionAction = ""
@@ -123,7 +125,26 @@ internal object UsbDirectDevices {
     fun rememberedVolume(deviceId: Int): Double? = volumes[deviceId]
 
     @Synchronized
-    fun rememberVolume(deviceId: Int, db: Double) {
+    fun rememberedVolume(device: UsbDevice): Double? {
+        volumes[device.deviceId]?.let { return it }
+        val key = volumePreferenceKey(device.vendorId, device.productId, runCatching { device.serialNumber }.getOrNull())
+            ?: return null
+        val prefs = appContext?.getSharedPreferences(VOLUME_PREFS, Context.MODE_PRIVATE) ?: return null
+        return prefs.getFloat(key, Float.NaN).takeIf(Float::isFinite)?.toDouble()
+    }
+
+    @Synchronized
+    fun rememberVolume(deviceId: Int, identity: String?, db: Double) {
         volumes[deviceId] = db
+        val key = identity ?: return
+        val prefs = appContext?.getSharedPreferences(VOLUME_PREFS, Context.MODE_PRIVATE) ?: return
+        prefs.edit().putFloat(key, db.toFloat()).apply()
+    }
+
+    internal fun volumePreferenceKey(vendorId: Int, productId: Int, serialNumber: String?): String? {
+        val serial = serialNumber?.trim()?.takeIf { it.isNotEmpty() } ?: return null
+        val identity = "$vendorId:$productId:$serial".toByteArray(Charsets.UTF_8)
+        val digest = MessageDigest.getInstance("SHA-256").digest(identity)
+        return digest.joinToString(prefix = "volume_", separator = "") { "%02x".format(it) }
     }
 }

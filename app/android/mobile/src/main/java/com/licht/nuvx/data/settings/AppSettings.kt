@@ -90,6 +90,7 @@ object AppSettings {
     const val TELEGRAM_URL = "https://t.me/nuvxserver"
 
     private lateinit var prefs: SharedPreferences
+    private lateinit var authStore: AuthStore
 
     private val discordSettings = DiscordSettingsController()
     private val scrobblingSettings = ScrobblingSettingsController()
@@ -129,10 +130,12 @@ object AppSettings {
     val syncDownloadedPlaylists = downloadSettings.syncDownloadedPlaylists
 
     val meteredConnection = MutableStateFlow<Boolean?>(null)
+    val networkTransport = MutableStateFlow(NetworkTransport.UNKNOWN)
 
     val crossfadeSeconds = transitionSettings.crossfadeSeconds
 
     val audioFocusOption = MutableStateFlow(AudioFocusOption.AUTO_PAUSE)
+    val sleepTimerFadeOutSeconds = MutableStateFlow(DEFAULT_SLEEP_TIMER_FADE_OUT_SECONDS)
 
     val smartFadeEnabled = transitionSettings.smartFadeEnabled
 
@@ -160,6 +163,9 @@ object AppSettings {
     val directSourceStream = audioOutputSettings.directSourceStream
 
     val spatialAudio = audioOutputSettings.spatialAudio
+    val hapticFeedbackEnabled = audioOutputSettings.hapticFeedbackEnabled
+    val karaokeEnabled = audioOutputSettings.karaokeEnabled
+    val karaokeVocalLevel = audioOutputSettings.karaokeVocalLevel
 
     val equalizerEnabled = equalizerSettings.enabled
 
@@ -184,6 +190,8 @@ object AppSettings {
     val autoplay = MutableStateFlow(true)
 
     val shuffleEnabled = MutableStateFlow(false)
+
+    val rememberShuffleAcrossQueues = MutableStateFlow(false)
 
     val repeatMode = MutableStateFlow(Player.REPEAT_MODE_OFF)
 
@@ -225,6 +233,8 @@ object AppSettings {
 
     val hideSongStatus = MutableStateFlow(false)
 
+    val keepScreenOnInPlayer = MutableStateFlow(false)
+
     val showQueueHistory = MutableStateFlow(false)
     val nightlyUpdates = MutableStateFlow(false)
 
@@ -232,7 +242,7 @@ object AppSettings {
 
     val dontRepeatSuggestions = MutableStateFlow(false)
 
-    val preferMusicOnly = MutableStateFlow(false)
+    val preferMusicOnly = MutableStateFlow(true)
 
     val hideRecents = homeFeedSettings.hideRecents
 
@@ -241,6 +251,8 @@ object AppSettings {
     val hideTopPicks = homeFeedSettings.hideTopPicks
 
     val hideHomeMoods = homeFeedSettings.hideHomeMoods
+
+    val hideTrending = homeFeedSettings.hideTrending
 
     val squareVideoThumbnails = homeFeedSettings.squareVideoThumbnails
 
@@ -283,6 +295,7 @@ object AppSettings {
     val playerTheme = playerPresentationSettings.playerTheme
 
     val lastPlayerScreen = playerPresentationSettings.lastPlayerScreen
+    val showTotalDuration = playerPresentationSettings.showTotalDuration
 
     val syncedLyrics = lyricsSettings.syncedLyrics
 
@@ -407,10 +420,16 @@ object AppSettings {
     }
 
     val downloadsAllowedNow: Boolean
-        get() = !wifiOnlyDownloads.value || meteredConnection.value != true
+        get() = !wifiOnlyDownloads.value || networkTransport.value == NetworkTransport.WIFI ||
+            networkTransport.value == NetworkTransport.OFFLINE
 
     fun init(context: Context, authStore: AuthStore) {
+        this.authStore = authStore
         prefs = context.getSharedPreferences("nuvx_settings", Context.MODE_PRIVATE)
+        val legacySpotifyToken = prefs.getString(KEY_SPOTIFY_SPDC_TOKEN, null)
+        val migratedSpotifyToken = migratedSpotifySpdcToken(authStore.spotifySpdcToken, legacySpotifyToken)
+        if (migratedSpotifyToken != authStore.spotifySpdcToken) authStore.spotifySpdcToken = migratedSpotifyToken
+        prefs.edit().remove(KEY_SPOTIFY_SPDC_TOKEN).apply()
         downloadSettings.initialize(prefs)
         homeFeedSettings.initialize(prefs)
         playerPresentationSettings.initialize(prefs)
@@ -431,7 +450,7 @@ object AppSettings {
         librarySettings.initialize(prefs)
         lyricsSettings.initialize(prefs)
         readAll()
-        MeteredConnectionObserver.watch(context, meteredConnection)
+        MeteredConnectionObserver.watch(context, meteredConnection, networkTransport)
     }
 
     fun reload() {
@@ -443,6 +462,7 @@ object AppSettings {
         audioQualitySettings.read()
         downloadSettings.read()
         transitionSettings.read()
+        sleepTimerFadeOutSeconds.value = prefs.getInt(KEY_SLEEP_TIMER_FADE_OUT_SECONDS, DEFAULT_SLEEP_TIMER_FADE_OUT_SECONDS).coerceIn(0, 60)
         audioOutputSettings.read()
         equalizerSettings.read()
         playbackSpeed.value = prefs.getFloat(KEY_SPEED, 1.0f)
@@ -452,6 +472,7 @@ object AppSettings {
         appearanceSettings.readThemeAndFont()
         autoplay.value = prefs.getBoolean(KEY_AUTOPLAY, true)
         shuffleEnabled.value = prefs.getBoolean(KEY_SHUFFLE_ENABLED, false)
+        rememberShuffleAcrossQueues.value = prefs.getBoolean(KEY_REMEMBER_SHUFFLE_ACROSS_QUEUES, false)
         repeatMode.value = prefs.getInt(KEY_REPEAT_MODE, Player.REPEAT_MODE_OFF)
         showNerdStats.value = prefs.getBoolean(KEY_NERD_STATS, false)
         showListenTogetherButton.value = prefs.getBoolean(KEY_LISTEN_TOGETHER_BUTTON, true)
@@ -471,11 +492,12 @@ object AppSettings {
         hideVolumeBar.value = prefs.getBoolean(KEY_HIDE_VOLUME_BAR, false)
         hideStatusBarInPlayer.value = prefs.getBoolean(KEY_HIDE_STATUS_BAR_IN_PLAYER, false)
         hideSongStatus.value = prefs.getBoolean(KEY_HIDE_SONG_STATUS, false)
+        keepScreenOnInPlayer.value = prefs.getBoolean(KEY_KEEP_SCREEN_ON_IN_PLAYER, false)
         showQueueHistory.value = prefs.getBoolean(KEY_SHOW_QUEUE_HISTORY, false)
         nightlyUpdates.value = prefs.getBoolean(KEY_NIGHTLY_UPDATES, false)
         swipeToPlayNext.value = prefs.getBoolean(KEY_SWIPE_TO_PLAY_NEXT, false)
         dontRepeatSuggestions.value = prefs.getBoolean(KEY_DONT_REPEAT_SUGGESTIONS, false)
-        preferMusicOnly.value = prefs.getBoolean(KEY_PREFER_MUSIC_ONLY, false)
+        preferMusicOnly.value = prefs.getBoolean(KEY_PREFER_MUSIC_ONLY, true)
         homeFeedSettings.read()
         appearanceSettings.readVisualEffects()
         lyricsSettings.readPresentationPreferences()
@@ -484,7 +506,7 @@ object AppSettings {
         lyricsSettings.readProviderPreferences()
         audioCacheSettings.read()
         scrobblingSettings.read()
-        spotifySpdcToken.value = prefs.getString(KEY_SPOTIFY_SPDC_TOKEN, "").orEmpty()
+        spotifySpdcToken.value = authStore.spotifySpdcToken.orEmpty()
         replayGenres.value = prefs.getBoolean(KEY_REPLAY_GENRES, true)
         filterNonMusicAudio.value = prefs.getBoolean(KEY_FILTER_NON_MUSIC_AUDIO, true)
         librarySettings.readPreferences()
@@ -516,6 +538,11 @@ object AppSettings {
         prefs.edit().putString(KEY_AUDIO_FOCUS_OPTION, option.name).apply()
     }
 
+    fun setRememberShuffleAcrossQueues(value: Boolean) {
+        rememberShuffleAcrossQueues.value = value
+        prefs.edit().putBoolean(KEY_REMEMBER_SHUFFLE_ACROSS_QUEUES, value).apply()
+    }
+
     fun setRepeatMode(value: Int) {
         repeatMode.value = value
         prefs.edit().putInt(KEY_REPEAT_MODE, value).apply()
@@ -535,6 +562,12 @@ object AppSettings {
 
     fun setCrossfadeSeconds(value: Int) = transitionSettings.setCrossfadeSeconds(value)
 
+    fun setSleepTimerFadeOutSeconds(value: Int) {
+        val clamped = value.coerceIn(0, 60)
+        sleepTimerFadeOutSeconds.value = clamped
+        prefs.edit().putInt(KEY_SLEEP_TIMER_FADE_OUT_SECONDS, clamped).apply()
+    }
+
     fun setSmartFadeEnabled(value: Boolean) = transitionSettings.setSmartFadeEnabled(value)
 
     fun setAutomixPerformanceMode(value: AutomixPerformanceMode) = transitionSettings.setAutomixPerformanceMode(value)
@@ -547,6 +580,11 @@ object AppSettings {
     fun setDirectSourceStream(value: Boolean) = audioOutputSettings.setDirectSourceStream(value)
 
     fun setSpatialAudio(value: Boolean) = audioOutputSettings.setSpatialAudio(value)
+
+    fun setHapticFeedbackEnabled(value: Boolean) = audioOutputSettings.setHapticFeedbackEnabled(value)
+    fun setKaraokeEnabled(value: Boolean) = audioOutputSettings.setKaraokeEnabled(value)
+
+    fun setKaraokeVocalLevel(value: Float) = audioOutputSettings.setKaraokeVocalLevel(value)
 
     fun setEqualizerEnabled(value: Boolean) = equalizerSettings.setEnabled(value)
 
@@ -663,6 +701,11 @@ object AppSettings {
         prefs.edit().putBoolean(KEY_HIDE_SONG_STATUS, value).apply()
     }
 
+    fun setKeepScreenOnInPlayer(value: Boolean) {
+        keepScreenOnInPlayer.value = value
+        prefs.edit().putBoolean(KEY_KEEP_SCREEN_ON_IN_PLAYER, value).apply()
+    }
+
     fun setNightlyUpdates(value: Boolean) {
         nightlyUpdates.value = value
         prefs.edit().putBoolean(KEY_NIGHTLY_UPDATES, value).apply()
@@ -695,6 +738,8 @@ object AppSettings {
     fun setHideTopPicks(value: Boolean) = homeFeedSettings.setHideTopPicks(value)
 
     fun setHideHomeMoods(value: Boolean) = homeFeedSettings.setHideHomeMoods(value)
+
+    fun setHideTrending(value: Boolean) = homeFeedSettings.setHideTrending(value)
 
     fun setHideExplicit(value: Boolean) = homeFeedSettings.setHideExplicit(value)
 
@@ -755,6 +800,7 @@ object AppSettings {
     fun setPlayerTheme(value: PlayerTheme) = playerPresentationSettings.setPlayerTheme(value)
 
     fun setLastPlayerScreen(value: LastPlayerScreen) = playerPresentationSettings.setLastPlayerScreen(value)
+    fun setShowTotalDuration(value: Boolean) = playerPresentationSettings.setShowTotalDuration(value)
 
     fun setAudioCacheLimitBytes(value: Long) = audioCacheSettings.setCacheLimitBytes(value)
 
@@ -774,7 +820,8 @@ object AppSettings {
 
     fun setSpotifySpdcToken(value: String) {
         spotifySpdcToken.value = value
-        prefs.edit().putString(KEY_SPOTIFY_SPDC_TOKEN, value).apply()
+        authStore.spotifySpdcToken = value
+        prefs.edit().remove(KEY_SPOTIFY_SPDC_TOKEN).apply()
         SpotifyToken.invalidate()
     }
 
@@ -959,10 +1006,13 @@ object AppSettings {
     fun normalizeSignatureApiUrl(raw: String): String = playerPresentationSettings.normalizeSignatureApiUrl(raw)
 
     private const val KEY_AUDIO_FOCUS_OPTION = "audio_focus_option"
+    const val DEFAULT_SLEEP_TIMER_FADE_OUT_SECONDS = 15
+    private const val KEY_SLEEP_TIMER_FADE_OUT_SECONDS = "sleep_timer_fade_out_seconds"
     private const val KEY_SPEED = "playback_speed"
     private const val KEY_AUTOPLAY = "autoplay"
     private const val KEY_NIGHTLY_UPDATES = "nightly_updates"
     private const val KEY_SHUFFLE_ENABLED = "shuffle_enabled"
+    private const val KEY_REMEMBER_SHUFFLE_ACROSS_QUEUES = "remember_shuffle_across_queues"
     private const val KEY_REPEAT_MODE = "repeat_mode"
     private const val KEY_NERD_STATS = "show_nerd_stats"
     private const val KEY_LISTEN_TOGETHER_BUTTON = "show_listen_together_button"
@@ -981,6 +1031,7 @@ object AppSettings {
     private const val KEY_HIDE_VOLUME_BAR = "hide_volume_bar"
     private const val KEY_HIDE_STATUS_BAR_IN_PLAYER = "hide_status_bar_in_player"
     private const val KEY_HIDE_SONG_STATUS = "hide_song_status"
+    private const val KEY_KEEP_SCREEN_ON_IN_PLAYER = "keep_screen_on_in_player"
     private const val KEY_SHOW_QUEUE_HISTORY = "show_queue_history"
     private const val KEY_SWIPE_TO_PLAY_NEXT = "swipe_to_play_next"
     private const val KEY_DONT_REPEAT_SUGGESTIONS = "dont_repeat_suggestions"

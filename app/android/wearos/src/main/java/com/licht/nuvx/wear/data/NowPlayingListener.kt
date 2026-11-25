@@ -22,6 +22,9 @@ import com.licht.nuvx.wear.WearProtocol as P
 
 class NowPlayingListener : WearableListenerService() {
 
+    @Volatile private var previousMediaId: String? = null
+    @Volatile private var previousPlaying: Boolean? = null
+
     override fun onMessageReceived(event: MessageEvent) {
         val path = event.path ?: return
         when {
@@ -43,9 +46,25 @@ class NowPlayingListener : WearableListenerService() {
             it.type == DataEvent.TYPE_CHANGED && it.dataItem.uri.path == P.PATH_NOW_PLAYING
         } ?: return
         val map = DataMapItem.fromDataItem(latest.dataItem).dataMap
-        val playing = map.getBoolean(P.KEY_HAS_TRACK) && map.getBoolean(P.KEY_PLAYING) &&
-            !map.getBoolean(P.KEY_WATCH_SPEAKER)
-        if (playing) {
+        WearPlaybackHaptics.enabled = map.getBoolean(P.KEY_HAPTIC_FEEDBACK, true)
+        val hasTrack = map.getBoolean(P.KEY_HAS_TRACK)
+        val playing = hasTrack && map.getBoolean(P.KEY_PLAYING)
+        val mediaId = map.getString(P.KEY_MEDIA_ID).takeIf { hasTrack }
+        val haptic = synchronized(this) {
+            val oldId = previousMediaId
+            val oldPlaying = previousPlaying
+            previousMediaId = mediaId
+            previousPlaying = playing
+            when {
+                oldId != null && mediaId != null && oldId != mediaId && playing ->
+                    WearPlaybackHaptics.Kind.TrackChange
+                oldPlaying != null && oldPlaying != playing ->
+                    if (playing) WearPlaybackHaptics.Kind.Resume else WearPlaybackHaptics.Kind.Pause
+                else -> null
+            }
+        }
+        haptic?.let { WearPlaybackHaptics.playPlayback(this, it) }
+        if (playing && !map.getBoolean(P.KEY_WATCH_SPEAKER)) {
             show(this, map.getString(P.KEY_TITLE).orEmpty(), map.getString(P.KEY_ARTIST).orEmpty())
         } else {
             hide(this)

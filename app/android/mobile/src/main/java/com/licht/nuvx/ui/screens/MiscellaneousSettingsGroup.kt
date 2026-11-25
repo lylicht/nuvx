@@ -74,6 +74,7 @@ internal fun MiscellaneousSettingsGroup(
     hidePodcastsTab: Boolean,
 ) {
     SearchableSettingsGroup(search, header = stringResource(R.string.miscellaneous)) {
+        val keepScreenOnInPlayer by AppSettings.keepScreenOnInPlayer.collectAsStateWithLifecycle()
         val nightlyUpdates by AppSettings.nightlyUpdates.collectAsStateWithLifecycle()
         val updateScope = rememberCoroutineScope()
         val setNightly: (Boolean) -> Unit = { on ->
@@ -163,6 +164,18 @@ internal fun MiscellaneousSettingsGroup(
                     )
                 },
                 onClick = { AppSettings.setHideSongStatus(!hideSongStatus) },
+            )
+        }
+        val keepScreenOnTitle = stringResource(R.string.keep_screen_on_in_player)
+        row(keepScreenOnTitle, "screen", "awake", "display", "player") {
+            SettingsRow(
+                icon = SfIcons.VisibilityOff,
+                title = keepScreenOnTitle,
+                subtitle = stringResource(R.string.keep_screen_on_in_player_subtitle),
+                trailing = {
+                    IosSwitch(checked = keepScreenOnInPlayer, onCheckedChange = AppSettings::setKeepScreenOnInPlayer)
+                },
+                onClick = { AppSettings.setKeepScreenOnInPlayer(!keepScreenOnInPlayer) },
             )
         }
         val showNerdStatsTitle = stringResource(R.string.show_nerd_stats)

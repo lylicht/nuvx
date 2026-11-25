@@ -48,7 +48,7 @@ internal object StreamLengthProbe {
     private const val LOSSY_FLOOR_KBPS = 64
 
     private val client: OkHttpClient by lazy {
-        Http.client.newBuilder()
+        Http.transportClient.newBuilder()
             .callTimeout(PROBE_TIMEOUT_SEC, TimeUnit.SECONDS)
             .build()
     }

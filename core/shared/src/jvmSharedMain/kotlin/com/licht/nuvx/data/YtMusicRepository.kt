@@ -206,11 +206,26 @@ object YtMusicRepository {
     private suspend fun albumPageOf(albumResponse: JsonObject): SongPage {
         val metadata = pageOf(albumResponse)
         val playlist = albumPlaylistOf(albumResponse, metadata.songs.size) ?: return metadata
-        return pageOf(playlist).copy(
+        val listing = pageOf(playlist)
+        return listing.copy(
+            songs = withPlaysFrom(metadata.songs, listing.songs),
             library = metadata.library,
             header = metadata.header,
             description = metadata.description,
         )
+    }
+
+    internal fun withPlaysFrom(albumRows: List<Song>, songs: List<Song>): List<Song> {
+        val counted = albumRows.filter { it.plays != null }
+        if (counted.isEmpty()) return songs
+        val byId = counted.associate { it.videoId to it.plays }
+        val byTitle = counted.groupBy { it.title.trim().lowercase(Locale.ROOT) }
+            .filterValues { it.size == 1 }
+            .mapValues { it.value.single().plays }
+        return songs.map { song ->
+            if (song.plays != null) song
+            else song.copy(plays = byId[song.videoId] ?: byTitle[song.title.trim().lowercase(Locale.ROOT)])
+        }
     }
 
     private suspend fun albumPlaylistOf(albumResponse: JsonObject, albumRows: Int): JsonObject? {

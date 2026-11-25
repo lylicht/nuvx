@@ -1578,4 +1578,10 @@
         <item quantity="one">Delete this song from your device? This cannot be undone.</item>
         <item quantity="other">Delete %1$d songs from your device? This cannot be undone.</item>
     </plurals>
+    <string name="remember_shuffle_across_queues">Conserver la lecture aleatoire entre les files</string>
+    <string name="remember_shuffle_across_queues_subtitle">Conserver la lecture aleatoire au demarrage d un autre album ou playlist</string>
+    <string name="haptic_feedback">Retour haptique</string>
+    <string name="haptic_feedback_subtitle">Vibre lors des commandes, des pauses, des reprises et des changements de titre.</string>
+    <string name="hide_trending">Masquer les recommandations tendance</string>
+    <string name="hide_trending_subtitle">Retire de l’accueil les titres tendance et les sections communautaires</string>
 </resources>

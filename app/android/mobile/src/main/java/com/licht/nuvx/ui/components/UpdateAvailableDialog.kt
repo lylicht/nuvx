@@ -7,6 +7,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -42,6 +43,7 @@ import com.licht.nuvx.data.settings.AppSettings
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.materials.ExperimentalHazeMaterialsApi
 import dev.chrisbanes.haze.materials.HazeMaterials
+import java.text.NumberFormat
 
 internal val ALERT_WIDTH = 270.dp
 internal val ALERT_CORNER = 14.dp
@@ -138,21 +140,33 @@ fun UpdateAvailableDialog(
 
                 val downloading = state as? AppUpdateChecker.DownloadState.Downloading
                 if (downloading != null || state is AppUpdateChecker.DownloadState.Failed) {
-                    Box(
-                        Modifier
-                            .padding(top = 12.dp)
-                            .fillMaxWidth()
-                            .height(DOWNLOAD_ROW_HEIGHT)
-                            .clip(RoundedCornerShape(DOWNLOAD_ROW_HEIGHT / 2))
-                            .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.14f)),
+                    Row(
+                        modifier = Modifier.padding(top = 12.dp).fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        if (downloading != null && downloading.fraction > 0f) {
-                            Box(
-                                Modifier
-                                    .fillMaxWidth(downloading.fraction)
-                                    .height(DOWNLOAD_ROW_HEIGHT)
-                                    .clip(RoundedCornerShape(DOWNLOAD_ROW_HEIGHT / 2))
-                                    .background(MaterialTheme.colorScheme.primary),
+                        Box(
+                            Modifier
+                                .weight(1f)
+                                .height(DOWNLOAD_ROW_HEIGHT)
+                                .clip(RoundedCornerShape(DOWNLOAD_ROW_HEIGHT / 2))
+                                .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.14f)),
+                        ) {
+                            if (downloading != null && downloading.fraction > 0f) {
+                                Box(
+                                    Modifier
+                                        .fillMaxWidth(downloading.fraction)
+                                        .height(DOWNLOAD_ROW_HEIGHT)
+                                        .clip(RoundedCornerShape(DOWNLOAD_ROW_HEIGHT / 2))
+                                        .background(MaterialTheme.colorScheme.primary),
+                                )
+                            }
+                        }
+                        if (downloading != null) {
+                            Text(
+                                text = NumberFormat.getPercentInstance().format(downloading.fraction),
+                                modifier = Modifier.padding(start = 8.dp),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
                     }
