@@ -1583,4 +1583,6 @@
     <string name="haptic_feedback_subtitle">Vibriert bei der Bedienung und wenn die Wiedergabe pausiert, fortgesetzt oder der Titel gewechselt wird.</string>
     <string name="hide_trending">Trendempfehlungen ausblenden</string>
     <string name="hide_trending_subtitle">Entfernt angesagte Songs und Community-Bereiche von der Startseite</string>
+    <string name="preserve_album_transitions">Alben ohne Unterbrechung abspielen</string>
+    <string name="preserve_album_transitions_subtitle">Verhindert AutoMix-Überblendungen zwischen aufeinanderfolgenden Titeln desselben Albums.</string>
 </resources>

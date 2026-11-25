@@ -141,6 +141,7 @@ object AppSettings {
 
     val automixPerformanceMode = transitionSettings.automixPerformanceMode
     val advancedAutomix = transitionSettings.advancedAutomix
+    val preserveAlbumTransitions = transitionSettings.preserveAlbumTransitions
     val skipSilence = transitionSettings.skipSilence
 
     val outputPcmMode = audioOutputSettings.outputPcmMode
@@ -572,6 +573,7 @@ object AppSettings {
 
     fun setAutomixPerformanceMode(value: AutomixPerformanceMode) = transitionSettings.setAutomixPerformanceMode(value)
     fun setAdvancedAutomix(value: Boolean) = transitionSettings.setAdvancedAutomix(value)
+    fun setPreserveAlbumTransitions(value: Boolean) = transitionSettings.setPreserveAlbumTransitions(value)
 
     fun setSkipSilence(value: Boolean) = transitionSettings.setSkipSilence(value)
 

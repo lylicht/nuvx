@@ -1621,4 +1621,6 @@
     <string name="haptic_feedback_subtitle">Wibruje podczas obsługi elementów sterujących oraz przy wstrzymaniu, wznowieniu lub zmianie utworu.</string>
     <string name="hide_trending">Ukryj polecane trendy</string>
     <string name="hide_trending_subtitle">Usuwa z ekranu głównego popularne utwory i sekcje społeczności</string>
+    <string name="preserve_album_transitions">Odtwarzaj albumy bez przerw</string>
+    <string name="preserve_album_transitions_subtitle">Pomija przenikanie AutoMix między kolejnymi utworami z tego samego albumu.</string>
 </resources>

@@ -143,6 +143,10 @@ internal class CrossfadeLoopPlanner(
     }
 
     private fun loopRefusalFor(player: ExoPlayer, current: MediaItem, next: MediaItem, state: SmartAnalysis): String? = when {
+        AppSettings.preserveAlbumTransitions.value &&
+            !player.shuffleModeEnabled &&
+            player.nextMediaItemIndex == player.currentMediaItemIndex + 1 &&
+            current.isSameAlbumAs(next) -> "consecutive album tracks"
         !LoopMixRenderer.available -> "no renderer"
         AppSettings.playbackSpeed.value != 1f -> "playback speed is not 1x"
         player.skipSilenceEnabled -> "skip silence is on"

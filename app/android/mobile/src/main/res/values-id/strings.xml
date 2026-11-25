@@ -1560,4 +1560,6 @@
     <string name="haptic_feedback_subtitle">Bergetar saat kontrol digunakan dan saat pemutaran dijeda, dilanjutkan, atau berganti lagu.</string>
     <string name="hide_trending">Sembunyikan rekomendasi tren</string>
     <string name="hide_trending_subtitle">Hapus lagu dan bagian komunitas yang sedang tren dari Beranda</string>
+    <string name="preserve_album_transitions">Putar album tanpa jeda</string>
+    <string name="preserve_album_transitions_subtitle">Hindari transisi AutoMix di antara lagu berurutan dari album yang sama.</string>
 </resources>

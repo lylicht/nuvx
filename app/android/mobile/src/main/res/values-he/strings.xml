@@ -1588,4 +1588,6 @@
     <string name="haptic_feedback_subtitle">המכשיר רוטט בשימוש בפקדים ובהשהיה, בחידוש או בהחלפת רצועה.</string>
     <string name="hide_trending">הסתרת המלצות פופולריות</string>
     <string name="hide_trending_subtitle">הסרת שירים ומדורים קהילתיים פופולריים מדף הבית</string>
+    <string name="preserve_album_transitions">השמעת אלבומים ברצף</string>
+    <string name="preserve_album_transitions_subtitle">מונע מעברי AutoMix בין רצועות עוקבות מאותו אלבום.</string>
 </resources>

@@ -417,7 +417,7 @@ private const val EXTRA_PLAYBACK_SOURCE_TYPE = "nuvx.playbackSourceType"
 private const val EXTRA_PLAYBACK_SOURCE_ID = "nuvx.playbackSourceId"
 
 private const val EXTRA_ARTIST_ID = "nuvx.artistId"
-private const val EXTRA_ALBUM_ID = "nuvx.albumId"
+internal const val EXTRA_ALBUM_ID = "nuvx.albumId"
 
 private const val EXTRA_SET_VIDEO_ID = "nuvx.setVideoId"
 

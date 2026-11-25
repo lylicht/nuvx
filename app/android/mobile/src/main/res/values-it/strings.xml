@@ -1522,4 +1522,6 @@
     <string name="haptic_feedback_subtitle">Vibra quando usi i controlli e quando la riproduzione si mette in pausa, riprende o cambia brano.</string>
     <string name="hide_trending">Nascondi i consigli di tendenza</string>
     <string name="hide_trending_subtitle">Rimuove da Home i brani e le sezioni community di tendenza</string>
+    <string name="preserve_album_transitions">Mantieni gli album senza interruzioni</string>
+    <string name="preserve_album_transitions_subtitle">Evita le dissolvenze AutoMix tra brani consecutivi dello stesso album.</string>
 </resources>

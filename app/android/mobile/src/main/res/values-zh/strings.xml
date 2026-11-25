@@ -1560,4 +1560,6 @@
     <string name="haptic_feedback_subtitle">操作控制时，以及播放暂停、继续或切换歌曲时震动。</string>
     <string name="hide_trending">隐藏热门趋势推荐</string>
     <string name="hide_trending_subtitle">从首页移除热门歌曲和社区内容</string>
+    <string name="preserve_album_transitions">专辑无间断播放</string>
+    <string name="preserve_album_transitions_subtitle">避免同一专辑连续曲目之间出现 AutoMix 淡入淡出。</string>
 </resources>

@@ -1583,4 +1583,6 @@
     <string name="haptic_feedback_subtitle">कंट्रोल इस्तेमाल करने और प्लेबैक रोकने, फिर शुरू करने या ट्रैक बदलने पर कंपन होता है।</string>
     <string name="hide_trending">ट्रेंडिंग सुझाव छिपाएँ</string>
     <string name="hide_trending_subtitle">होम से ट्रेंडिंग गाने और कम्युनिटी सेक्शन हटाएँ</string>
+    <string name="preserve_album_transitions">एल्बम को बिना रुकावट चलाएँ</string>
+    <string name="preserve_album_transitions_subtitle">एक ही एल्बम के लगातार ट्रैकों के बीच AutoMix फ़ेड से बचें।</string>
 </resources>

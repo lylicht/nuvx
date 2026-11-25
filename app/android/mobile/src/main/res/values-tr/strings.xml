@@ -1540,4 +1540,6 @@
     <string name="haptic_feedback_subtitle">Kontroller kullanıldığında ve oynatma duraklatıldığında, sürdürüldüğünde veya parça değiştiğinde titrer.</string>
     <string name="hide_trending">Trend önerilerini gizle</string>
     <string name="hide_trending_subtitle">Trend şarkıları ve topluluk bölümlerini Ana Sayfa’dan kaldırır</string>
+    <string name="preserve_album_transitions">Albümleri kesintisiz çal</string>
+    <string name="preserve_album_transitions_subtitle">Aynı albümdeki ardışık parçalar arasında AutoMix geçişlerini önler.</string>
 </resources>

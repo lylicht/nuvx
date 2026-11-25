@@ -1500,4 +1500,6 @@
     <string name="haptic_feedback_subtitle">Rung khi dùng các nút điều khiển và khi phát bị tạm dừng, tiếp tục hoặc chuyển bài.</string>
     <string name="hide_trending">Ẩn đề xuất thịnh hành</string>
     <string name="hide_trending_subtitle">Xóa bài hát và mục cộng đồng thịnh hành khỏi Trang chủ</string>
+    <string name="preserve_album_transitions">Phát album liền mạch</string>
+    <string name="preserve_album_transitions_subtitle">Tránh chuyển tiếp AutoMix giữa các bài liên tiếp trong cùng album.</string>
 </resources>

@@ -1616,4 +1616,6 @@
     <string name="haptic_feedback_subtitle">Вибрация при нажатии кнопок, паузе, возобновлении и смене трека.</string>
     <string name="hide_trending">Скрыть популярные рекомендации</string>
     <string name="hide_trending_subtitle">Убирает популярные треки и разделы сообщества с главной страницы</string>
+    <string name="preserve_album_transitions">Воспроизводить альбомы без пауз</string>
+    <string name="preserve_album_transitions_subtitle">Отключает переходы AutoMix между последовательными треками одного альбома.</string>
 </resources>

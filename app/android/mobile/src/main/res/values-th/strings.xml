@@ -1566,4 +1566,6 @@
     <string name="haptic_feedback_subtitle">สั่นเมื่อใช้ปุ่มควบคุมและเมื่อหยุดชั่วคราว เล่นต่อ หรือเปลี่ยนเพลง</string>
     <string name="hide_trending">ซ่อนรายการแนะนำที่กำลังมาแรง</string>
     <string name="hide_trending_subtitle">นำเพลงและหมวดชุมชนที่กำลังมาแรงออกจากหน้าแรก</string>
+    <string name="preserve_album_transitions">เล่นอัลบั้มแบบต่อเนื่อง</string>
+    <string name="preserve_album_transitions_subtitle">หลีกเลี่ยงการเฟดของ AutoMix ระหว่างเพลงที่ต่อเนื่องกันในอัลบั้มเดียวกัน</string>
 </resources>
