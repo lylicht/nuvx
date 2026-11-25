@@ -213,7 +213,7 @@ val newPipeExtractorStripped = tasks.register<org.gradle.api.tasks.bundling.Jar>
 dependencies {
     implementation(project(":shared"))
     implementation(project(":sharedUi"))
-    compileOnly("org.checkerframework:checker-qual:3.43.0")
+    compileOnly("org.checkerframework:checker-qual:4.4.0")
 
     val composeBom = platform("androidx.compose:compose-bom:2026.11.01")
     implementation(composeBom)
