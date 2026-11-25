@@ -1,5 +1,7 @@
 package com.licht.nuvx.ui.components
 
+import android.content.Intent
+import android.net.Uri
 import android.content.Context
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -38,19 +40,15 @@ internal fun ScrobbleLoginDialogs(
     }
 
     if (showLastfmLogin) {
-        var usernameInput by remember { mutableStateOf("") }
-        var passwordInput by remember { mutableStateOf("") }
+        var lastfmToken by remember { mutableStateOf<String?>(null) }
         var lastfmError by remember { mutableStateOf<String?>(null) }
         var lastfmLoading by remember { mutableStateOf(false) }
         LastfmLoginAlert(
             hazeState = hazeState,
-            usernameInput = usernameInput,
-            onUsernameInputChange = { usernameInput = it },
-            passwordInput = passwordInput,
-            onPasswordInputChange = { passwordInput = it },
+            authorizationPending = lastfmToken != null,
             error = lastfmError,
             loading = lastfmLoading,
-            onSignIn = {
+            onAuthorize = {
                 lastfmLoading = true
                 lastfmError = null
                 scope.launch {
@@ -59,12 +57,39 @@ internal fun ScrobbleLoginDialogs(
                             apiKey = AppSettings.lastfmApiKey.value,
                             secret = AppSettings.lastfmSecret.value,
                         )
-                        LastFM.getMobileSession(usernameInput.trim(), passwordInput)
+                        val token = LastFM.getToken().getOrThrow().token
+                        lastfmToken = token
+                        context.startActivity(
+                            Intent(Intent.ACTION_VIEW, Uri.parse(LastFM.getAuthUrl(token)))
+                                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                        )
+                    } catch (e: Exception) {
+                        lastfmError = e.message ?: context.getString(R.string.login_failed)
+                    } finally {
+                        lastfmLoading = false
+                    }
+                }
+            },
+            onComplete = {
+                val token = lastfmToken ?: return@LastfmLoginAlert
+                lastfmLoading = true
+                lastfmError = null
+                scope.launch {
+                    try {
+                        LastFM.initialize(
+                            apiKey = AppSettings.lastfmApiKey.value,
+                            secret = AppSettings.lastfmSecret.value,
+                        )
+                        LastFM.getSession(token)
                             .onSuccess { auth ->
                                 onLastfmSession(auth.session.key, auth.session.name)
                             }
                             .onFailure { e ->
-                                lastfmError = e.message ?: context.getString(R.string.login_failed)
+                                lastfmError = if (e is LastFM.LastFmException && (e.code == 14 || e.code == 4)) {
+                                    context.getString(R.string.lastfm_oauth_error_pending)
+                                } else {
+                                    e.message ?: context.getString(R.string.login_failed)
+                                }
                             }
                     } catch (e: Exception) {
                         lastfmError = e.message ?: context.getString(R.string.login_failed)
