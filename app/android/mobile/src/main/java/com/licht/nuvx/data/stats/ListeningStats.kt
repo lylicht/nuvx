@@ -246,12 +246,6 @@ object ListeningStats {
     }
 
     private fun prune() {
-        val existing = months()
-        if (existing.size > KEEP_MONTHS) {
-            existing.take(existing.size - KEEP_MONTHS).forEach {
-                File(directory, "$it.json").delete()
-            }
-        }
         val bucket = open ?: return
         bucket.tracks.trimTo(MAX_TRACKS) { it.ms }
         bucket.artists.trimTo(MAX_NAMES) { it.ms }
@@ -379,8 +373,6 @@ object ListeningStats {
 
     private const val TAG = "NuvxListening"
     private const val DIRECTORY = "listening"
-
-    private const val KEEP_MONTHS = 36
 
     private const val MAX_TRACKS = 600
     private const val MAX_NAMES = 400
