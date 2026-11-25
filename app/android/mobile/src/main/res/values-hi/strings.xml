@@ -1577,4 +1577,6 @@
         <item quantity="one">Delete this song from your device? This cannot be undone.</item>
         <item quantity="other">Delete %1$d songs from your device? This cannot be undone.</item>
     </plurals>
+    <string name="preserve_album_transitions">एल्बम को बिना रुकावट चलाएँ</string>
+    <string name="preserve_album_transitions_subtitle">एक ही एल्बम के लगातार ट्रैकों के बीच AutoMix फ़ेड से बचें।</string>
 </resources>

@@ -1494,4 +1494,6 @@
         <item quantity="one">Delete this song from your device? This cannot be undone.</item>
         <item quantity="other">Delete %1$d songs from your device? This cannot be undone.</item>
     </plurals>
+    <string name="preserve_album_transitions">Phát album liền mạch</string>
+    <string name="preserve_album_transitions_subtitle">Tránh chuyển tiếp AutoMix giữa các bài liên tiếp trong cùng album.</string>
 </resources>

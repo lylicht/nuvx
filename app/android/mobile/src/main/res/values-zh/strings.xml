@@ -1554,4 +1554,6 @@
         <item quantity="one">Delete this song from your device? This cannot be undone.</item>
         <item quantity="other">Delete %1$d songs from your device? This cannot be undone.</item>
     </plurals>
+    <string name="preserve_album_transitions">专辑无间断播放</string>
+    <string name="preserve_album_transitions_subtitle">避免同一专辑连续曲目之间出现 AutoMix 淡入淡出。</string>
 </resources>

@@ -1415,4 +1415,6 @@
         <item quantity="one">Delete this song from your device? This cannot be undone.</item>
         <item quantity="other">Delete %1$d songs from your device? This cannot be undone.</item>
     </plurals>
+    <string name="preserve_album_transitions">앨범을 끊김 없이 재생</string>
+    <string name="preserve_album_transitions_subtitle">같은 앨범의 연속된 트랙 사이에서 AutoMix 페이드를 방지합니다.</string>
 </resources>

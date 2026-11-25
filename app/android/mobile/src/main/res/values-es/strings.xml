@@ -1549,4 +1549,6 @@
         <item quantity="one">Delete this song from your device? This cannot be undone.</item>
         <item quantity="other">Delete %1$d songs from your device? This cannot be undone.</item>
     </plurals>
+    <string name="preserve_album_transitions">Mantener los álbumes sin pausas</string>
+    <string name="preserve_album_transitions_subtitle">Evita fundidos de AutoMix entre pistas consecutivas del mismo álbum.</string>
 </resources>

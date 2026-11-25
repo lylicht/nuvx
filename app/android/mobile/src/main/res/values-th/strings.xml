@@ -1560,4 +1560,6 @@
         <item quantity="one">Delete this song from your device? This cannot be undone.</item>
         <item quantity="other">Delete %1$d songs from your device? This cannot be undone.</item>
     </plurals>
+    <string name="preserve_album_transitions">เล่นอัลบั้มแบบต่อเนื่อง</string>
+    <string name="preserve_album_transitions_subtitle">หลีกเลี่ยงการเฟดของ AutoMix ระหว่างเพลงที่ต่อเนื่องกันในอัลบั้มเดียวกัน</string>
 </resources>
