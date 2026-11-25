@@ -1129,11 +1129,34 @@ class PlaybackService : MediaLibraryService() {
 
     private fun watchSleepTimer() {
         scope.launch {
-            SleepTimer.deadline.collectLatest { deadline ->
+            combine(SleepTimer.deadline, AppSettings.sleepTimerFadeOutSeconds) { deadline, fadeSeconds -> deadline to fadeSeconds }
+                .collectLatest { (deadline, fadeSeconds) ->
                 if (deadline == null) return@collectLatest
+                crossfade?.cancelSleepFadeOut()
                 val remaining = deadline - SystemClock.elapsedRealtime()
-                if (remaining > 0) delay(remaining)
+                if (remaining <= 0L) {
+                    player?.pause()
+                    player?.volume = 1f
+                    SleepTimer.cancel()
+                    return@collectLatest
+                }
+                val fadeMs = minOf(fadeSeconds * 1000L, remaining).coerceAtLeast(0L)
+                val untilFade = remaining - fadeMs
+                if (untilFade > 0L) delay(untilFade)
+                val activePlayer = player
+                if (activePlayer == null || !activePlayer.isPlaying || fadeMs <= 0L) {
+                    val untilDeadline = deadline - SystemClock.elapsedRealtime()
+                    if (untilDeadline > 0L) delay(untilDeadline)
+                    player?.pause()
+                    player?.volume = 1f
+                    SleepTimer.cancel()
+                    return@collectLatest
+                }
+                crossfade?.startSleepFadeOut(fadeMs)
+                val untilDeadline = deadline - SystemClock.elapsedRealtime()
+                if (untilDeadline > 0L) delay(untilDeadline)
                 player?.pause()
+                player?.volume = 1f
                 SleepTimer.cancel()
             }
         }
