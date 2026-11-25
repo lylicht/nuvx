@@ -277,6 +277,50 @@ describe('player behavior at queue and media boundaries', () => {
     expect(player.usePlayer.getState()).toMatchObject({ index: 0, status: 'paused', nowPlaying: { videoId: 'one' } });
   });
 
+  it('does not restore a stale queue when the next track moves during crossfade loading', async () => {
+    const player = await youtubePlayer();
+    const current = player.usePlayer.getState().queue[0]!;
+    const next = { ...current, entryId: 'next', track: track('next', '') };
+    const other = { ...current, entryId: 'other', track: track('other', '') };
+    player.usePlayer.setState({ queue: [current, next], index: 0, crossfadeSec: 6, status: 'playing' });
+    let resolveIncoming!: (value: Awaited<ReturnType<typeof engineLoad>>) => void;
+    engineLoad.mockReturnValueOnce(new Promise((resolve) => { resolveIncoming = resolve; }));
+    const audio = player.getAudio() as FakeAudio;
+    audio.paused = false;
+    audio.currentTime = 175;
+    audio.dispatchEvent(new Event('timeupdate'));
+    await vi.waitFor(() => expect(engineLoad).toHaveBeenCalledTimes(2));
+
+    const liveQueue = [current, other, next];
+    player.usePlayer.setState({ queue: liveQueue, index: 0 });
+    resolveIncoming(loaded('next'));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(player.usePlayer.getState()).toMatchObject({ queue: liveQueue, index: 0, nowPlaying: { videoId: 'one' } });
+  });
+
+  it('keeps live queue additions when the crossfade target is still next', async () => {
+    const player = await youtubePlayer();
+    const current = player.usePlayer.getState().queue[0]!;
+    const next = { ...current, entryId: 'next', track: track('next', '') };
+    const appended = { ...current, entryId: 'appended', track: track('appended', '') };
+    player.usePlayer.setState({ queue: [current, next], index: 0, crossfadeSec: 6, status: 'playing' });
+    let resolveIncoming!: (value: Awaited<ReturnType<typeof engineLoad>>) => void;
+    engineLoad.mockReturnValueOnce(new Promise((resolve) => { resolveIncoming = resolve; }));
+    const audio = player.getAudio() as FakeAudio;
+    audio.paused = false;
+    audio.currentTime = 175;
+    audio.dispatchEvent(new Event('timeupdate'));
+    await vi.waitFor(() => expect(engineLoad).toHaveBeenCalledTimes(2));
+
+    const liveQueue = [current, next, appended];
+    player.usePlayer.setState({ queue: liveQueue, index: 0 });
+    resolveIncoming(loaded('next'));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(player.usePlayer.getState()).toMatchObject({ queue: liveQueue, index: 1, nowPlaying: { videoId: 'next' } });
+  });
+
   it('discards stale track loads after rapid track changes', async () => {
     const player = await import('./player');
     fetchRadio.mockResolvedValue({ candidates: [], seedIsVideo: false });

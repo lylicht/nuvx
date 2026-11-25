@@ -836,6 +836,8 @@ function maybeCrossfade() {
   if (!Number.isFinite(remaining) || remaining > state.crossfadeSec || remaining < 1) return;
   const plan = planNext(true);
   if (!plan || plan.kind !== 'index') return;
+  const sourceEntryId = state.queue[state.index]?.entryId;
+  if (!sourceEntryId) return;
 
   const back = decks[1 - active]!;
   const entry = plan.queue[plan.index]!;
@@ -850,12 +852,28 @@ function maybeCrossfade() {
     .load(entry.track.videoId, { autoplay: true })
     .then((track) => {
       if (!fade || fade.token !== token || !decks) return;
+      const live = usePlayer.getState();
+      const queueUnchanged = live.queue === state.queue && live.index === state.index;
+      const handoff = queueUnchanged
+        ? { queue: plan.queue, index: plan.index }
+        : live.queue[live.index]?.entryId === sourceEntryId &&
+            live.queue[live.index + 1]?.entryId === entry.entryId
+          ? { queue: live.queue, index: live.index + 1 }
+          : null;
+      if (!handoff) {
+        trackLog.i('crossfade discarded because the live queue moved on', entry.track.videoId);
+        fade = null;
+        back.gain = 1;
+        void back.engine.stop().catch(() => {});
+        applyVolumes();
+        return;
+      }
       fade.pending = false;
       back.loudnessDb = track.loudnessDb;
       const from = front;
       const to = back;
       active = 1 - active;
-      usePlayer.setState((s) => ({ queue: plan.queue, index: plan.index, deck: s.deck + 1, status: 'playing' }));
+      usePlayer.setState((s) => ({ queue: handoff.queue, index: handoff.index, deck: s.deck + 1, status: 'playing' }));
       applyTrack(track, entry.track);
       afterTrackStarted();
 
