@@ -19,6 +19,7 @@ import com.licht.nuvx.data.model.Song
 import com.licht.nuvx.data.model.SongMenu
 import com.licht.nuvx.data.model.UiState
 import com.licht.nuvx.data.model.UserPlaylist
+import com.licht.nuvx.data.stats.ListeningStats
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -205,6 +206,7 @@ internal class MainAccountController(
 
             val wasSignedIn = signedIn.value
             if (wasSignedIn) cacheCurrentListener()
+            ListeningStats.setScope("$accountId:${profile.profileId}")
             authStore.upsertSession(stored)
             authStore.cookie = session.cookie
             _googleAccounts.value = authStore.sessions
@@ -246,6 +248,7 @@ internal class MainAccountController(
             profiles = updatedProfiles,
             activeProfileId = profile.profileId,
         )
+        ListeningStats.setScope("$accountId:${profile.profileId}")
         authStore.upsertSession(updated)
         authStore.select(accountId, profile.profileId)
         _googleAccounts.value = authStore.sessions
@@ -358,6 +361,7 @@ internal class MainAccountController(
         _googleAccounts.value = emptyList()
         _activeAccountId.value = null
         _activeProfileId.value = null
+        ListeningStats.setScope(null)
         _library.value = UiState.Loading
         libraryHistory.cancelLikedSync()
         LikeState.clear()
