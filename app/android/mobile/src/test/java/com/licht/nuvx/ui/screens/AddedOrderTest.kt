@@ -8,8 +8,8 @@ import org.junit.Test
 
 class AddedOrderTest {
     private val songs = listOf(
-        Song(videoId = "old", title = "Old", artist = "Artist"),
-        Song(videoId = "new", title = "New", artist = "Artist"),
+        Song(videoId = "old", title = "Old", artist = "Artist", thumbnailUrl = null, fromAutoplay = false),
+        Song(videoId = "new", title = "New", artist = "Artist", thumbnailUrl = null, fromAutoplay = false),
     )
 
     @Test
