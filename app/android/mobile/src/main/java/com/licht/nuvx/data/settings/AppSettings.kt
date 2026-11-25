@@ -83,6 +83,7 @@ object AppSettings {
     const val TELEGRAM_URL = "https://t.me/nuvxserver"
 
     private lateinit var prefs: SharedPreferences
+    private lateinit var authStore: AuthStore
 
     private val discordSettings = DiscordSettingsController()
     private val scrobblingSettings = ScrobblingSettingsController()
@@ -407,7 +408,12 @@ object AppSettings {
         get() = !wifiOnlyDownloads.value || meteredConnection.value != true
 
     fun init(context: Context, authStore: AuthStore) {
+        this.authStore = authStore
         prefs = context.getSharedPreferences("nuvx_settings", Context.MODE_PRIVATE)
+        val legacySpotifyToken = prefs.getString(KEY_SPOTIFY_SPDC_TOKEN, null)
+        val migratedSpotifyToken = migratedSpotifySpdcToken(authStore.spotifySpdcToken, legacySpotifyToken)
+        if (migratedSpotifyToken != authStore.spotifySpdcToken) authStore.spotifySpdcToken = migratedSpotifyToken
+        prefs.edit().remove(KEY_SPOTIFY_SPDC_TOKEN).apply()
         downloadSettings.initialize(prefs)
         homeFeedSettings.initialize(prefs)
         playerPresentationSettings.initialize(prefs)
@@ -480,7 +486,7 @@ object AppSettings {
         lyricsSettings.readProviderPreferences()
         audioCacheSettings.read()
         scrobblingSettings.read()
-        spotifySpdcToken.value = prefs.getString(KEY_SPOTIFY_SPDC_TOKEN, "").orEmpty()
+        spotifySpdcToken.value = authStore.spotifySpdcToken.orEmpty()
         replayGenres.value = prefs.getBoolean(KEY_REPLAY_GENRES, true)
         filterNonMusicAudio.value = prefs.getBoolean(KEY_FILTER_NON_MUSIC_AUDIO, true)
         librarySettings.readPreferences()
@@ -780,7 +786,8 @@ object AppSettings {
 
     fun setSpotifySpdcToken(value: String) {
         spotifySpdcToken.value = value
-        prefs.edit().putString(KEY_SPOTIFY_SPDC_TOKEN, value).apply()
+        authStore.spotifySpdcToken = value
+        prefs.edit().remove(KEY_SPOTIFY_SPDC_TOKEN).apply()
         SpotifyToken.invalidate()
     }
 
