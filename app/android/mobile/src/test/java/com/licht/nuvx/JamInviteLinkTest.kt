@@ -2,6 +2,7 @@ package com.licht.nuvx
 
 import com.licht.nuvx.data.listentogether.JamInviteLink
 import com.licht.nuvx.data.listentogether.ListenTogether
+import com.licht.nuvx.data.listentogether.ListenTogetherServerUrl
 import com.licht.nuvx.data.listentogether.ProbeResult
 import com.licht.nuvx.data.listentogether.ServerConnectionState
 import com.licht.nuvx.data.listentogether.ServerUrlError
@@ -18,6 +19,14 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class JamInviteLinkTest {
+
+    @Test
+    fun `websocket transport is secure except for explicit local development hosts`() {
+        assertEquals("wss://party.example/path", ListenTogetherServerUrl.webSocketBase("http://party.example/path"))
+        assertEquals("wss://party.example", ListenTogetherServerUrl.webSocketBase("https://party.example"))
+        assertEquals("ws://localhost:8080", ListenTogetherServerUrl.webSocketBase("http://localhost:8080"))
+        assertEquals("ws://10.0.2.2:8080", ListenTogetherServerUrl.webSocketBase("http://10.0.2.2:8080"))
+    }
 
     @Test
     fun `parses and normalizes a public invite`() {
