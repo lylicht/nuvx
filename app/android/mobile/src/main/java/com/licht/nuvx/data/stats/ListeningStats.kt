@@ -137,7 +137,7 @@ object ListeningStats {
         if (song.videoId.isBlank()) return
         val now = System.currentTimeMillis()
         val at = Instant.ofEpochMilli(now).atZone(ZoneId.systemDefault())
-        val dayKey = "${at.year}-${"%02d".format(at.monthValue)}-${"%02d".format(at.dayOfMonth)}"
+        val dayKey = dayKey(YearMonth.from(at).toString(), at.dayOfMonth)
         synchronized(lock) {
             val bucket = bucketFor(YearMonth.from(at))
             val track = bucket.tracks.getOrPut(song.videoId) {
@@ -452,6 +452,9 @@ object ListeningStats {
 
     private const val MAX_TRACKS = 600
     private const val MAX_NAMES = 400
+
+    /** Date keys are parsed by LocalDate, so always serialize their digits as ASCII. */
+    internal fun dayKey(month: String, day: Int): String = "$month-${day.toString().padStart(2, '0')}"
 }
 
 @Serializable
