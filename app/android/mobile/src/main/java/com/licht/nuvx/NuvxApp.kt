@@ -284,6 +284,7 @@ import com.licht.nuvx.ui.player.LocalPlayerDock
 import com.licht.nuvx.ui.player.PlayerDock
 import com.licht.nuvx.ui.screens.DetailScreen
 import com.licht.nuvx.ui.screens.sortedForDetail
+import com.licht.nuvx.ui.screens.addedOrderOf
 import com.licht.nuvx.ui.screens.ExploreScreen
 import com.licht.nuvx.ui.screens.LocalFolder
 import com.licht.nuvx.ui.screens.LocalFolderState
@@ -2567,7 +2568,10 @@ internal fun NuvxApp(
                                                 subtitle = detail.subtitle,
                                                 thumbnailUrl = detail.thumbnailUrl,
                                                 type = detail.type,
-                                                songs = releaseSongs.sortedForDetail(songSort).map { song ->
+                                                songs = releaseSongs.sortedForDetail(
+                                                    songSort,
+                                                    addedOrderOf(detail.browseId, detail.type),
+                                                ).map { song ->
                                                     if (detail.type == BrowseType.ALBUM) {
                                                         song.copy(albumName = song.albumName ?: detail.title)
                                                     } else {

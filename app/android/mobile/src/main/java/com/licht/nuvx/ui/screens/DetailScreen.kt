@@ -254,7 +254,8 @@ fun DetailScreen(
     val rawSongs = (page.songs as? UiState.Success)?.data.orEmpty()
     val folderSort = folder?.sort
     val songs = remember(rawSongs, songSort, folderSort) {
-        if (folderSort != null) rawSongs.sortedForLibrary(folderSort) else rawSongs.sortedForDetail(songSort)
+        if (folderSort != null) rawSongs.sortedForLibrary(folderSort)
+        else rawSongs.sortedForDetail(songSort, addedOrderOf(page.browseId, page.type))
     }
     val originalTrackNumbers = remember(rawSongs) {
         val byTag = rawSongs.useTrackTags()
@@ -690,24 +691,43 @@ fun DetailScreen(
 }
 }
 
-internal fun List<Song>.sortedForDetail(sort: SongSort): List<Song> = when (sort) {
+internal enum class AddedOrder { FILE_DATES, APPENDED, NEWEST_FIRST }
+
+internal fun addedOrderOf(browseId: String, type: BrowseType): AddedOrder = when {
+    browseId == "VLLM" || browseId == "LM" || browseId == "local:offline:liked" -> AddedOrder.NEWEST_FIRST
+    type == BrowseType.PLAYLIST -> AddedOrder.APPENDED
+    else -> AddedOrder.FILE_DATES
+}
+
+internal fun List<Song>.sortedForDetail(
+    sort: SongSort,
+    addedOrder: AddedOrder = AddedOrder.FILE_DATES,
+): List<Song> = when (sort) {
     SongSort.DEFAULT -> this
     SongSort.TITLE_ASC -> sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.title })
     SongSort.TITLE_DESC -> sortedWith(compareByDescending(String.CASE_INSENSITIVE_ORDER) { it.title })
-    SongSort.DATE_ADDED_ASC -> withIndex()
-        .sortedWith(
-            compareBy<IndexedValue<Song>> { (_, song) ->
-                song.localDateAddedSeconds ?: Long.MAX_VALUE
-            }.thenBy { (position, _) -> position },
-        )
-        .map { it.value }
-    SongSort.DATE_ADDED_DESC -> withIndex()
-        .sortedWith(
-            compareByDescending<IndexedValue<Song>> { (_, song) ->
-                song.localDateAddedSeconds ?: Long.MIN_VALUE
-            }.thenByDescending { (position, _) -> position },
-        )
-        .map { it.value }
+    SongSort.DATE_ADDED_ASC -> when (addedOrder) {
+        AddedOrder.APPENDED -> this
+        AddedOrder.NEWEST_FIRST -> asReversed()
+        AddedOrder.FILE_DATES -> withIndex()
+            .sortedWith(
+                compareBy<IndexedValue<Song>> { (_, song) ->
+                    song.localDateAddedSeconds ?: Long.MAX_VALUE
+                }.thenBy { (position, _) -> position },
+            )
+            .map { it.value }
+    }
+    SongSort.DATE_ADDED_DESC -> when (addedOrder) {
+        AddedOrder.APPENDED -> asReversed()
+        AddedOrder.NEWEST_FIRST -> this
+        AddedOrder.FILE_DATES -> withIndex()
+            .sortedWith(
+                compareByDescending<IndexedValue<Song>> { (_, song) ->
+                    song.localDateAddedSeconds ?: Long.MIN_VALUE
+                }.thenByDescending { (position, _) -> position },
+            )
+            .map { it.value }
+    }
 }
 
 internal fun List<Song>.matching(query: String): List<IndexedValue<Song>> {
