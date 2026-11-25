@@ -166,7 +166,6 @@ fun SettingsScreen(
     val skipSilence by AppSettings.skipSilence.collectAsStateWithLifecycle()
     val dolbyAtmos by AppSettings.dolbyAtmos.collectAsStateWithLifecycle()
     val directSourceStream by AppSettings.directSourceStream.collectAsStateWithLifecycle()
-    val excorFallback by AppSettings.excorFallback.collectAsStateWithLifecycle()
     val dolbyAtmosSupported = DeviceCodecs.playsDolbyAtmos
     val spatialAudio by AppSettings.spatialAudio.collectAsStateWithLifecycle()
     val nerdStats by AppSettings.showNerdStats.collectAsStateWithLifecycle()
@@ -428,18 +427,6 @@ fun SettingsScreen(
                         onCheckedChange = AppSettings::setDirectSourceStream,
                         subtitle = stringResource(R.string.direct_source_stream_in_party).takeIf { party.inParty },
                         enabled = !party.inParty,
-                    )
-                }
-                val excorTitle = stringResource(R.string.excor_fallback)
-                val excorSubtitle = stringResource(R.string.excor_fallback_subtitle)
-                row(excorTitle, excorSubtitle, "excor", "innertube", "extraction", "engine") {
-                    SettingsRow(
-                        icon = SfIcons.Cached,
-                        title = excorTitle,
-                        subtitle = excorSubtitle,
-                        trailing = {
-                            IosSwitch(checked = excorFallback, onCheckedChange = AppSettings::setExcorFallback)
-                        },
                     )
                 }
                 val onWifiTitle = stringResource(R.string.on_wifi)
