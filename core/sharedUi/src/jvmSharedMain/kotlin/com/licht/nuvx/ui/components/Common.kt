@@ -189,6 +189,7 @@ fun SongRow(
             searchPlayingStyle = searchPlayingStyle,
             selected = selected,
             showSourceQuality = showSourceQuality,
+            showPlays = showPlays,
             trailing = trailing,
         )
     }
@@ -322,6 +323,7 @@ private fun SongRowContent(
     searchPlayingStyle: Boolean = false,
     selected: Boolean = false,
     showSourceQuality: Boolean = false,
+    showPlays: Boolean = false,
     trailing: (@Composable () -> Unit)? = null,
 ) {
     val titleColor by animateColorAsState(
