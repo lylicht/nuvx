@@ -20,6 +20,8 @@ import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.put
+import kotlinx.serialization.json.putJsonObject
 import kotlinx.serialization.json.putJsonArray
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.MediaType.Companion.toMediaType
@@ -47,6 +49,9 @@ object SpotifyWrite {
 
     private const val TRACK_URI = "spotify:track:"
     private const val SEARCH_LIMIT = 10
+    private const val PATHFINDER_SEARCH_HASH =
+        "b02683192a98dde7966b5e6655a79eeb62713eab703eda9902c932818dd52751"
+    private const val PATHFINDER_URL = "https://api-partner.spotify.com/pathfinder/v2/query"
     private const val PLAYLIST_CHUNK = 100
     private const val SAVED_CHUNK = 50
     private const val USER_AGENT =
@@ -59,23 +64,40 @@ object SpotifyWrite {
 
     /** Overridable in tests; never changed at runtime. */
     internal var apiBase = "https://api.spotify.com/v1"
+    internal var pathfinderBase = PATHFINDER_URL
     internal var httpClient: OkHttpClient = Http.client
     internal var tokenProvider: suspend () -> String? = { SpotifyToken.accessToken() }
+    internal var clientTokenProvider: () -> String? = { SpotifyToken.clientToken() }
 
     suspend fun searchTracks(query: String): List<SpotifyTrack> {
         if (query.isBlank()) return emptyList()
-        val url = endpoint("search").newBuilder()
-            .addQueryParameter("q", query)
-            .addQueryParameter("type", "track")
-            .addQueryParameter("limit", SEARCH_LIMIT.toString())
-            .build()
+        val clientToken = clientTokenProvider() ?: return emptyList()
+        val variables = buildJsonObject {
+            put("searchTerm", query)
+            put("offset", 0)
+            put("limit", SEARCH_LIMIT)
+            put("numberOfTopResults", 5)
+            put("includeAudiobooks", false)
+            put("includePreReleases", false)
+        }
+        val extensions = buildJsonObject {
+            putJsonObject("persistedQuery") {
+                put("version", 1)
+                put("sha256Hash", PATHFINDER_SEARCH_HASH)
+            }
+        }
+        val requestBody = buildJsonObject {
+            put("operationName", "searchTracks")
+            put("variables", variables)
+            put("extensions", extensions)
+        }.toString().toRequestBody(mediaType)
         val (code, body) = execute { token ->
-            Request.Builder().url(url).get().authorized(token).build()
+            Request.Builder().url(pathfinderBase).post(requestBody).authorized(token)
+                .header("Client-Token", clientToken).build()
         } ?: return emptyList()
         if (code !in 200..299 || body.isNullOrBlank()) return emptyList()
         val root = runCatching { json.parseToJsonElement(body).jsonObject }.getOrNull() ?: return emptyList()
-        val items = runCatching { root.obj("tracks")?.arr("items") }.getOrNull().orEmpty()
-        return items.mapNotNull { item -> parseTrack(item as? JsonObject ?: return@mapNotNull null) }
+        return parseSearchTracks(root)
     }
 
     suspend fun trackIdFor(song: Song): String? {
@@ -170,6 +192,30 @@ object SpotifyWrite {
         },
         albumName = album,
     )
+
+    internal fun parseSearchTracks(root: JsonObject): List<SpotifyTrack> =
+        root.obj("data")?.obj("searchV2")?.obj("tracksV2")?.arr("items").orEmpty().mapNotNull { entry ->
+            val data = (entry as? JsonObject)?.obj("item")?.obj("data") ?: return@mapNotNull null
+            val uri = data.str("uri") ?: return@mapNotNull null
+            val id = uri.substringAfterLast(':').takeIf(::isValidTrackId) ?: return@mapNotNull null
+            val title = data.str("name")?.takeIf(String::isNotBlank) ?: return@mapNotNull null
+            val artists = data.obj("artists")?.arr("items").orEmpty().mapNotNull { artist ->
+                (artist as? JsonObject)?.obj("profile")?.str("name")?.takeIf(String::isNotBlank)
+            }
+            val album = data.obj("albumOfTrack")
+            val duration = (data.obj("trackDuration") ?: data.obj("duration"))?.get("totalMilliseconds")
+                ?.let { runCatching { it.jsonPrimitive.content.toInt() }.getOrNull() } ?: 0
+            SpotifyTrack(
+                id = id,
+                title = title,
+                artist = artists.joinToString(", "),
+                album = album?.str("name"),
+                durationMs = duration,
+                imageUrl = album?.obj("coverArt")?.arr("sources")?.firstNotNullOfOrNull { source ->
+                    (source as? JsonObject)?.str("url")
+                },
+            )
+        }
 
     private fun parseTrack(item: JsonObject): SpotifyTrack? {
         val id = item.str("id")?.takeIf(::isValidTrackId) ?: return null
