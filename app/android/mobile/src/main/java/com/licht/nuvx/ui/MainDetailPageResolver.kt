@@ -7,6 +7,7 @@ import com.licht.nuvx.data.OfflinePlaylists
 import com.licht.nuvx.data.YtMusicRepository
 import com.licht.nuvx.data.model.BrowseType
 import com.licht.nuvx.data.model.DetailPage
+import com.licht.nuvx.data.model.DetailLoadId
 import com.licht.nuvx.data.model.HomeShelf
 import com.licht.nuvx.data.model.LibraryState
 import com.licht.nuvx.data.model.Song
@@ -29,7 +30,7 @@ internal class MainDetailPageResolver(
     private val localPageState: suspend (String) -> UiState<List<Song>>?,
     private val withArtwork: (List<Song>, String?) -> List<Song>,
     private val setPlaylistOwned: (String, Boolean) -> Unit,
-    private val fillIn: (String, String, String?) -> Unit,
+    private val fillIn: (DetailLoadId, String, String, String?) -> Unit,
     private val openSpotifyPage: (String, String, String, String?) -> Unit,
     private val text: (Int) -> String,
     private val friendly: (Throwable) -> String,
@@ -50,6 +51,7 @@ internal class MainDetailPageResolver(
             return
         }
         val resolved = browseTypeOf(browseId, type)
+        val detailLoadId = DetailLoadId()
         _detailStack.value += DetailPage(
             browseId = browseId,
             title = title,
@@ -57,6 +59,7 @@ internal class MainDetailPageResolver(
             thumbnailUrl = thumbnailUrl,
             songs = UiState.Loading,
             type = resolved,
+            detailLoadId = detailLoadId,
         )
         scope.launch {
             var sections = emptyList<HomeShelf>()
@@ -79,7 +82,7 @@ internal class MainDetailPageResolver(
             }
             if (onDevice.isNotEmpty()) {
                 _detailStack.value = _detailStack.value.map {
-                    if (it.browseId == browseId && it.songs is UiState.Loading) it.copy(songs = UiState.Success(onDevice)) else it
+                    if (it.detailLoadId === detailLoadId && it.songs is UiState.Loading) it.copy(songs = UiState.Success(onDevice)) else it
                 }
             }
             if (localPlaylist != null) {
@@ -149,7 +152,7 @@ internal class MainDetailPageResolver(
                 }
             }
             _detailStack.value = _detailStack.value.map {
-                if (it.browseId == browseId &&
+                if (it.detailLoadId === detailLoadId &&
                     (it.songs is UiState.Loading || (onDevice.isNotEmpty() && state is UiState.Success))
                 ) {
                     it.copy(
@@ -170,7 +173,7 @@ internal class MainDetailPageResolver(
                     it
                 }
             }
-            more?.let { fillIn(browseId, it, thumbnailUrl ?: artwork) }
+            more?.let { fillIn(detailLoadId, browseId, it, thumbnailUrl ?: artwork) }
         }
     }
 

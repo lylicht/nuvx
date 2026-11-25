@@ -1,6 +1,9 @@
 package com.licht.nuvx.playback
 
 import com.licht.nuvx.data.model.Song
+import com.licht.nuvx.data.model.BrowseType
+import com.licht.nuvx.data.model.DetailLoadId
+import com.licht.nuvx.data.model.DetailPage
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -14,6 +17,7 @@ object BoundedContextRequests {
         val continuationToken: String?,
         val shuffle: Boolean,
         val handoffToken: String? = null,
+        val detailLoadId: DetailLoadId? = null,
     )
 
     data class Snapshot(
@@ -23,7 +27,13 @@ object BoundedContextRequests {
         val version: Long,
         val serviceOwned: Boolean = false,
         val released: Boolean = false,
-    )
+    ) {
+        internal fun canUpdateDetail(page: DetailPage): Boolean =
+            (serviceOwned || released) &&
+                request.detailLoadId != null && request.detailLoadId === page.detailLoadId &&
+                request.source.id == page.browseId && page.continuation != null &&
+                (page.type == BrowseType.ALBUM || page.type == BrowseType.PLAYLIST)
+    }
 
     private data class Pending(
         val token: String,

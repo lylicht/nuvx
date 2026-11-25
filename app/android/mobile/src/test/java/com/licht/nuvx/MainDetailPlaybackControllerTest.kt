@@ -2,6 +2,7 @@ package com.licht.nuvx
 
 import com.licht.nuvx.data.model.BrowseType
 import com.licht.nuvx.data.model.DetailPage
+import com.licht.nuvx.data.model.DetailLoadId
 import com.licht.nuvx.data.model.Song
 import com.licht.nuvx.data.model.UiState
 import com.licht.nuvx.playback.QueueSource
@@ -23,6 +24,7 @@ class MainDetailPlaybackControllerTest {
         var bounded = false
         var token: String? = null
         var contextRequests = 0
+        var detailLoadId: DetailLoadId? = null
     }
 
     private fun song(id: String, album: String? = null, setVideoId: String? = null) = Song(
@@ -55,17 +57,18 @@ class MainDetailPlaybackControllerTest {
         locked: Boolean = false,
         casting: Boolean = false,
     ) = MainDetailPlaybackController(
-        playFrom = { songs, index, source, bounded, token ->
+        playFrom = { songs, index, source, bounded, token, detailLoadId ->
             recorder.invoked = true
             recorder.songs = songs
             recorder.index = index
             recorder.source = source
             recorder.bounded = bounded
             recorder.token = token
+            recorder.detailLoadId = detailLoadId
         },
-        takePlaybackContext = { browseId ->
+        takePlaybackContext = { requestedPage ->
             recorder.contextRequests++
-            latest?.takeIf { it.browseId == browseId }
+            latest?.takeIf { it.browseId == requestedPage.browseId && it.detailLoadId === requestedPage.detailLoadId }
         },
         controlsLocked = { locked },
         casting = { casting },
@@ -109,6 +112,46 @@ class MainDetailPlaybackControllerTest {
         assertTrue(recorder.bounded)
         assertEquals("newer", recorder.token)
         assertEquals(1, recorder.contextRequests)
+    }
+
+    @Test
+    fun `playlist playback ignores a latest snapshot that no longer contains the tapped occurrence`() {
+        val recorder = Recorder()
+        val page = page(
+            BrowseType.PLAYLIST,
+            listOf(song("a", setVideoId = "old-slot"), song("b", setVideoId = "slot-b")),
+            continuation = "next",
+        ).copy(detailLoadId = DetailLoadId())
+        val visible = listOf(song("a", setVideoId = "old-slot"), song("b", setVideoId = "slot-b"))
+        val latest = page.copy(songs = UiState.Success(listOf(song("b", setVideoId = "slot-b"))))
+
+        controller(recorder, latest = latest).play(page, visible, 0)
+
+        assertTrue(recorder.invoked)
+        assertEquals(listOf("a", "b"), recorder.songs.map(Song::videoId))
+        assertEquals(0, recorder.index)
+        assertEquals("next", recorder.token)
+        assertEquals(1, recorder.contextRequests)
+        assertTrue(recorder.detailLoadId === page.detailLoadId)
+    }
+
+    @Test
+    fun `downloaded preview does not claim remote continuation identity`() {
+        val recorder = Recorder()
+        val page = page(
+            BrowseType.PLAYLIST,
+            listOf(song("a", setVideoId = "remote-slot")),
+            continuation = "remote-next",
+        ).copy(detailLoadId = DetailLoadId())
+
+        controller(recorder).play(page, listOf(song("a")), 0)
+
+        assertTrue(recorder.invoked)
+        assertFalse(recorder.bounded)
+        assertEquals("a", recorder.songs.single().videoId)
+        assertEquals("remote-next", recorder.token)
+        assertEquals(0, recorder.contextRequests)
+        assertNull(recorder.detailLoadId)
     }
 
     @Test

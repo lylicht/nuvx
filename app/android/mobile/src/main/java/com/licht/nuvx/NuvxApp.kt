@@ -1036,10 +1036,11 @@ internal fun NuvxApp(
         source: QueueSource,
         boundedContext: Boolean = false,
         continuationToken: String? = null,
-    ) = playbackStarter.playFrom(allSongs, allIndex, source, boundedContext, continuationToken)
+        detailLoadId: com.licht.nuvx.data.model.DetailLoadId? = null,
+    ) = playbackStarter.playFrom(allSongs, allIndex, source, boundedContext, continuationToken, detailLoadId)
     val detailPlayback = MainDetailPlaybackController(
-        playFrom = { songs, index, source, boundedContext, continuationToken ->
-            playFrom(songs, index, source, boundedContext, continuationToken)
+        playFrom = { songs, index, source, boundedContext, continuationToken, detailLoadId ->
+            playFrom(songs, index, source, boundedContext, continuationToken, detailLoadId)
         },
         takePlaybackContext = viewModel::takePlaybackContext,
         controlsLocked = { ListenTogether.state.value.controlsLocked },

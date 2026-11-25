@@ -28,6 +28,7 @@ import com.licht.nuvx.data.model.NOTIFICATION_ART_PX
 import com.licht.nuvx.data.model.PlaybackSourceType
 import com.licht.nuvx.data.model.QueueTier
 import com.licht.nuvx.data.model.Song
+import com.licht.nuvx.data.model.DetailLoadId
 import com.licht.nuvx.data.model.artworkAt
 import com.licht.nuvx.data.sources.SourceKind
 import com.licht.nuvx.data.sources.SourceRegistry
@@ -98,6 +99,7 @@ suspend fun MediaController.playBoundedContext(
     source: QueueSource,
     continuationToken: String?,
     shuffle: Boolean = QueueShuffle.enabled.value,
+    detailLoadId: DetailLoadId? = null,
 ) {
     val token = BoundedContextRequests.put(
         BoundedContextRequests.Request(
@@ -106,6 +108,7 @@ suspend fun MediaController.playBoundedContext(
             source = source,
             continuationToken = continuationToken,
             shuffle = shuffle,
+            detailLoadId = detailLoadId,
         ),
     )
     try {
