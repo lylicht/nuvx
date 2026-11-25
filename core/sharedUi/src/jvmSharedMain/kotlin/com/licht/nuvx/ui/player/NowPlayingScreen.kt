@@ -325,11 +325,12 @@ fun NowPlayingScreen(
 
     val spotifyCanvasAutoHide by PlayerSettings.spotifyCanvasAutoHide.collectAsStateWithLifecycle()
     val mixing by PlayerSettings.smartMixInProgress.collectAsStateWithLifecycle()
+    val fullBleedArt by PlayerSettings.fullBleedArtwork.collectAsStateWithLifecycle()
     val videoMode = showsMusicVideo(song)
     val squareVideo = videoMode && VideoThumbnails.square
     val canvas = rememberCanvasArtwork(song)?.takeUnless { videoMode }?.let {
         val tall = it.portraitUrl
-        if (tall != null && playerFillsWindow(windowWidth)) {
+        if (tall != null && fullBleedArt && playerFillsWindow(windowWidth)) {
             it.copy(url = tall, fallbackUrl = it.url, portraitUrl = null)
         } else it
     }
@@ -566,7 +567,6 @@ fun NowPlayingScreen(
             )
         }
     }
-    val fullBleedArt by PlayerSettings.fullBleedArtwork.collectAsStateWithLifecycle()
     val spotifyCanvasOnPhone = canvas?.source == CanvasSource.SPOTIFY &&
         playerFillsWindow(windowWidth)
     val heroMode = !videoMode && (
