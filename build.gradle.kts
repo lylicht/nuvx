@@ -15,7 +15,7 @@ buildscript {
             "org.bouncycastle:bcpkix-jdk18on:1.87",
             "org.bouncycastle:bcprov-jdk18on:1.87",
             "org.bouncycastle:bcutil-jdk18on:1.87",
-            "org.bitbucket.b_c:jose4j:0.9.6",
+            "org.bitbucket.b_c:jose4j:0.9.7",
             "org.jdom:jdom2:2.0.6.1",
         )
     }
@@ -44,7 +44,7 @@ allprojects {
             "org.bouncycastle:bcpkix-jdk18on:1.87",
             "org.bouncycastle:bcprov-jdk18on:1.87",
             "org.bouncycastle:bcutil-jdk18on:1.87",
-            "org.bitbucket.b_c:jose4j:0.9.6",
+            "org.bitbucket.b_c:jose4j:0.9.7",
             "org.jdom:jdom2:2.0.6.1",
         )
     }
