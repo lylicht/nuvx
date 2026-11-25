@@ -70,6 +70,8 @@ object QueueCoordinator {
     }
 
     fun consumePlayedUserQueue(player: Player, tierAt: (Int) -> QueueTier = player::queueTierAt) {
+        // Keep played queue entries available to Previous unless repeat-all needs a circular context list.
+        if (player.repeatMode != Player.REPEAT_MODE_ALL) return
         val currentIndex = player.currentMediaItemIndex
         if (currentIndex <= 0) return
 
