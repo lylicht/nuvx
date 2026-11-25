@@ -404,6 +404,8 @@
     <string name="hide_status_bar_in_player">Hide status bar in player</string>
     <string name="hide_status_bar_in_player_subtitle">Hides the clock, battery and notification icons while the main player is open</string>
     <string name="hide_song_status">Hide Song Status</string>
+    <string name="keep_screen_on_in_player">Keep screen on</string>
+    <string name="keep_screen_on_in_player_subtitle">Keep the screen awake while Now Playing is open</string>
     <string name="show_queue_history">Show queue history</string>
     <string name="show_queue_history_subtitle">Show up to 25 previously played songs above Now playing in the queue</string>
     <string name="hide_song_status_subtitle">Hides the “Playing from” or “Played by” text in the main player</string>
