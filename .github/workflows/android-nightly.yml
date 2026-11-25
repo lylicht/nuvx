@@ -1,13 +1,11 @@
 name: Nuvx releases
 
 on:
-  # Stable releases still use v* tags; every merged PR on main gets a nightly,
-  # even if it only edits documentation or workflow files.
+  # Every merged PR pushes to main; no paths filter, so docs-only merges count.
+  # Direct pushes to main also produce nightlies. Stable releases use v* tags.
   push:
-    tags: ["v*"]
-  pull_request_target:
-    types: [closed]
     branches: [main]
+    tags: ["v*"]
   workflow_dispatch:
   # A nightly every 3 hours when main has new commits (GitHub may start it late under load).
   schedule:
@@ -17,9 +15,11 @@ permissions:
   contents: write
 
 concurrency:
-  # Serialize nightly builds across PR merges, manual runs and the schedule.
-  # Use separate groups for stable tags so stable releases remain unaffected.
+  # Serialize nightlies across pushes, manual runs and the schedule. Queue up to
+  # 100 pending builds rather than canceling a merged PR's pending run.
+  # Stable tags use separate groups and are never deleted by nightly cleanup.
   group: nuvx-release-build-${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || 'main' }}
+  queue: max
   cancel-in-progress: false
 
 defaults:
@@ -28,9 +28,6 @@ defaults:
 
 jobs:
   gate:
-    # pull_request_target runs with base-branch permissions; only merged PRs
-    # qualify, and we always build the trusted base SHA, never PR head code.
-    if: github.event_name != 'pull_request_target' || github.event.pull_request.merged == true
     runs-on: ubuntu-24.04
     outputs:
       build: ${{ steps.check.outputs.build }}
@@ -53,7 +50,7 @@ jobs:
 
   prepare:
     needs: gate
-    if: needs.gate.outputs.build == 'true' && (((github.event_name == 'push' || github.event_name == 'workflow_dispatch') && startsWith(github.ref, 'refs/tags/')) || ((github.event_name == 'workflow_dispatch' || github.event_name == 'schedule' || (github.event_name == 'pull_request_target' && github.event.pull_request.merged == true)) && github.ref == 'refs/heads/main'))
+    if: needs.gate.outputs.build == 'true' && (((github.event_name == 'push' || github.event_name == 'workflow_dispatch') && startsWith(github.ref, 'refs/tags/')) || ((github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule') && github.ref == 'refs/heads/main'))
     runs-on: ubuntu-24.04
     outputs:
       release_tag: ${{ steps.metadata.outputs.release_tag }}
