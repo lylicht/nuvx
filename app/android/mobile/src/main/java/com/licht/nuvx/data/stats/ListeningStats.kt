@@ -168,11 +168,15 @@ object ListeningStats {
                 if (countsAsPlay) d.plays++
             }
 
-            primaryArtist(song.artist)?.let { name ->
+            val linkedLead = song.artists.firstOrNull()?.name?.trim()?.takeIf { it.isNotEmpty() }
+            val artistName = linkedLead ?: primaryArtist(song.artist)
+            val hasLinkedLead = linkedLead != null
+            artistName?.let { name ->
                 ArtistFacts.noticed(name)
                 val artist = bucket.artists.getOrPut(name.lowercase(Locale.ROOT)) {
-                    NameEntry(name = name, art = song.thumbnailUrl)
+                    NameEntry(name = name, art = song.thumbnailUrl, leadNameIsVerified = hasLinkedLead)
                 }
+                if (hasLinkedLead) artist.leadNameIsVerified = true
                 artist.ms += playedMs
                 if (countsAsPlay) artist.plays++
                 if (artist.id == null) artist.id = song.artistId
@@ -399,7 +403,7 @@ object ListeningStats {
                 key = key,
                 tracks = stored.tracks.associateByTo(LinkedHashMap()) { it.id },
                 artists = stored.artists
-                    .map { it.copy(name = primaryArtist(it.name) ?: it.name) }
+                    .map { it.copy(name = it.leadName()) }
                     .mergedBy(LinkedHashMap()) { it.name.lowercase(Locale.ROOT) },
                 albums = stored.albums.mergedBy(LinkedHashMap()) { albumKey(it.id, it.name, it.sub.orEmpty()) },
                 hours = LongArray(24) { stored.hours.getOrElse(it) { 0L } },
@@ -512,6 +516,7 @@ data class NameEntry(
     val sub: String? = null,
     var art: String? = null,
     var id: String? = null,
+    var leadNameIsVerified: Boolean = false,
     var ms: Long = 0L,
     var plays: Int = 0,
     val key: String? = null,
@@ -549,6 +554,9 @@ data class NameEntry(
         return totalMs to totalPlays
     }
 }
+
+internal fun NameEntry.leadName(): String =
+    if (leadNameIsVerified) name else ListeningStats.primaryArtist(name) ?: name
 
 @Serializable
 data class StoredBucket(
