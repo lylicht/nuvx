@@ -6,9 +6,12 @@ Every nuvx release, newest first. Downloads and checksums are on each version's 
 
 ## Unreleased
 
+## 1.0.6
+
 - **Desktop live presence:** Windows, Linux and macOS now send an anonymous, installation-scoped heartbeat so running PCs appear in the online client counter; they leave the count on normal exit.
 - **Playback engine cleanup:** remove the unused eXcor extractor, its settings and bundled Android artifact; retain NewPipe fallback and upgrade Android/JVM InnerTubeX to v0.13.1.
 - **Linux account sign-in (#393):** verify Google and Spotify sessions before the browser window closes, so failed logins can be retried without silently claiming success. Thanks [@Sina-Naghilou](https://github.com/Sina-Naghilou) for reporting the Ubuntu issue.
+- **Security dependencies:** update the rebuild workspace's GLib and remove vulnerable rand 0.7 from its dependency graph.
 
 ## 1.0.5
 
