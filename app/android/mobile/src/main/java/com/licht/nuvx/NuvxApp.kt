@@ -314,6 +314,8 @@ import com.licht.nuvx.data.canvas.AppleArtistArtRepository
 import com.licht.nuvx.data.canvas.keyColors
 import com.licht.nuvx.ui.theme.SystemBarIcons
 import com.licht.nuvx.ui.utils.guardSheetFromContentTouches
+import com.licht.nuvx.ui.utils.LocalSheetTouchGuard
+import com.licht.nuvx.ui.utils.SheetTouchGuard
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeSource
 import kotlinx.coroutines.launch
@@ -3051,6 +3053,7 @@ internal fun NuvxApp(
                     confirmValueChange = confirmSheetValue,
                 )
             }
+            val sheetTouchGuard = remember(nowPlayingSheetState) { SheetTouchGuard() }
             DisposableEffect(nowPlayingSheetState) {
                 playerSheetMotion.sheet = nowPlayingSheetState
                 playerDock.sheetOffset = playerSheetMotion::position
@@ -3070,6 +3073,7 @@ internal fun NuvxApp(
                 sheetMaxWidth = Dp.Unspecified,
                 properties = ModalBottomSheetProperties(shouldDismissOnBackPress = reducePlayerMotion),
             ) {
+                CompositionLocalProvider(LocalSheetTouchGuard provides sheetTouchGuard) {
                 BackHandler(enabled = !reducePlayerMotion) { playerSheetMotion.close() }
                 val sheetWindow = (LocalView.current.parent as? DialogWindowProvider)?.window
                 DacVolumeKeys()
@@ -3091,7 +3095,7 @@ internal fun NuvxApp(
                                 )
                             }
                         }
-                        .guardSheetFromContentTouches(nowPlayingSheetState)
+                        .guardSheetFromContentTouches(nowPlayingSheetState, sheetTouchGuard)
                         .onSizeChanged {
                             playerDock.sheetTravel = it.height.toFloat()
                             playerSheetMotion.laidOut = true
@@ -3123,6 +3127,7 @@ internal fun NuvxApp(
                     ) { song ->
                         songMenuBody(song)
                     }
+                }
                 }
             }
         }
