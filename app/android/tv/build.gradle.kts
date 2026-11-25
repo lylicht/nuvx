@@ -290,7 +290,7 @@ dependencies {
     else implementation("com.microsoft.onnxruntime:onnxruntime-android:1.32.0")
 
     implementation("com.google.android.gms:play-services-cast-framework:23.0.0")
-    implementation("androidx.mediarouter:mediarouter:1.8.1")
+    implementation("androidx.mediarouter:mediarouter:1.9.0")
 
     testImplementation("junit:junit:4.13.2")
     testImplementation("com.squareup.okhttp3:mockwebserver:5.5.1")
