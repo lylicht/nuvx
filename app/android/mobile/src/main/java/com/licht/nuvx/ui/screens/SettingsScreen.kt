@@ -168,6 +168,7 @@ fun SettingsScreen(
     val directSourceStream by AppSettings.directSourceStream.collectAsStateWithLifecycle()
     val dolbyAtmosSupported = DeviceCodecs.playsDolbyAtmos
     val spatialAudio by AppSettings.spatialAudio.collectAsStateWithLifecycle()
+    val hapticFeedbackEnabled by AppSettings.hapticFeedbackEnabled.collectAsStateWithLifecycle()
     val nerdStats by AppSettings.showNerdStats.collectAsStateWithLifecycle()
     val listenTogetherButton by AppSettings.showListenTogetherButton.collectAsStateWithLifecycle()
     val hideRadioTab by AppSettings.hideRadioTab.collectAsStateWithLifecycle()
@@ -516,6 +517,7 @@ fun SettingsScreen(
             automixPerformance = automixPerformance,
             skipSilence = skipSilence,
             spatialAudio = spatialAudio,
+            hapticFeedbackEnabled = hapticFeedbackEnabled,
             playingDolbyAtmos = playingDolbyAtmos,
             swipeToPlayNext = swipeToPlayNext,
             dontRepeatSuggestions = dontRepeatSuggestions,

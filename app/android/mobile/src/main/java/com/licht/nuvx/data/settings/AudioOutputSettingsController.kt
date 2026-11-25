@@ -24,6 +24,7 @@ internal class AudioOutputSettingsController {
     val dolbyAtmos = MutableStateFlow(true)
     val directSourceStream = MutableStateFlow(false)
     val spatialAudio = MutableStateFlow(true)
+    val hapticFeedbackEnabled = MutableStateFlow(true)
 
     fun initialize(prefs: SharedPreferences) {
         this.prefs = prefs
@@ -55,6 +56,8 @@ internal class AudioOutputSettingsController {
             KEY_SPATIAL_AUDIO,
             defaultSpatialAudioEnabled(BuildConfig.APPLICATION_ID),
         )
+        hapticFeedbackEnabled.value = prefs.getBoolean(KEY_HAPTIC_FEEDBACK, true)
+        com.licht.nuvx.ui.haptics.HapticsSettings.enabled = hapticFeedbackEnabled.value
     }
 
     fun setOutputPcmMode(value: OutputPcmMode) {
@@ -112,6 +115,12 @@ internal class AudioOutputSettingsController {
         prefs.edit().putBoolean(KEY_SPATIAL_AUDIO, value).apply()
     }
 
+    fun setHapticFeedbackEnabled(value: Boolean) {
+        hapticFeedbackEnabled.value = value
+        com.licht.nuvx.ui.haptics.HapticsSettings.enabled = value
+        prefs.edit().putBoolean(KEY_HAPTIC_FEEDBACK, value).apply()
+    }
+
     private companion object {
         const val KEY_OUTPUT_PCM_MODE = "output_pcm_mode"
         const val KEY_PREFER_USB_DAC = "prefer_usb_dac"
@@ -124,6 +133,7 @@ internal class AudioOutputSettingsController {
         const val KEY_DOLBY_ATMOS = "dolby_atmos"
         const val KEY_DIRECT_SOURCE_STREAM = "direct_source_stream"
         const val KEY_SPATIAL_AUDIO = "spatial_audio"
+        const val KEY_HAPTIC_FEEDBACK = "haptic_feedback_enabled"
         const val KEY_TV_SPATIAL_AUDIO = "tv_spatial_audio"
     }
 }

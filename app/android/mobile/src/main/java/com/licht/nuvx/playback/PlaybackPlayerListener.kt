@@ -13,6 +13,7 @@ import com.licht.nuvx.data.innertube.PlaybackTracker
 import com.licht.nuvx.data.stats.ListeningRecorder
 import com.licht.nuvx.playback.cast.Speakers
 import com.licht.nuvx.wear.WearBridge
+import com.licht.nuvx.ui.haptics.Haptic
 
 @UnstableApi
 internal class PlaybackPlayerListener(
@@ -50,6 +51,7 @@ internal class PlaybackPlayerListener(
     private val nextMediaIdOf: (ExoPlayer) -> String?,
     private val musicOnlyController: PlaybackMusicOnlyController,
     private val saveQueueSnapshot: (ExoPlayer) -> Unit,
+    private val playbackHaptic: (Haptic) -> Unit,
 ) : Player.Listener {
     private var lastRepeatMode = Player.REPEAT_MODE_OFF
 
@@ -101,6 +103,9 @@ internal class PlaybackPlayerListener(
     }
 
     override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
+        if (reason != Player.PLAY_WHEN_READY_CHANGE_REASON_END_OF_MEDIA_ITEM) {
+            playbackHaptic(if (playWhenReady) Haptic.Resume else Haptic.Pause)
+        }
         if (playWhenReady) player()?.let { speakers().onLocalStartedPlaying(it) }
         publishWidgetState(playWhenReady)
         partySync()?.onPlayWhenReadyChanged(playWhenReady, reason)
@@ -128,6 +133,15 @@ internal class PlaybackPlayerListener(
         ) {
             clearSwappingMediaId()
             return
+        }
+
+        if (mediaItem != null && (
+                reason == Player.MEDIA_ITEM_TRANSITION_REASON_AUTO ||
+                    reason == Player.MEDIA_ITEM_TRANSITION_REASON_REPEAT ||
+                    reason == Player.MEDIA_ITEM_TRANSITION_REASON_SEEK
+                )
+        ) {
+            playbackHaptic(Haptic.TrackChange)
         }
 
         speakers().onLocalTransition(mediaItem, reason)

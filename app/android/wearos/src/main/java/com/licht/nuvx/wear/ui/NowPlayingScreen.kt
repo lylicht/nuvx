@@ -147,7 +147,10 @@ fun NowPlayingScreen(
                         actions.volume(steps)
                         volumeNudge++
                     }
-                    view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                    if (com.licht.nuvx.wear.data.WearPlaybackHaptics.enabled) {
+                        view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                        com.licht.nuvx.wear.data.WearPlaybackHaptics.markControlAction()
+                    }
                 }
                 true
             }
@@ -377,7 +380,10 @@ private fun PlayDisc(
                 detectDragGesturesAfterLongPress(
                     onDragStart = {
                         if (latestDuration > 0) {
-                            view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+                            if (com.licht.nuvx.wear.data.WearPlaybackHaptics.enabled) {
+                                view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+                                com.licht.nuvx.wear.data.WearPlaybackHaptics.markControlAction()
+                            }
                             onScrubStart()
                         }
                     },

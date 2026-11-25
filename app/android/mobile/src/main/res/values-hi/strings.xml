@@ -1577,4 +1577,6 @@
         <item quantity="one">Delete this song from your device? This cannot be undone.</item>
         <item quantity="other">Delete %1$d songs from your device? This cannot be undone.</item>
     </plurals>
+    <string name="haptic_feedback">हैप्टिक फ़ीडबैक</string>
+    <string name="haptic_feedback_subtitle">कंट्रोल इस्तेमाल करने और प्लेबैक रोकने, फिर शुरू करने या ट्रैक बदलने पर कंपन होता है।</string>
 </resources>

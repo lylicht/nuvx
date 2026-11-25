@@ -1534,4 +1534,6 @@
         <item quantity="one">Delete this song from your device? This cannot be undone.</item>
         <item quantity="other">Delete %1$d songs from your device? This cannot be undone.</item>
     </plurals>
+    <string name="haptic_feedback">Dokunsal geri bildirim</string>
+    <string name="haptic_feedback_subtitle">Kontroller kullanıldığında ve oynatma duraklatıldığında, sürdürüldüğünde veya parça değiştiğinde titrer.</string>
 </resources>

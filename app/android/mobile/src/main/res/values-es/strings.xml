@@ -1549,4 +1549,6 @@
         <item quantity="one">Delete this song from your device? This cannot be undone.</item>
         <item quantity="other">Delete %1$d songs from your device? This cannot be undone.</item>
     </plurals>
+    <string name="haptic_feedback">Respuesta háptica</string>
+    <string name="haptic_feedback_subtitle">Vibra al usar los controles y cuando la reproducción se pausa, reanuda o cambia de canción.</string>
 </resources>

@@ -1554,4 +1554,6 @@
         <item quantity="one">Delete this song from your device? This cannot be undone.</item>
         <item quantity="other">Delete %1$d songs from your device? This cannot be undone.</item>
     </plurals>
+    <string name="haptic_feedback">Umpan balik haptik</string>
+    <string name="haptic_feedback_subtitle">Bergetar saat kontrol digunakan dan saat pemutaran dijeda, dilanjutkan, atau berganti lagu.</string>
 </resources>

@@ -71,6 +71,8 @@ import com.licht.nuvx.data.sources.TrackMatcher
 import com.licht.nuvx.playback.smart.AutomixAnalysisSource
 import com.licht.nuvx.playback.smart.VersionAudioAligner
 import com.licht.nuvx.wear.WearBridge
+import com.licht.nuvx.ui.haptics.Haptic
+import com.licht.nuvx.ui.haptics.playPlaybackHaptic
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -455,6 +457,7 @@ class PlaybackService : MediaLibraryService() {
         nextMediaIdOf = loudnessController::nextMediaIdOf,
         musicOnlyController = musicOnlyController,
         saveQueueSnapshot = ::saveQueueSnapshot,
+        playbackHaptic = { playPlaybackHaptic(this, it) },
     )
 
     private val formatListener = PlaybackAudioAnalyticsListener(

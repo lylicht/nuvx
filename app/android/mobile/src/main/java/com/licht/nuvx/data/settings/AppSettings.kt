@@ -151,6 +151,7 @@ object AppSettings {
     val directSourceStream = audioOutputSettings.directSourceStream
 
     val spatialAudio = audioOutputSettings.spatialAudio
+    val hapticFeedbackEnabled = audioOutputSettings.hapticFeedbackEnabled
 
     val equalizerEnabled = equalizerSettings.enabled
 
@@ -530,6 +531,8 @@ object AppSettings {
     fun setDirectSourceStream(value: Boolean) = audioOutputSettings.setDirectSourceStream(value)
 
     fun setSpatialAudio(value: Boolean) = audioOutputSettings.setSpatialAudio(value)
+
+    fun setHapticFeedbackEnabled(value: Boolean) = audioOutputSettings.setHapticFeedbackEnabled(value)
 
     fun setEqualizerEnabled(value: Boolean) = equalizerSettings.setEnabled(value)
 

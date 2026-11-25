@@ -1554,4 +1554,6 @@
         <item quantity="one">Delete this song from your device? This cannot be undone.</item>
         <item quantity="other">Delete %1$d songs from your device? This cannot be undone.</item>
     </plurals>
+    <string name="haptic_feedback">触觉反馈</string>
+    <string name="haptic_feedback_subtitle">操作控制时，以及播放暂停、继续或切换歌曲时震动。</string>
 </resources>

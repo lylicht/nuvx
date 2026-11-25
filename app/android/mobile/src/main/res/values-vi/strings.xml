@@ -1494,4 +1494,6 @@
         <item quantity="one">Delete this song from your device? This cannot be undone.</item>
         <item quantity="other">Delete %1$d songs from your device? This cannot be undone.</item>
     </plurals>
+    <string name="haptic_feedback">Phản hồi xúc giác</string>
+    <string name="haptic_feedback_subtitle">Rung khi dùng các nút điều khiển và khi phát bị tạm dừng, tiếp tục hoặc chuyển bài.</string>
 </resources>

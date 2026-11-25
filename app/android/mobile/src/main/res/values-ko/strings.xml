@@ -1415,4 +1415,6 @@
         <item quantity="one">Delete this song from your device? This cannot be undone.</item>
         <item quantity="other">Delete %1$d songs from your device? This cannot be undone.</item>
     </plurals>
+    <string name="haptic_feedback">햅틱 피드백</string>
+    <string name="haptic_feedback_subtitle">컨트롤을 조작하거나 재생이 일시 중지·재개되거나 트랙이 바뀔 때 진동합니다.</string>
 </resources>

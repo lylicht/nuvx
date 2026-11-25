@@ -1582,4 +1582,6 @@
         <item quantity="one">Delete this song from your device? This cannot be undone.</item>
         <item quantity="other">Delete %1$d songs from your device? This cannot be undone.</item>
     </plurals>
+    <string name="haptic_feedback">Feedback tátil</string>
+    <string name="haptic_feedback_subtitle">Vibra ao usar os controles e quando a reprodução é pausada, retomada ou muda de faixa.</string>
 </resources>

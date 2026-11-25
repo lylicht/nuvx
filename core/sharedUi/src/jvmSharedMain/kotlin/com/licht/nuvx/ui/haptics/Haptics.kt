@@ -21,6 +21,8 @@ enum class Haptic {
 
     Pause,
 
+    TrackChange,
+
     Expand,
 
     Pulse,
@@ -32,3 +34,7 @@ expect class Haptics {
 
 @Composable
 expect fun rememberHaptics(): Haptics
+
+expect object HapticsSettings {
+    var enabled: Boolean
+}
