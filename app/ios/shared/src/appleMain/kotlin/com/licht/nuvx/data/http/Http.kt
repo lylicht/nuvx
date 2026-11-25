@@ -296,6 +296,7 @@ actual object Http {
         headers: Map<String, String>,
         timeoutMillis: Long,
     ): RawHttpText {
+        val requestHeaders = headers
         val response = client.request(url) {
 
 
@@ -308,8 +309,8 @@ actual object Http {
                 requestTimeoutMillis = timeoutMillis
                 connectTimeoutMillis = 20_000
             }
-            val explicitContentType = headers.firstOrNull { it.key.equals("Content-Type", ignoreCase = true) }?.value
-            headers.forEach { (key, value) ->
+            val explicitContentType = requestHeaders.firstOrNull { it.key.equals("Content-Type", ignoreCase = true) }?.value
+            requestHeaders.forEach { (key, value) ->
                 if (!key.equals("Content-Type", ignoreCase = true)) header(key, value)
             }
             if (body != null) {
