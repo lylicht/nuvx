@@ -1036,10 +1036,11 @@ internal fun NuvxApp(
         source: QueueSource,
         boundedContext: Boolean = false,
         continuationToken: String? = null,
-    ) = playbackStarter.playFrom(allSongs, allIndex, source, boundedContext, continuationToken)
+        replaceUpcomingQueue: Boolean = false,
+    ) = playbackStarter.playFrom(allSongs, allIndex, source, boundedContext, continuationToken, replaceUpcomingQueue)
     val detailPlayback = MainDetailPlaybackController(
-        playFrom = { songs, index, source, boundedContext, continuationToken ->
-            playFrom(songs, index, source, boundedContext, continuationToken)
+        playFrom = { songs, index, source, boundedContext, continuationToken, replaceUpcomingQueue ->
+            playFrom(songs, index, source, boundedContext, continuationToken, replaceUpcomingQueue)
         },
         takePlaybackContext = viewModel::takePlaybackContext,
         controlsLocked = { ListenTogether.state.value.controlsLocked },
@@ -1824,6 +1825,7 @@ internal fun NuvxApp(
                                     else navigator.pop()
                                 },
                                 onSongClick = playDetailSongs,
+                                onPlayCollection = { songs -> detailPlayback.play(page, songs, 0, replaceUpcomingQueue = true) },
                                 onSongLongPress = { openSongMenu(detailPlayback.albumSong(page, it)) },
                                 onSongSwipe = { onSongSwipe(detailPlayback.albumSong(page, it)) },
                                 onShuffle = { songs ->
@@ -3360,7 +3362,7 @@ internal fun NuvxApp(
                 onAddToQueue = act(addSongsToQueue),
                 onPlay = act { songs ->
                     QueueShuffle.disableForNextQueue()
-                    play(songs, 0)
+                    playFrom(songs, 0, QueueSource(target.title, PlaybackSourceType.BROWSE, target.browseId), replaceUpcomingQueue = target.type == BrowseType.ALBUM || target.type == BrowseType.PLAYLIST)
                 }.takeIf { target.fromCard },
                 onShuffle = act { songs ->
                     QueueShuffle.enableForNextQueue()

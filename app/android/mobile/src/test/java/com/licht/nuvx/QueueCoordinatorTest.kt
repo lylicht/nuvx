@@ -141,6 +141,24 @@ class QueueCoordinatorTest {
     }
 
     @Test
+    fun `collection Play can replace upcoming manual queue`() {
+        val result = QueueCoordinator.buildContextQueue(
+            currentTimeline = listOf(
+                testSong("current"),
+                testSong("old-queued", tier = QueueTier.USER_QUEUE),
+            ),
+            currentIndex = 0,
+            newContextSongs = listOf(testSong("mix-1"), testSong("mix-2")),
+            selectedIndex = 0,
+            contextSource = QueueSource("Mix", PlaybackSourceType.BROWSE, "mix"),
+            replaceUpcomingQueue = true,
+        )
+
+        assertEquals(listOf("mix-1", "mix-2"), result.timeline.map(Song::videoId))
+        assertEquals(0, result.startIndex)
+    }
+
+    @Test
     fun `buildContextQueue starting from first track has startIndex 0 and empty preceding context`() {
         val userQ = testSong("u1", tier = QueueTier.USER_QUEUE, entryId = "entry-u1")
         val currentTimeline = listOf(testSong("now"), userQ)

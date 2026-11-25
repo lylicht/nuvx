@@ -14,6 +14,7 @@ object BoundedContextRequests {
         val continuationToken: String?,
         val shuffle: Boolean,
         val handoffToken: String? = null,
+        val replaceUpcomingQueue: Boolean = false,
     )
 
     data class Snapshot(

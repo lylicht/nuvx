@@ -43,6 +43,7 @@ internal class MainPlaybackStarter(
         source: QueueSource,
         boundedContext: Boolean = false,
         continuationToken: String? = null,
+        replaceUpcomingQueue: Boolean = false,
     ) {
         if (allSongs.getOrNull(allIndex)?.isUnresolvedSpotify == true) return
         val songs = allSongs.filterNot { it.isUnresolvedSpotify }
@@ -75,7 +76,7 @@ internal class MainPlaybackStarter(
             } else {
                 val bounded = boundedContext || songs.size > BoundedQueuePlanner.MAX_PHYSICAL_CONTEXT
                 if (bounded && !CastController.state.value.casting) {
-                    c.playBoundedContext(songs, index, source, continuationToken)
+                    c.playBoundedContext(songs, index, source, continuationToken, replaceUpcomingQueue = replaceUpcomingQueue)
                 } else {
                     val result = QueueCoordinator.buildContextQueue(
                         currentTimeline = currentTimeline,
@@ -83,6 +84,7 @@ internal class MainPlaybackStarter(
                         newContextSongs = songs,
                         selectedIndex = index,
                         contextSource = source,
+                        replaceUpcomingQueue = replaceUpcomingQueue,
                     )
                     c.playSongs(result.timeline, result.startIndex)
                 }

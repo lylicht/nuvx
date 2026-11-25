@@ -9,13 +9,13 @@ import com.licht.nuvx.playback.QueueSource
 import com.licht.nuvx.playback.contextEntryKey
 
 internal class MainDetailPlaybackController(
-    private val playFrom: (List<Song>, Int, QueueSource, Boolean, String?) -> Unit,
+    private val playFrom: (List<Song>, Int, QueueSource, Boolean, String?, Boolean) -> Unit,
     private val takePlaybackContext: (String) -> DetailPage?,
     private val controlsLocked: () -> Boolean,
     private val casting: () -> Boolean,
     private val refusedByHost: () -> Unit,
 ) {
-    fun play(page: DetailPage, songs: List<Song>, index: Int) {
+    fun play(page: DetailPage, songs: List<Song>, index: Int, replaceUpcomingQueue: Boolean = false) {
         if (controlsLocked()) {
             refusedByHost()
             return
@@ -43,6 +43,7 @@ internal class MainDetailPlaybackController(
             source,
             useBounded,
             latestPage?.continuation ?: page.continuation,
+            replaceUpcomingQueue,
         )
     }
 
