@@ -48,15 +48,9 @@ jobs:
             echo "main advanced; refusing to tag an outdated commit" >&2
             exit 1
           fi
-          tag_sha=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/v1.0.5" --jq '.object.sha // empty' 2>/dev/null || true)
-          if [[ -n "$tag_sha" && "$tag_sha" != "$GITHUB_SHA" ]]; then
-            echo "Tag v1.0.5 points to a different commit" >&2
-            exit 1
-          fi
-          if [[ -z "$tag_sha" ]]; then
-            gh api --method POST "repos/$GITHUB_REPOSITORY/git/refs" \
-              -f ref=refs/tags/v1.0.5 -f "sha=$GITHUB_SHA" > /dev/null
-          fi
+          # Fail safely rather than moving an existing release tag.
+          gh api --method POST "repos/$GITHUB_REPOSITORY/git/refs" \
+            -f ref=refs/tags/v1.0.5 -f "sha=$GITHUB_SHA" > /dev/null
           if gh release view v1.0.5 >/dev/null 2>&1; then
             echo "Release v1.0.5 already exists; not dispatching a duplicate"
             exit 0
