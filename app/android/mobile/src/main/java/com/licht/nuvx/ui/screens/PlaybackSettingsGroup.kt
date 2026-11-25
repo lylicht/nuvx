@@ -44,6 +44,7 @@ internal fun PlaybackSettingsGroup(
     loudnessOffOnSpeaker: Boolean,
     smartFade: Boolean,
     crossfade: Int,
+    sleepTimerFadeOut: Int,
     automixPerformance: AutomixPerformanceMode,
     skipSilence: Boolean,
     spatialAudio: Boolean,
@@ -62,6 +63,16 @@ internal fun PlaybackSettingsGroup(
         header = stringResource(R.string.playback),
         footer = stringResource(R.string.bit_perfect_bypassed_footer).takeIf { bitPerfectReady },
     ) {
+        val rememberShuffle by AppSettings.rememberShuffleAcrossQueues.collectAsStateWithLifecycle()
+        val rememberShuffleTitle = stringResource(R.string.remember_shuffle_across_queues)
+        row(rememberShuffleTitle, "shuffle", "queue", "playlist") {
+            SettingsSubRow(
+                title = rememberShuffleTitle,
+                subtitle = stringResource(R.string.remember_shuffle_across_queues_subtitle),
+                checked = rememberShuffle,
+                onCheckedChange = AppSettings::setRememberShuffleAcrossQueues,
+            )
+        }
         val outputPrecisionTitle = stringResource(R.string.output_precision)
         row(outputPrecisionTitle, "pcm", "bit depth", "sample rate", "dac") {
             SettingsRow(
@@ -217,6 +228,19 @@ internal fun PlaybackSettingsGroup(
                     )
                 }
             }
+        }
+        val sleepFadeTitle = stringResource(R.string.sleep_timer_fade_out)
+        row(sleepFadeTitle, "sleep", "timer", "fade", "out") {
+            SliderRow(
+                icon = SfIcons.SleepTimer,
+                title = sleepFadeTitle,
+                subtitle = stringResource(R.string.sleep_timer_fade_out_subtitle),
+                value = if (sleepTimerFadeOut == 0) stringResource(R.string.off) else "${sleepTimerFadeOut}s",
+                sliderValue = sleepTimerFadeOut.toFloat(),
+                onSliderValue = { AppSettings.setSleepTimerFadeOutSeconds(it.roundToInt()) },
+                valueRange = 0f..60f,
+                steps = 59,
+            )
         }
         val automixTitle = stringResource(R.string.automix)
         row(automixTitle, "crossfade", "smart fade", "mix") {

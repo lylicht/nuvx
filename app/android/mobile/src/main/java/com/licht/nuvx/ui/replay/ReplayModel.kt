@@ -5,9 +5,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.licht.nuvx.data.stats.ArtistFacts
 import com.licht.nuvx.data.stats.ListeningStats
 import com.licht.nuvx.data.stats.ReplayPeriod
@@ -35,27 +37,38 @@ fun rememberReplayState(active: Boolean): Pair<ReplayState, (ReplayPeriod) -> Un
     var summary by remember { mutableStateOf<ReplaySummary?>(null) }
     var loading by remember { mutableStateOf(true) }
     var memberSince by remember { mutableStateOf<String?>(null) }
+    val scopeRevision by ListeningStats.scopeRevision.collectAsStateWithLifecycle()
+    var memberSinceRevision by remember { mutableLongStateOf(-1L) }
+    var summaryRevision by remember { mutableLongStateOf(-1L) }
 
-    LaunchedEffect(active) {
+    LaunchedEffect(active, scopeRevision) {
         if (!active) return@LaunchedEffect
         memberSince = withContext(Dispatchers.IO) {
             ListeningStats.months().firstOrNull()?.let {
                 "%02d/%02d".format(Locale.ROOT, it.monthValue, it.year % 100)
             }
         }
+        memberSinceRevision = scopeRevision
     }
-    LaunchedEffect(period, active) {
+    LaunchedEffect(period, active, scopeRevision) {
         if (!active) return@LaunchedEffect
         loading = summary == null
         summary = ListeningStats.summary(period)
+        summaryRevision = scopeRevision
         loading = false
 
         ArtistFacts.revision.drop(1).collectLatest {
             delay(SETTLE_MILLIS)
             summary = ListeningStats.summary(period)
+            summaryRevision = scopeRevision
         }
     }
-    return ReplayState(period, summary, loading, memberSince) to
+    return ReplayState(
+        period = period,
+        summary = summary.takeIf { summaryRevision == scopeRevision },
+        loading = loading || summaryRevision != scopeRevision,
+        memberSince = memberSince.takeIf { memberSinceRevision == scopeRevision },
+    ) to
         { next: ReplayPeriod -> period = next }
 }
 

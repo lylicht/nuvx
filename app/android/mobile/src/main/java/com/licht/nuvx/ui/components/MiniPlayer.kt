@@ -114,12 +114,15 @@ internal fun Modifier.miniPlayerGestures(
     pull: MiniPlayerPull?,
     onNext: () -> Unit,
     onPrevious: () -> Unit,
+    onDismiss: (() -> Unit)? = null,
+    dismissThreshold: Dp = 24.dp,
     locked: Boolean = false,
     onBlocked: () -> Unit = {},
 ): Modifier {
     val currentPull by rememberUpdatedState(pull)
     val currentOnNext by rememberUpdatedState(onNext)
     val currentOnPrevious by rememberUpdatedState(onPrevious)
+    val currentOnDismiss by rememberUpdatedState(onDismiss)
     val currentLocked by rememberUpdatedState(locked)
     val currentOnBlocked by rememberUpdatedState(onBlocked)
     val scope = rememberCoroutineScope()
@@ -127,6 +130,7 @@ internal fun Modifier.miniPlayerGestures(
     val settle = remember { arrayOfNulls<Job>(1) }
     return pointerInput(Unit) {
         val trackThreshold = TRACK_SWIPE_THRESHOLD.toPx()
+        val dismissDistance = dismissThreshold.toPx()
         val liftEase = PULL_LIFT_EASE.toPx()
         val maxVelocity = viewConfiguration.maximumFlingVelocity
         awaitEachGesture {
@@ -140,9 +144,10 @@ internal fun Modifier.miniPlayerGestures(
                 if (!change.pressed || change.isConsumed) return@awaitEachGesture
                 val moved = change.position - down.position
                 if (moved.getDistance() < viewConfiguration.touchSlop) continue
-                vertical = moved.y < 0f && abs(moved.x) < -moved.y * PULL_BIAS
+                vertical = abs(moved.x) < abs(moved.y) * PULL_BIAS
                 if (!vertical && abs(moved.x) < abs(moved.y)) return@awaitEachGesture
-                if (vertical && currentPull == null) return@awaitEachGesture
+                if (vertical && moved.y < 0f && currentPull == null) return@awaitEachGesture
+                if (vertical && moved.y > 0f && currentOnDismiss == null) return@awaitEachGesture
                 change.consume()
                 start = change
             }
@@ -164,8 +169,30 @@ internal fun Modifier.miniPlayerGestures(
                 return@awaitEachGesture
             }
 
-            val target = currentPull ?: return@awaitEachGesture
             settle[0]?.cancel()
+            if (slopped.position.y > down.position.y) {
+                var dragged = slopped.position.y - down.position.y
+                val finished = drag(pointer) { change ->
+                    dragged += change.positionChange().y
+                    change.consume()
+                    lift.floatValue = -pullLift(dragged.coerceAtLeast(0f), liftEase)
+                }
+                if (finished && dragged >= dismissDistance) currentOnDismiss?.invoke()
+                val from = lift.floatValue
+                settle[0] = scope.launch {
+                    animate(
+                        initialValue = from,
+                        targetValue = 0f,
+                        animationSpec = spring(
+                            dampingRatio = 0.65f,
+                            stiffness = Spring.StiffnessMediumLow,
+                        ),
+                    ) { value, _ -> lift.floatValue = value }
+                }
+                return@awaitEachGesture
+            }
+
+            val target = currentPull ?: return@awaitEachGesture
             val tracker = VelocityTracker()
             tracker.addPointerInputChange(down)
             tracker.addPointerInputChange(slopped)
@@ -224,6 +251,7 @@ fun MiniPlayer(
     onPlayPause: () -> Unit,
     onNext: () -> Unit,
     onPrevious: () -> Unit,
+    onDismiss: (() -> Unit)? = null,
     onExpand: () -> Unit,
     controlsLocked: Boolean = false,
     onBlockedControl: () -> Unit = {},
@@ -247,6 +275,8 @@ fun MiniPlayer(
                     haptics.play(Haptic.SkipPrevious)
                     onPrevious()
                 },
+                onDismiss = onDismiss,
+                dismissThreshold = 24.dp,
                 locked = controlsLocked,
                 onBlocked = onBlockedControl,
             )
@@ -310,11 +340,13 @@ fun MiniPlayer(
                     color = MaterialTheme.colorScheme.onBackground,
                     badgeColor = MaterialTheme.colorScheme.onSurfaceVariant,
                     fadeOverflow = true,
+                    marquee = true,
                 )
                 FadingLine(
                     text = song.artist,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    marquee = true,
                 )
             }
             if (isLoading) {

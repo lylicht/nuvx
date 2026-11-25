@@ -42,6 +42,12 @@ object AudioDecoder {
 
     data class StereoPcm(val left: FloatArray, val right: FloatArray, val sampleRate: Double)
 
+    internal class MonoPcmChunks(val chunks: List<FloatArray>, val sampleRate: Double) {
+        val sampleCount: Int = chunks.sumOf { it.size }
+
+        fun flatten(): FloatArray = AudioDecoder.flatten(chunks, sampleCount)
+    }
+
     fun containerDurationSeconds(source: MediaDataSource): Double? {
         val extractor = MediaExtractor()
         return try {
@@ -71,11 +77,22 @@ object AudioDecoder {
         endSeconds: Double,
         abort: () -> Boolean = { false },
     ): Pair<Pcm, Double>? {
+        val (pcm, start) = decodeRegionChunks(source, startSeconds, endSeconds, abort) ?: return null
+        return Pcm(pcm.flatten(), pcm.sampleRate) to start
+    }
+
+    /** Retain decoded mono blocks separately so callers can pass them to native DSP without a second Java PCM copy. */
+    internal fun decodeRegionChunks(
+        source: MediaDataSource,
+        startSeconds: Double,
+        endSeconds: Double,
+        abort: () -> Boolean = { false },
+    ): Pair<MonoPcmChunks, Double>? {
         val chunks = ArrayList<FloatArray>()
         val decoded = decodeRaw(source, startSeconds, endSeconds, abort) { buffer, info, channels, _ ->
             chunks += toMono(buffer, info, channels)
         } ?: return null
-        return Pcm(flatten(chunks), decoded.first) to decoded.second
+        return MonoPcmChunks(chunks, decoded.first) to decoded.second
     }
 
     fun decodeRegionStereo(
@@ -103,8 +120,8 @@ object AudioDecoder {
             onChunk(toMono(buffer, info, channels), info.presentationTimeUs / 1_000_000.0, rate)
         }
 
-    private fun flatten(chunks: List<FloatArray>): FloatArray {
-        val samples = FloatArray(chunks.sumOf { it.size })
+    private fun flatten(chunks: List<FloatArray>, sampleCount: Int = chunks.sumOf { it.size }): FloatArray {
+        val samples = FloatArray(sampleCount)
         var offset = 0
         for (chunk in chunks) {
             chunk.copyInto(samples, offset)

@@ -2,6 +2,7 @@ package com.licht.nuvx.data.scrobbling
 
 import com.licht.nuvx.data.DebugLog as Log
 import com.licht.nuvx.data.model.Song
+import com.licht.nuvx.data.model.durationMillis
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
@@ -23,7 +24,7 @@ object ListenBrainzManager {
         if (token.isBlank() || song == null) return false
         return withContext(Dispatchers.IO) {
             try {
-                val durationMs = durationMsOverride ?: parseDurationMs(song.durationText)
+                val durationMs = durationMsOverride ?: song.durationText.durationMillis()
                 val durationPart = if (durationMs > 0) "\"duration_ms\":$durationMs," else ""
                 val releaseName = song.albumName.orEmpty()
                 val releasePart = if (releaseName.isBlank()) "" else "\"release_name\":\"${escapeJson(releaseName)}\","
@@ -68,7 +69,7 @@ object ListenBrainzManager {
         if (token.isBlank() || song == null) return false
         return withContext(Dispatchers.IO) {
             try {
-                val durationMs = durationMsOverride ?: parseDurationMs(song.durationText)
+                val durationMs = durationMsOverride ?: song.durationText.durationMillis()
                 val durationPart = if (durationMs > 0) "\"duration_ms\":$durationMs," else ""
                 val releaseName = song.albumName.orEmpty()
                 val releasePart = if (releaseName.isBlank()) "" else "\"release_name\":\"${escapeJson(releaseName)}\","
@@ -105,15 +106,6 @@ object ListenBrainzManager {
                 false
             }
         }
-    }
-
-    private fun parseDurationMs(text: String?): Long {
-        if (text == null) return 0L
-        val parts = text.split(":")
-        if (parts.size != 2) return 0L
-        val minutes = parts[0].toLongOrNull() ?: return 0L
-        val seconds = parts[1].toLongOrNull() ?: return 0L
-        return (minutes * 60 + seconds) * 1000
     }
 
     private fun escapeJson(s: String): String = s.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n")

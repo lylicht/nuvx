@@ -6,6 +6,14 @@ import android.net.Uri
 import android.os.Build
 import android.provider.Settings
 import androidx.core.content.FileProvider
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.Observer
+import androidx.work.BackoffPolicy
+import androidx.work.Data
+import androidx.work.ExistingWorkPolicy
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkInfo
+import androidx.work.WorkManager
 import com.licht.nuvx.BuildConfig
 import com.licht.nuvx.core.compareReleaseOrder
 import com.licht.nuvx.core.releaseIsNewer
@@ -15,6 +23,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
+import java.util.concurrent.TimeUnit
+import java.util.UUID
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
@@ -34,7 +44,7 @@ object AppUpdateChecker {
         val notes: String?,
     )
 
-    private const val CACHE_SUBDIR = "updates"
+    internal const val CACHE_SUBDIR = "updates"
 
     private const val RELEASES_URL =
         "https://api.github.com/repos/lylicht/nuvx/releases?per_page=100"
@@ -54,8 +64,61 @@ object AppUpdateChecker {
     private val _download = MutableStateFlow<DownloadState>(DownloadState.Idle)
     val download = _download.asStateFlow()
 
-    @Volatile
-    private var downloadCancelled = false
+    private var workObserver: Observer<WorkInfo>? = null
+    private var workLiveData: LiveData<WorkInfo>? = null
+    private var observedWorkId: String? = null
+    private var observedContext: Context? = null
+
+    fun observeDownload(context: Context) {
+        val app = context.applicationContext
+        val workId = app.getSharedPreferences(UPDATE_PREFS, Context.MODE_PRIVATE)
+            .getString(KEY_WORK_ID, null)
+        attachToWork(app, workId)
+    }
+
+    private fun attachToWork(app: Context, workId: String?) {
+        if (observedContext === app && observedWorkId == workId && (workObserver != null || workId == null)) return
+        workLiveData?.let { liveData -> workObserver?.let(liveData::removeObserver) }
+        observedContext = app
+        observedWorkId = workId
+        if (workId == null) {
+            workObserver = null
+            workLiveData = null
+            _download.value = DownloadState.Idle
+            return
+        }
+        val liveData = runCatching {
+            WorkManager.getInstance(app).getWorkInfoByIdLiveData(UUID.fromString(workId))
+        }.getOrNull() ?: run {
+            workObserver = null
+            workLiveData = null
+            _download.value = DownloadState.Idle
+            return
+        }
+        val observer = Observer<WorkInfo> { work ->
+            if (work == null) {
+                _download.value = DownloadState.Idle
+                return@Observer
+            }
+            _download.value = when (work.state) {
+                WorkInfo.State.ENQUEUED, WorkInfo.State.BLOCKED, WorkInfo.State.RUNNING ->
+                    DownloadState.Downloading(work.progress.getFloat(KEY_PROGRESS, 0f))
+                WorkInfo.State.SUCCEEDED -> {
+                    val path = work.outputData.getString(KEY_OUTPUT_FILE)
+                    val file = path?.let(::File)
+                    if (file?.isFile == true && file.length() > 0L) DownloadState.Ready(file)
+                    else DownloadState.Failed("Downloaded APK is missing")
+                }
+                WorkInfo.State.FAILED -> DownloadState.Failed(
+                    work.outputData.getString(KEY_OUTPUT_ERROR) ?: "Download failed",
+                )
+                WorkInfo.State.CANCELLED -> DownloadState.Idle
+            }
+        }
+        workObserver = observer
+        workLiveData = liveData
+        liveData.observeForever(observer)
+    }
 
     suspend fun check() = withContext(Dispatchers.IO) {
         runCatching {
@@ -118,64 +181,67 @@ object AppUpdateChecker {
     }.getOrNull()
 
     suspend fun clearCache(context: Context) = withContext(Dispatchers.IO) {
-        File(context.cacheDir, CACHE_SUBDIR).listFiles()?.forEach { it.delete() }
+        File(context.cacheDir, CACHE_SUBDIR).listFiles()?.forEach { file ->
+            if (!file.name.endsWith(".part") && !file.name.endsWith(".apk")) file.delete()
+        }
     }
 
-    suspend fun downloadApk(context: Context): Unit = withContext(Dispatchers.IO) {
-        val info = _available.value ?: return@withContext
-        val url = info.apkUrl ?: return@withContext
-        downloadCancelled = false
-        _download.value = DownloadState.Downloading(0f)
-
-        runCatching {
-            val dir = File(context.cacheDir, CACHE_SUBDIR).apply { mkdirs() }
-            dir.listFiles()?.forEach { it.delete() }
-            val target = File(dir, "nuvx-${info.version}.apk")
-
-            val request = Request.Builder().url(url).build()
-            Http.client.newCall(request).execute().use { response ->
-                check(response.isSuccessful) { "Download failed: HTTP ${response.code}" }
-                val body = response.body ?: error("Empty download body")
-                val total = body.contentLength().takeIf { it > 0 }
-
-                body.byteStream().use { input ->
-                    target.outputStream().use { output ->
-                        val buffer = ByteArray(64 * 1024)
-                        var readTotal = 0L
-                        while (true) {
-                            if (downloadCancelled) {
-                                _download.value = DownloadState.Idle
-                                return@withContext
-                            }
-                            val read = input.read(buffer)
-                            if (read == -1) break
-                            output.write(buffer, 0, read)
-                            readTotal += read
-                            total?.let {
-                                _download.value =
-                                    DownloadState.Downloading((readTotal.toFloat() / it).coerceIn(0f, 1f))
-                            }
-                        }
-                    }
-                }
-            }
-            _download.value = DownloadState.Ready(target)
-        }.onFailure { error ->
-            _download.value = if (downloadCancelled) {
-                DownloadState.Idle
-            } else {
-                DownloadState.Failed(error.message ?: "Download failed")
-            }
+    suspend fun downloadApk(context: Context) {
+        observeDownload(context)
+        val info = _available.value ?: return
+        val url = info.apkUrl ?: return
+        withContext(Dispatchers.IO) {
+            val request = OneTimeWorkRequestBuilder<AppUpdateDownloadWorker>()
+                .setInputData(
+                    Data.Builder()
+                        .putString(KEY_URL, url)
+                        .putString(KEY_VERSION, info.version)
+                        .build(),
+                )
+                .setConstraints(
+                    androidx.work.Constraints.Builder()
+                        .setRequiredNetworkType(androidx.work.NetworkType.CONNECTED)
+                        .build(),
+                )
+                .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 15, TimeUnit.SECONDS)
+                .build()
+            WorkManager.getInstance(context.applicationContext).enqueueUniqueWork(
+                UPDATE_WORK_NAME,
+                ExistingWorkPolicy.REPLACE,
+                request,
+            )
+            context.applicationContext.getSharedPreferences(UPDATE_PREFS, Context.MODE_PRIVATE)
+                .edit()
+                .putString(KEY_WORK_ID, request.id.toString())
+                .apply()
+            attachToWork(context.applicationContext, request.id.toString())
         }
     }
 
     fun cancelDownload() {
-        downloadCancelled = true
+        observedContext?.let { WorkManager.getInstance(it).cancelUniqueWork(UPDATE_WORK_NAME) }
     }
 
     fun resetDownload() {
+        observedContext?.getSharedPreferences(UPDATE_PREFS, Context.MODE_PRIVATE)
+            ?.edit()
+            ?.remove(KEY_WORK_ID)
+            ?.apply()
+        workLiveData?.let { liveData -> workObserver?.let(liveData::removeObserver) }
+        observedWorkId = null
+        workLiveData = null
+        workObserver = null
         _download.value = DownloadState.Idle
     }
+
+    internal const val UPDATE_WORK_NAME = "nuvx-app-update-download"
+    internal const val KEY_URL = "url"
+    internal const val KEY_VERSION = "version"
+    internal const val KEY_PROGRESS = "progress"
+    internal const val KEY_OUTPUT_FILE = "apk_file"
+    internal const val KEY_OUTPUT_ERROR = "error"
+    private const val UPDATE_PREFS = "app_update_download"
+    private const val KEY_WORK_ID = "work_id"
 
     fun installApk(context: Context, file: File) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&

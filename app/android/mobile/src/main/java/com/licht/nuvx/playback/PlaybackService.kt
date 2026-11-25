@@ -148,6 +148,8 @@ class PlaybackService : MediaLibraryService() {
 
     private val spatialAudioProcessorA = SpatialAudioProcessor()
     private val spatialAudioProcessorB = SpatialAudioProcessor()
+    private val vocalReductionProcessorA = VocalReductionProcessor()
+    private val vocalReductionProcessorB = VocalReductionProcessor()
     private val equalizerProcessorA = EqualizerProcessor()
     private val equalizerProcessorB = EqualizerProcessor()
     private val transitionFilterA = TransitionFilterProcessor()
@@ -568,6 +570,7 @@ class PlaybackService : MediaLibraryService() {
         outputRouter.configureInitialOutput()
         val exoPlayer = playerFactory.build(
             spatialAudioProcessorA,
+            vocalReductionProcessorA,
             equalizerProcessorA,
             transitionFilterA,
             loudnessA,
@@ -575,6 +578,7 @@ class PlaybackService : MediaLibraryService() {
         )
         val sparePlayer = playerFactory.build(
             spatialAudioProcessorB,
+            vocalReductionProcessorB,
             equalizerProcessorB,
             transitionFilterB,
             loudnessB,
@@ -1128,11 +1132,34 @@ class PlaybackService : MediaLibraryService() {
 
     private fun watchSleepTimer() {
         scope.launch {
-            SleepTimer.deadline.collectLatest { deadline ->
+            combine(SleepTimer.deadline, AppSettings.sleepTimerFadeOutSeconds) { deadline, fadeSeconds -> deadline to fadeSeconds }
+                .collectLatest { (deadline, fadeSeconds) ->
                 if (deadline == null) return@collectLatest
+                crossfade?.cancelSleepFadeOut()
                 val remaining = deadline - SystemClock.elapsedRealtime()
-                if (remaining > 0) delay(remaining)
+                if (remaining <= 0L) {
+                    player?.pause()
+                    player?.volume = 1f
+                    SleepTimer.cancel()
+                    return@collectLatest
+                }
+                val fadeMs = minOf(fadeSeconds * 1000L, remaining).coerceAtLeast(0L)
+                val untilFade = remaining - fadeMs
+                if (untilFade > 0L) delay(untilFade)
+                val activePlayer = player
+                if (activePlayer == null || !activePlayer.isPlaying || fadeMs <= 0L) {
+                    val untilDeadline = deadline - SystemClock.elapsedRealtime()
+                    if (untilDeadline > 0L) delay(untilDeadline)
+                    player?.pause()
+                    player?.volume = 1f
+                    SleepTimer.cancel()
+                    return@collectLatest
+                }
+                crossfade?.startSleepFadeOut(fadeMs)
+                val untilDeadline = deadline - SystemClock.elapsedRealtime()
+                if (untilDeadline > 0L) delay(untilDeadline)
                 player?.pause()
+                player?.volume = 1f
                 SleepTimer.cancel()
             }
         }
@@ -1150,6 +1177,7 @@ class PlaybackService : MediaLibraryService() {
         spareFilter = transitionFilterB
         val newActive = playerFactory.build(
             spatialAudioProcessorA,
+            vocalReductionProcessorA,
             equalizerProcessorA,
             transitionFilterA,
             loudnessA,
@@ -1157,6 +1185,7 @@ class PlaybackService : MediaLibraryService() {
         )
         val newSpare = playerFactory.build(
             spatialAudioProcessorB,
+            vocalReductionProcessorB,
             equalizerProcessorB,
             transitionFilterB,
             loudnessB,
@@ -1259,6 +1288,10 @@ class PlaybackService : MediaLibraryService() {
             AppSettings.spatialAudio.collect { applySpatialAudioEnabled() }
         }
         scope.launch {
+            combine(AppSettings.karaokeEnabled, AppSettings.karaokeVocalLevel) { _, _ -> Unit }
+                .collect { applyKaraokeSettings() }
+        }
+        scope.launch {
             combine(AppSettings.loudnessNormalization, AppSettings.loudnessTargetLufs) { on, target -> on to target }.collect {
                 loudnessController.setup(player?.currentMediaItem?.mediaId)
             }
@@ -1304,6 +1337,15 @@ class PlaybackService : MediaLibraryService() {
         val enabled = AppSettings.spatialAudio.value && !activeTrackIsDolbyAtmos
         spatialAudioProcessorA.enabled = enabled
         spatialAudioProcessorB.enabled = enabled
+    }
+
+    private fun applyKaraokeSettings() {
+        val enabled = AppSettings.karaokeEnabled.value
+        val vocalLevel = AppSettings.karaokeVocalLevel.value
+        vocalReductionProcessorA.enabled = enabled
+        vocalReductionProcessorB.enabled = enabled
+        vocalReductionProcessorA.vocalLevel = vocalLevel
+        vocalReductionProcessorB.vocalLevel = vocalLevel
     }
 
     private fun observeDiscord() = discordPresence.observe()

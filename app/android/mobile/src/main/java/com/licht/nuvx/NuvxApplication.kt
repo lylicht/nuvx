@@ -114,7 +114,10 @@ class NuvxApplication : Application(), SingletonImageLoader.Factory, Configurati
         PlaylistSync.init(this)
         com.licht.nuvx.data.sync.LanHost.files = com.licht.nuvx.download.Downloads.hostFiles(this)
         com.licht.nuvx.data.sync.NuvxSync.init(this) // after AppSettings, which loads the playlists
-        ListeningStats.init(this)
+        val initialStatsScope = authStore.activeAccountId?.let { accountId ->
+            "$accountId:${authStore.activeProfileId ?: "default"}"
+        }
+        ListeningStats.init(this, initialStatsScope)
         ArtistFacts.init(this)
         AudioCache.init(this)
         SpotifyToken.init(this)

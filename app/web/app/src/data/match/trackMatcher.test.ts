@@ -18,6 +18,19 @@ const song = (title: string, artist: string, duration?: string, album: string | 
 });
 
 describe('TrackMatcher', () => {
+  it('searches and matches titles made entirely of brackets', () => {
+    expect(queries({ title: '(Nice Dream)', artist: 'Radiohead' })).toEqual(['nice dream radiohead', 'nice dream']);
+    expect(matches(song('Nice Dream', 'Radiohead'), '(Nice Dream)', 'Radiohead')).toBe(true);
+    expect(matches(song('(Nice Dream)', 'Radiohead'), 'Nice Dream', 'Radiohead')).toBe(true);
+    expect(matches(song('(sic)', 'Slipknot'), 'sic', 'Slipknot')).toBe(true);
+  });
+
+  it('keeps version markers and upload-label controls for bracket-only titles', () => {
+    expect(matches(song('Nice Dream (Live)', 'Radiohead'), '(Nice Dream) (Live)', 'Radiohead')).toBe(true);
+    expect(matches(song('Nice Dream', 'Radiohead'), '(Nice Dream) (Live)', 'Radiohead')).toBe(false);
+    expect(queries({ title: '(Official Video)', artist: 'Radiohead' })).toEqual([]);
+  });
+
   it('matches the same recording across differing catalogue titles', () => {
     expect(matches(song('Bohemian Rhapsody (Remastered 2011)', 'Queen'), 'Bohemian Rhapsody', 'Queen')).toBe(true);
     expect(matches(song('Sunflower', 'Post Malone, Swae Lee'), 'Sunflower (feat. Swae Lee)', 'Post Malone')).toBe(true);

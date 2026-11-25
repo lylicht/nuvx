@@ -1554,6 +1554,8 @@
         <item quantity="one">Delete this song from your device? This cannot be undone.</item>
         <item quantity="other">Delete %1$d songs from your device? This cannot be undone.</item>
     </plurals>
+    <string name="remember_shuffle_across_queues">在不同队列间记住随机播放</string>
+    <string name="remember_shuffle_across_queues_subtitle">开始播放其他专辑或播放列表时保持随机播放</string>
     <string name="haptic_feedback">触觉反馈</string>
     <string name="haptic_feedback_subtitle">操作控制时，以及播放暂停、继续或切换歌曲时震动。</string>
 </resources>

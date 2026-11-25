@@ -39,6 +39,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -73,6 +74,7 @@ fun GlassNavBar(
     onPlayPause: () -> Unit,
     onNext: () -> Unit,
     onPrevious: () -> Unit,
+    onDismissMiniPlayer: (() -> Unit)? = null,
     onExpand: () -> Unit,
     controlsLocked: Boolean = false,
     onBlockedControl: () -> Unit = {},
@@ -111,6 +113,7 @@ fun GlassNavBar(
                 onPlayPause = onPlayPause,
                 onNext = onNext,
                 onPrevious = onPrevious,
+                onDismiss = onDismissMiniPlayer,
                 onExpand = onExpand,
                 controlsLocked = controlsLocked,
                 onBlockedControl = onBlockedControl,
@@ -143,6 +146,8 @@ fun GlassNavBar(
                     onPlayPause = onPlayPause,
                     onNext = onNext,
                     onPrevious = onPrevious,
+                    onDismiss = onDismissMiniPlayer,
+                    dismissThreshold = 24.dp,
                     onExpand = onExpand,
                     controlsLocked = controlsLocked,
                     onBlockedControl = onBlockedControl,
@@ -163,6 +168,8 @@ fun GlassNavBar(
                     onPlayPause = onPlayPause,
                     onNext = onNext,
                     onPrevious = onPrevious,
+                    onDismiss = onDismissMiniPlayer,
+                    dismissThreshold = 96.dp,
                     onExpand = onExpand,
                     controlsLocked = controlsLocked,
                     onBlockedControl = onBlockedControl,
@@ -243,6 +250,8 @@ private fun GlassNowPlaying(
     onPlayPause: () -> Unit,
     onNext: () -> Unit,
     onPrevious: () -> Unit,
+    onDismiss: (() -> Unit)?,
+    dismissThreshold: Dp = 96.dp,
     onExpand: () -> Unit,
     controlsLocked: Boolean,
     onBlockedControl: () -> Unit,
@@ -284,6 +293,8 @@ private fun GlassNowPlaying(
                     haptics.play(Haptic.SkipPrevious)
                     onPrevious()
                 },
+                onDismiss = onDismiss,
+                dismissThreshold = dismissThreshold,
                 locked = controlsLocked,
                 onBlocked = onBlockedControl,
             )
@@ -346,11 +357,13 @@ private fun GlassNowPlaying(
                     color = contentColor,
                     badgeColor = secondary,
                     fadeOverflow = true,
+                    marquee = true,
                 )
                 FadingLine(
                     text = song.artist,
                     style = artistStyle,
                     color = secondary,
+                    marquee = true,
                 )
             }
             if (isLoading) {

@@ -369,7 +369,8 @@ object ListenTogether {
         }
 
         val code = prefs.getString(KEY_CODE, null)
-        val saved = prefs.getString(KEY_TOKEN, null)
+        val saved = PartyTokenStore.decryptOrNull(prefs.getString(KEY_TOKEN, null))
+        if (saved == null) prefs.edit().remove(KEY_TOKEN).apply()
         prefs.edit().remove(KEY_CODE).remove(KEY_TOKEN).apply()
         if (!code.isNullOrBlank() && !saved.isNullOrBlank()) {
             releaseStaleSlot(code, saved)
@@ -503,7 +504,7 @@ object ListenTogether {
             token = membership.token
             prefs.edit()
                 .putString(KEY_CODE, membership.code)
-                .putString(KEY_TOKEN, membership.token)
+                .putString(KEY_TOKEN, PartyTokenStore.encryptOrNull(membership.token))
                 .apply()
             clock.reset()
             _state.value = State(
@@ -548,7 +549,7 @@ object ListenTogether {
             token = membership.token
             prefs.edit()
                 .putString(KEY_CODE, membership.code)
-                .putString(KEY_TOKEN, membership.token)
+                .putString(KEY_TOKEN, PartyTokenStore.encryptOrNull(membership.token))
                 .apply()
             clock.reset()
             _state.value = State(
@@ -653,7 +654,7 @@ object ListenTogether {
                 token = membership.token
                 prefs.edit()
                     .putString(KEY_CODE, membership.code)
-                    .putString(KEY_TOKEN, membership.token)
+                    .putString(KEY_TOKEN, PartyTokenStore.encryptOrNull(membership.token))
                     .apply()
                 clock.reset()
                 _state.value = State(
@@ -849,9 +850,7 @@ object ListenTogether {
 
     private fun wsBase(): String {
         val base = activePartyServerBase ?: effectiveIdleServerBase()
-        return resolveHttpBase(base)
-            .replaceFirst("https://", "wss://")
-            .replaceFirst("http://", "ws://")
+        return ListenTogetherServerUrl.webSocketBase(resolveHttpBase(base))
     }
 
     const val CODE_LENGTH = 6

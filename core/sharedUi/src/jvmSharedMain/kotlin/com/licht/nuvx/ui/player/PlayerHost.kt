@@ -170,10 +170,12 @@ interface PlayerSettingsSource {
     val canvasOverCellular: StateFlow<Boolean>
     val fullBleedArtwork: StateFlow<Boolean>
     val hideSongStatus: StateFlow<Boolean>
+    val keepScreenOnInPlayer: StateFlow<Boolean>
     val showQueueHistory: StateFlow<Boolean>
     val hideVolumeBar: StateFlow<Boolean>
     val hideStatusBar: StateFlow<Boolean>
     val lastPlayerScreen: StateFlow<LastPlayerScreen>
+    val showTotalDuration: StateFlow<Boolean>
     val playerTheme: StateFlow<PlayerTheme>
     val lyricsBlur: StateFlow<Boolean>
     val lyricsOffsetMs: StateFlow<Int>
@@ -202,6 +204,7 @@ interface PlayerSettingsSource {
     val versionAlignmentInProgress: StateFlow<Boolean>
 
     fun setLastPlayerScreen(value: LastPlayerScreen)
+    fun setShowTotalDuration(value: Boolean)
     fun setLyricsOffsetMs(value: Int)
     fun setMixViewOpen(open: Boolean)
 }

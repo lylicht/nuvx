@@ -20,6 +20,7 @@ import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import javax.crypto.Cipher
 import javax.crypto.spec.SecretKeySpec
+import java.net.URI
 
 @Serializable
 data class RawArtistMapItem(
@@ -47,7 +48,7 @@ data class RawMoreInfo(
 data class SaavnStream(val url: String, val kbps: Int?)
 
 internal fun selectBestSaavnStream(decryptedUrl: String, supports320: Boolean): SaavnStream? {
-    if (decryptedUrl.isBlank()) return null
+    if (!isValidSaavnCdnUrl(decryptedUrl)) return null
     val rendition = Regex(
         "_(48|96|160|320)\\.(mp4|aac|mp3)(?=[?#]|$)",
         RegexOption.IGNORE_CASE,
@@ -63,6 +64,17 @@ internal fun selectBestSaavnStream(decryptedUrl: String, supports320: Boolean): 
         320,
     )
 }
+
+internal fun isValidSaavnCdnUrl(value: String): Boolean = runCatching {
+    val uri = URI(value)
+    val scheme = uri.scheme?.lowercase() ?: return@runCatching false
+    if (scheme != "https" && scheme != "http") return@runCatching false
+    if (uri.rawUserInfo != null || uri.host.isNullOrBlank()) return@runCatching false
+    val host = uri.host.lowercase().trimEnd('.')
+    listOf("saavncdn.com", "jiosaavn.com").any { domain ->
+        host == domain || host.endsWith(".$domain")
+    }
+}.getOrDefault(false)
 
 @Serializable
 data class RawSongItem(

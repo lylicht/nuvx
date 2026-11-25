@@ -288,7 +288,7 @@ class AddonClient(rawBaseUrl: String, private val pickedQuality: String? = null)
         private const val PROBE_QUERY = "music"
 
         private val client: OkHttpClient by lazy {
-            Http.client.newBuilder()
+            Http.transportClient.newBuilder()
                 .readTimeout(60, TimeUnit.SECONDS)
                 .callTimeout(45, TimeUnit.SECONDS)
                 .build()

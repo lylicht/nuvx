@@ -3,6 +3,7 @@ package com.licht.nuvx.ui
 import com.licht.nuvx.R
 import com.licht.nuvx.data.YtMusicRepository
 import com.licht.nuvx.data.model.DetailPage
+import com.licht.nuvx.data.model.DetailLoadId
 import com.licht.nuvx.data.model.Song
 import com.licht.nuvx.data.model.UiState
 import com.licht.nuvx.playback.BoundedContextRequests
@@ -22,21 +23,21 @@ internal class MainDetailContextController(
     private val withArtwork: (List<Song>, String?) -> List<Song>,
     private val text: (Int) -> String,
 ) {
-    private val fillInJobs = mutableMapOf<String, Job>()
+    private val fillInJobs = mutableMapOf<DetailLoadId, Job>()
 
-    fun fillIn(browseId: String, token: String, artworkFallback: String?) {
-        fillInJobs[browseId]?.cancel()
-        fillInJobs[browseId] = scope.launch {
+    fun fillIn(detailLoadId: DetailLoadId, browseId: String, token: String, artworkFallback: String?) {
+        fillInJobs[detailLoadId]?.cancel()
+        fillInJobs[detailLoadId] = scope.launch {
             delay(150)
             var next: String? = token
             while (next != null) {
                 val fetched = YtMusicRepository.moreSongs(next).getOrNull() ?: return@launch
                 currentCoroutineContext().ensureActive()
                 val stack = _detailStack.value
-                if (stack.none { it.browseId == browseId }) return@launch
+                if (stack.none { it.detailLoadId === detailLoadId && it.browseId == browseId }) return@launch
                 var progressed = false
                 val updated = stack.map { current ->
-                    if (current.browseId != browseId) return@map current
+                    if (current.detailLoadId !== detailLoadId || current.browseId != browseId) return@map current
                     val existing = (current.songs as? UiState.Success)?.data ?: return@map current
                     val known = existing.mapTo(HashSet()) { it.contextEntryKey() }
                     val added = fetched.songs
@@ -61,24 +62,23 @@ internal class MainDetailContextController(
             }
         }.also { job ->
             job.invokeOnCompletion {
-                if (fillInJobs[browseId] === job) fillInJobs.remove(browseId)
+                if (fillInJobs[detailLoadId] === job) fillInJobs.remove(detailLoadId)
             }
         }
     }
 
     fun applyBoundedContextSnapshot(snapshot: BoundedContextRequests.Snapshot) {
-        val browseId = snapshot.request.source.id ?: return
+        val detailLoadId = snapshot.request.detailLoadId ?: return
         val stack = _detailStack.value
-        val index = stack.indexOfLast { it.browseId == browseId }
+        val index = stack.indexOfLast(snapshot::canUpdateDetail)
         if (index < 0) return
         val page = stack[index]
-        if (page.type != com.licht.nuvx.data.model.BrowseType.ALBUM && page.type != com.licht.nuvx.data.model.BrowseType.PLAYLIST) return
         if (snapshot.serviceOwned) {
-            if (snapshot.continuationToken != null) fillInJobs.remove(browseId)?.cancel()
+            if (snapshot.continuationToken != null) fillInJobs.remove(detailLoadId)?.cancel()
         } else if (snapshot.released && snapshot.continuationToken != null &&
-            fillInJobs[browseId]?.isActive != true
+            fillInJobs[detailLoadId]?.isActive != true
         ) {
-            fillIn(browseId, snapshot.continuationToken, page.thumbnailUrl)
+            fillIn(detailLoadId, page.browseId, snapshot.continuationToken, page.thumbnailUrl)
         }
         val existing = (page.songs as? UiState.Success)?.data ?: return
         val known = existing.mapTo(HashSet()) { it.contextEntryKey() }
@@ -95,12 +95,12 @@ internal class MainDetailContextController(
         }
     }
 
-    fun takePlaybackContext(browseId: String): DetailPage? {
+    fun takePlaybackContext(page: DetailPage): DetailPage? {
         val stack = _detailStack.value
-        val index = stack.indexOfLast { it.browseId == browseId }
+        val index = stack.indexOfLast { it.browseId == page.browseId && it.detailLoadId === page.detailLoadId }
         if (index < 0) return null
         val mirrored = BoundedContextRequests.snapshot.value
-            ?.takeIf { it.request.source.id == browseId }
+            ?.takeIf { it.canUpdateDetail(stack[index]) }
         if (mirrored != null) {
             applyBoundedContextSnapshot(mirrored)
             return _detailStack.value.getOrNull(index)
