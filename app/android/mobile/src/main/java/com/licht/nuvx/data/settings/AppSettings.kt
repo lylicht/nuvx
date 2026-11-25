@@ -122,6 +122,7 @@ object AppSettings {
     val syncDownloadedPlaylists = downloadSettings.syncDownloadedPlaylists
 
     val meteredConnection = MutableStateFlow<Boolean?>(null)
+    val networkTransport = MutableStateFlow(NetworkTransport.UNKNOWN)
 
     val crossfadeSeconds = transitionSettings.crossfadeSeconds
 
@@ -398,7 +399,8 @@ object AppSettings {
     }
 
     val downloadsAllowedNow: Boolean
-        get() = !wifiOnlyDownloads.value || meteredConnection.value != true
+        get() = !wifiOnlyDownloads.value || networkTransport.value == NetworkTransport.WIFI ||
+            networkTransport.value == NetworkTransport.OFFLINE
 
     fun init(context: Context, authStore: AuthStore) {
         prefs = context.getSharedPreferences("nuvx_settings", Context.MODE_PRIVATE)
@@ -422,7 +424,7 @@ object AppSettings {
         librarySettings.initialize(prefs)
         lyricsSettings.initialize(prefs)
         readAll()
-        MeteredConnectionObserver.watch(context, meteredConnection)
+        MeteredConnectionObserver.watch(context, meteredConnection, networkTransport)
     }
 
     fun reload() {
