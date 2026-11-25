@@ -151,6 +151,8 @@ object AppSettings {
     val directSourceStream = audioOutputSettings.directSourceStream
 
     val spatialAudio = audioOutputSettings.spatialAudio
+    val karaokeEnabled = audioOutputSettings.karaokeEnabled
+    val karaokeVocalLevel = audioOutputSettings.karaokeVocalLevel
 
     val equalizerEnabled = equalizerSettings.enabled
 
@@ -530,6 +532,10 @@ object AppSettings {
     fun setDirectSourceStream(value: Boolean) = audioOutputSettings.setDirectSourceStream(value)
 
     fun setSpatialAudio(value: Boolean) = audioOutputSettings.setSpatialAudio(value)
+
+    fun setKaraokeEnabled(value: Boolean) = audioOutputSettings.setKaraokeEnabled(value)
+
+    fun setKaraokeVocalLevel(value: Float) = audioOutputSettings.setKaraokeVocalLevel(value)
 
     fun setEqualizerEnabled(value: Boolean) = equalizerSettings.setEnabled(value)
 

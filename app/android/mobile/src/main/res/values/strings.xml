@@ -535,6 +535,12 @@
     <string name="pipeline_stereo_expand">Stereo Expand</string>
     <string name="pipeline_buffers">Buffers</string>
     <string name="pipeline_output_api">Output API</string>
+    <string name="karaoke_title">Karaoke</string>
+    <string name="karaoke_unavailable_bitperfect">Unavailable during bit-perfect output</string>
+    <string name="karaoke_available_stereo">Available for stereo PCM playback</string>
+    <string name="karaoke_active_description">Centered vocal reduction · stereo PCM</string>
+    <string name="karaoke_description">Reduce centered vocals on stereo tracks</string>
+    <string name="karaoke_vocal_level">Vocal level</string>
     <string name="pipeline_device_name">Device Name</string>
     <string name="mono">Mono</string>
     <string name="stereo">Stereo</string>
