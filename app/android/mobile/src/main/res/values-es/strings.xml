@@ -1352,8 +1352,6 @@
     <string name="diwali_title">nuvx te desea un feliz Diwali</string>
     <string name="diwali_subtitle">Que este festival de luces llene tu hogar de alegría y tus días de música.</string>
     <string name="diwali_cta">Celebremos</string>
-    <string name="excor_fallback">Respaldo eXcor</string>
-    <string name="excor_fallback_subtitle">Si InnerTube no encuentra una transmisión, prueba eXcor antes del extractor lento</string>
     <string name="radio">Radio</string>
     <string name="search_stations">Buscar emisoras</string>
     <string name="couldnt_load_radio">No se pudieron cargar las emisoras</string>
