@@ -44,6 +44,7 @@ internal fun PlaybackSettingsGroup(
     loudnessOffOnSpeaker: Boolean,
     smartFade: Boolean,
     crossfade: Int,
+    sleepTimerFadeOut: Int,
     automixPerformance: AutomixPerformanceMode,
     skipSilence: Boolean,
     spatialAudio: Boolean,
@@ -216,6 +217,19 @@ internal fun PlaybackSettingsGroup(
                     )
                 }
             }
+        }
+        val sleepFadeTitle = stringResource(R.string.sleep_timer_fade_out)
+        row(sleepFadeTitle, "sleep", "timer", "fade", "out") {
+            SliderRow(
+                icon = SfIcons.SleepTimer,
+                title = sleepFadeTitle,
+                subtitle = stringResource(R.string.sleep_timer_fade_out_subtitle),
+                value = if (sleepTimerFadeOut == 0) stringResource(R.string.off) else "${sleepTimerFadeOut}s",
+                sliderValue = sleepTimerFadeOut.toFloat(),
+                onSliderValue = { AppSettings.setSleepTimerFadeOutSeconds(it.roundToInt()) },
+                valueRange = 0f..60f,
+                steps = 59,
+            )
         }
         val automixTitle = stringResource(R.string.automix)
         row(automixTitle, "crossfade", "smart fade", "mix") {

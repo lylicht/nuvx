@@ -125,6 +125,8 @@ object AppSettings {
 
     val crossfadeSeconds = transitionSettings.crossfadeSeconds
 
+    val sleepTimerFadeOutSeconds = MutableStateFlow(DEFAULT_SLEEP_TIMER_FADE_OUT_SECONDS)
+
     val smartFadeEnabled = transitionSettings.smartFadeEnabled
 
     val automixPerformanceMode = transitionSettings.automixPerformanceMode
@@ -434,6 +436,7 @@ object AppSettings {
         audioQualitySettings.read()
         downloadSettings.read()
         transitionSettings.read()
+        sleepTimerFadeOutSeconds.value = prefs.getInt(KEY_SLEEP_TIMER_FADE_OUT_SECONDS, DEFAULT_SLEEP_TIMER_FADE_OUT_SECONDS).coerceIn(0, 60)
         audioOutputSettings.read()
         equalizerSettings.read()
         playbackSpeed.value = prefs.getFloat(KEY_SPEED, 1.0f)
@@ -517,6 +520,12 @@ object AppSettings {
     fun setDownloadLimitGb(value: Int) = downloadSettings.setDownloadLimitGb(value)
 
     fun setCrossfadeSeconds(value: Int) = transitionSettings.setCrossfadeSeconds(value)
+
+    fun setSleepTimerFadeOutSeconds(value: Int) {
+        val clamped = value.coerceIn(0, 60)
+        sleepTimerFadeOutSeconds.value = clamped
+        prefs.edit().putInt(KEY_SLEEP_TIMER_FADE_OUT_SECONDS, clamped).apply()
+    }
 
     fun setSmartFadeEnabled(value: Boolean) = transitionSettings.setSmartFadeEnabled(value)
 
@@ -941,6 +950,8 @@ object AppSettings {
 
     fun normalizeSignatureApiUrl(raw: String): String = playerPresentationSettings.normalizeSignatureApiUrl(raw)
 
+    const val DEFAULT_SLEEP_TIMER_FADE_OUT_SECONDS = 15
+    private const val KEY_SLEEP_TIMER_FADE_OUT_SECONDS = "sleep_timer_fade_out_seconds"
     private const val KEY_SPEED = "playback_speed"
     private const val KEY_AUTOPLAY = "autoplay"
     private const val KEY_NIGHTLY_UPDATES = "nightly_updates"

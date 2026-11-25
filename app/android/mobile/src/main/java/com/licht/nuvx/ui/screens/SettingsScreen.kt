@@ -161,6 +161,7 @@ fun SettingsScreen(
     val cellularQuality by AppSettings.audioQualityCellular.collectAsStateWithLifecycle()
     val metered by AppSettings.meteredConnection.collectAsStateWithLifecycle()
     val crossfade by AppSettings.crossfadeSeconds.collectAsStateWithLifecycle()
+    val sleepTimerFadeOut by AppSettings.sleepTimerFadeOutSeconds.collectAsStateWithLifecycle()
     val smartFade by AppSettings.smartFadeEnabled.collectAsStateWithLifecycle()
     val automixPerformance by AppSettings.automixPerformanceMode.collectAsStateWithLifecycle()
     val skipSilence by AppSettings.skipSilence.collectAsStateWithLifecycle()
@@ -513,6 +514,7 @@ fun SettingsScreen(
             loudnessOffOnSpeaker = loudnessOffOnSpeaker,
             smartFade = smartFade,
             crossfade = crossfade,
+            sleepTimerFadeOut = sleepTimerFadeOut,
             automixPerformance = automixPerformance,
             skipSilence = skipSilence,
             spatialAudio = spatialAudio,
