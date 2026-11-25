@@ -194,6 +194,11 @@ Java_com_licht_nuvx_playback_smart_TrackFeatures_nativeResample(
     jfloatArray samples,
     jdouble input_rate,
     jdouble output_rate) {
+  if (samples == nullptr) {
+    jclass exception = env->FindClass("java/lang/IllegalArgumentException");
+    if (exception != nullptr) env->ThrowNew(exception, "samples must not be null");
+    return nullptr;
+  }
   const jsize count = env->GetArrayLength(samples);
   std::vector<float> input(static_cast<size_t>(count));
   if (count > 0) {
