@@ -11,6 +11,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -37,6 +38,8 @@ private val downloadScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
 @Composable
 fun TvUpdateDialog(update: AppUpdateChecker.UpdateInfo, onDismiss: () -> Unit) {
+    val context = LocalContext.current
+    LaunchedEffect(context) { AppUpdateChecker.observeDownload(context) }
     val state by AppUpdateChecker.download.collectAsState()
     val notes = remember(update.notes) { update.notes?.let(::plainNotes) }
     val picture = remember(update.notes) { update.notes?.let(::firstPicture) }
