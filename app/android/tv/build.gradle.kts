@@ -268,8 +268,7 @@ dependencies {
 
     implementation("io.ktor:ktor-client-websockets:3.6.1")
 
-    implementation("com.github.MetrolistGroup.innertubex:innertubex-android:v0.12.0")
-    implementation("com.excor:eXcor-android:0.2.0")
+    implementation("com.github.MetrolistGroup.innertubex:innertubex-android:v0.13.1")
 
     implementation(files(newPipeExtractorStripped))
     implementation("com.github.TeamNewPipe:nanojson:e9d656ddb49a412a5a0a5d5ef20ca7ef09549996")
