@@ -40,6 +40,7 @@ data class Song(
     val playbackSourceType: PlaybackSourceType? = null,
     val playbackSourceId: String? = null,
     val feedbackToken: String? = null,
+    val plays: String? = null,
 ) {
     val fromAutoplay: Boolean get() = queueTier == QueueTier.AUTOPLAY
 

@@ -172,6 +172,7 @@ object InnertubeParser {
         val artist = parts.firstOrNull {
             !it.matches(DURATION) && it.lowercase(Locale.ROOT) !in TYPE_WORDS && !it.matches(TALLY)
         }
+        val plays = parts.firstOrNull { it.matches(TALLY) }
 
         val credits = creditsOf(
             columns.flatMap {
@@ -196,6 +197,7 @@ object InnertubeParser {
                 ?: "Unknown artist",
             thumbnailUrl = thumbnails.best(),
             durationText = duration,
+            plays = plays,
             artistId = credits.artistId ?: fallback.artistId,
             artists = completeArtistCredits(artist.orEmpty(), credits.artists.ifEmpty { fallback.artists }),
             albumId = credits.albumId ?: fallback.albumId,
@@ -278,6 +280,7 @@ object InnertubeParser {
         val artist = parts.firstOrNull {
             !it.matches(DURATION) && it.lowercase(Locale.ROOT) !in TYPE_WORDS && !it.matches(TALLY)
         }
+        val plays = parts.firstOrNull { it.matches(TALLY) }
         val thumbnails = renderer.o("thumbnail").o("musicThumbnailRenderer")
             .o("thumbnail").a("thumbnails")
 
@@ -290,6 +293,7 @@ object InnertubeParser {
                 ?: "Unknown artist",
             thumbnailUrl = thumbnails.best(),
             durationText = duration,
+            plays = plays,
             artistId = credits.artistId,
             artists = completeArtistCredits(artist.orEmpty(), credits.artists),
             albumId = credits.albumId,
