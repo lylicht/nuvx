@@ -239,6 +239,18 @@ internal fun PlaybackSettingsGroup(
             }
         }
         if (smartFade) {
+            val preserveAlbums by AppSettings.preserveAlbumTransitions.collectAsStateWithLifecycle()
+            val preserveAlbumsTitle = stringResource(R.string.preserve_album_transitions)
+            row(preserveAlbumsTitle, "album", "gapless", "automix") {
+                BypassedByBitPerfect(bitPerfectReady) {
+                    SettingsSubRow(
+                        title = preserveAlbumsTitle,
+                        subtitle = stringResource(R.string.preserve_album_transitions_subtitle),
+                        checked = preserveAlbums,
+                        onCheckedChange = AppSettings::setPreserveAlbumTransitions,
+                    )
+                }
+            }
             val advancedTitle = stringResource(R.string.advanced_automix)
             row(advancedTitle, "automix", "dj", "beat", "mix") {
                 BypassedByBitPerfect(bitPerfectReady) {

@@ -33,4 +33,17 @@ internal fun MediaItem.toTransitionInfo(durationMs: Long) = TransitionTrackInfo(
     durationMs = durationMs,
     title = mediaMetadata.title?.toString().orEmpty(),
     artist = mediaMetadata.artist?.toString().orEmpty(),
+    album = mediaMetadata.albumTitle?.toString().orEmpty(),
+    albumId = mediaMetadata.extras?.getString(EXTRA_ALBUM_ID).orEmpty(),
 )
+
+internal fun MediaItem.isSameAlbumAs(other: MediaItem): Boolean {
+    val id = mediaMetadata.extras?.getString(EXTRA_ALBUM_ID).orEmpty()
+    val otherId = other.mediaMetadata.extras?.getString(EXTRA_ALBUM_ID).orEmpty()
+    if (id.isNotBlank() && id == otherId) return true
+    val album = mediaMetadata.albumTitle?.toString().orEmpty()
+    val otherAlbum = other.mediaMetadata.albumTitle?.toString().orEmpty()
+    val artist = mediaMetadata.artist?.toString().orEmpty()
+    val otherArtist = other.mediaMetadata.artist?.toString().orEmpty()
+    return album.isNotBlank() && album == otherAlbum && artist.isNotBlank() && artist == otherArtist
+}

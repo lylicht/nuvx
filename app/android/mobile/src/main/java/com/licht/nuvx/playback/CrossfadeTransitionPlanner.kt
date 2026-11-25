@@ -210,6 +210,9 @@ internal class CrossfadeTransitionPlanner(
         val nextAnalysis = analysisFor(nextItem)
         val analysisState = AppSettings.smartAnalysis.value
         val advanced = AppSettings.advancedAutomix.value
+        val albumSequential = AppSettings.preserveAlbumTransitions.value &&
+            !player.shuffleModeEnabled &&
+            nextIndex == player.currentMediaItemIndex + 1
 
         val plan = planTransition(
             analysis = currentAnalysis,
@@ -220,6 +223,7 @@ internal class CrossfadeTransitionPlanner(
             duration = duration / 1000.0,
             fadeSeconds = fallbackSeconds,
             mode = CrossfadeMode.SMART,
+            albumSequential = albumSequential,
             advanced = advanced,
         )
         val verdict = "${plan.reason}|${plan.transitionStyle}|fade=${plan.fadeMs}" +
