@@ -1577,4 +1577,6 @@
         <item quantity="one">Delete this song from your device? This cannot be undone.</item>
         <item quantity="other">Delete %1$d songs from your device? This cannot be undone.</item>
     </plurals>
+    <string name="remember_shuffle_across_queues">Agli queues mein shuffle yaad rakhein</string>
+    <string name="remember_shuffle_across_queues_subtitle">Doosra album ya playlist shuru karne par shuffle chalu rakhein</string>
 </resources>
