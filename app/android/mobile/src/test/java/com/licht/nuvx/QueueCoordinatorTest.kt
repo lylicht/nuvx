@@ -336,8 +336,7 @@ class QueueCoordinatorTest {
     }
 
     @Test
-    fun `consumePlayedUserQueue prunes user queue items when entering context`() {
-        var currentIndex = 2
+    fun `consumePlayedUserQueue retains played user queue items for previous`() {
         val songs = listOf(
             testSong("u1", tier = QueueTier.USER_QUEUE),
             testSong("u2", tier = QueueTier.USER_QUEUE),
@@ -345,13 +344,16 @@ class QueueCoordinatorTest {
             testSong("c2", tier = QueueTier.CONTEXT),
         )
         val items = songs.map { it.toMediaItem() }.toMutableList()
-        val player = createFakePlayer(items, currentIndex = { currentIndex })
+        val testPlayer = TestPlayer(items, activeIndex = 2)
 
-        QueueCoordinator.consumePlayedUserQueue(player, tierAt(songs, items))
+        QueueCoordinator.consumePlayedUserQueue(testPlayer.player, tierAt(songs, items))
 
-        assertEquals(2, items.size)
-        assertEquals("c1", items[0].mediaId)
-        assertEquals("c2", items[1].mediaId)
+        assertEquals(listOf("u1", "u2", "c1", "c2"), items.map { it.mediaId })
+        assertEquals(0, testPlayer.queueEditCallCount)
+        testPlayer.player.seekToPreviousMediaItem()
+        assertEquals(1, testPlayer.activeIndex)
+        testPlayer.player.seekToPreviousMediaItem()
+        assertEquals(0, testPlayer.activeIndex)
     }
 
     @Test
