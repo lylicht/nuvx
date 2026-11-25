@@ -18,6 +18,7 @@ object BoundedContextRequests {
         val shuffle: Boolean,
         val handoffToken: String? = null,
         val detailLoadId: DetailLoadId? = null,
+        val replaceUpcomingQueue: Boolean = false,
     )
 
     data class Snapshot(

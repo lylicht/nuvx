@@ -332,6 +332,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     fun onLibraryShown() = feedRefreshController.onLibraryShown()
 
     init {
+        AppUpdateChecker.observeDownload(getApplication())
         search.start()
         loadHome()
         if (_signedIn.value) {

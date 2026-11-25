@@ -21,7 +21,7 @@ internal class AudioCacheReadAheadController(
     private val cacheKeyOf: (Uri) -> String,
     private val heldByYouTube: (String?) -> Boolean,
     private val dropYouTubeEntry: (String, String) -> Unit,
-    private val fetch: suspend (String, Long, Long) -> Unit,
+    private val fetch: suspend (String, Uri, Long, Long) -> Unit,
     private val fetchWhole: suspend (String) -> Unit,
     private val preloadBytes: Long,
     private val prefetchDelayMs: Long,
@@ -40,10 +40,25 @@ internal class AudioCacheReadAheadController(
         )
         setPendingQueue(mediaIds)
         job?.cancel()
+        val firstStreamable = upcoming.firstOrNull { item ->
+            val id = item.mediaId
+            id !in Downloads.saved.value && (
+                SourceRegistry.parseTrackKey(id) != null ||
+                    (!id.startsWith("content://") && !id.startsWith("file://"))
+                )
+        }
+        val sourceUpcoming = firstStreamable?.takeIf { SourceRegistry.parseTrackKey(it.mediaId) != null }
+        if (sourceUpcoming != null) {
+            val uri = sourcePlaybackUri(sourceUpcoming)
+            job = scope.launch(TrackLog.about(sourceUpcoming.mediaId)) {
+                delay(prefetchDelayMs)
+                fetch(cacheKeyOf(uri), uri, 0, preloadBytes)
+            }
+        }
         val videoIds = mediaIds.filter { SourceRegistry.parseTrackKey(it) == null }
             .filter { it !in Downloads.saved.value }
         val substitutable = SourceResolver.canSubstituteForYouTube()
-        job = videoIds.firstOrNull()?.let { next ->
+        if (sourceUpcoming == null) job = videoIds.firstOrNull()?.let { next ->
             val target = upcoming.firstOrNull { it.mediaId == next }?.target
             val pinnedToYouTube = OriginalVersion.isPinned(next)
             scope.launch {
@@ -60,7 +75,7 @@ internal class AudioCacheReadAheadController(
                 if (cacheBytes) {
                     launch(TrackLog.about(next)) {
                         delay(prefetchDelayMs)
-                        fetch(next, 0, preloadBytes)
+                        fetchWatch(next, 0, preloadBytes)
                         fetchWhole(next)
                     }
                 }
@@ -80,11 +95,18 @@ internal class AudioCacheReadAheadController(
     fun prefetchDirect(upcoming: AudioCache.Upcoming) {
         directJob?.cancel()
         val id = upcoming.mediaId
-        if (SourceRegistry.parseTrackKey(id) != null || id in Downloads.saved.value || OriginalVersion.isPinned(id)) {
+        val sourceTrack = SourceRegistry.parseTrackKey(id)
+        if (id in Downloads.saved.value || (sourceTrack == null && OriginalVersion.isPinned(id))) {
             directJob = null
             return
         }
         directJob = scope.launch(TrackLog.about(id)) {
+            if (sourceTrack != null) {
+                val uri = sourcePlaybackUri(upcoming)
+                delay(prefetchDelayMs)
+                fetch(cacheKeyOf(uri), uri, 0, preloadBytes)
+                return@launch
+            }
             if (StreamChoice.of(id) == null) {
                 val addon = runCatching { DirectSourceGate.lookup(id, upcoming.target) }
                     .onFailure { if (it is kotlinx.coroutines.CancellationException) throw it }
@@ -107,7 +129,7 @@ internal class AudioCacheReadAheadController(
                     if (addon == null) DirectSourceGate.startedOnYouTube(id, upcoming.target)
                 }
             }
-            fetch(id, 0, preloadBytes)
+            fetchWatch(id, 0, preloadBytes)
         }
     }
 
@@ -119,5 +141,29 @@ internal class AudioCacheReadAheadController(
     fun cancelQueue() {
         job?.cancel()
         job = null
+    }
+
+    private fun sourcePlaybackUri(upcoming: AudioCache.Upcoming): Uri {
+        val (source, track) = requireNotNull(SourceRegistry.parseTrackKey(upcoming.mediaId))
+        val target = upcoming.target
+        return Uri.parse(SourceRegistry.trackUri(source, track)).buildUpon()
+            .appendQueryParameter("n", target.title)
+            .appendQueryParameter("a", target.artist)
+            .apply { target.durationSec?.let { appendQueryParameter("d", it.toString()) } }
+            .apply { target.album?.let { appendQueryParameter("l", it) } }
+            .apply { target.isExplicit?.let { appendQueryParameter("e", if (it) "1" else "0") } }
+            .apply { if (target.isVideo) appendQueryParameter("m", "1") }
+            .apply {
+                appendQueryParameter(
+                    SourceResolver.MIX_PARAM,
+                    SourceResolver.mixOf(SourceRegistry.config(source)?.pickedQuality),
+                )
+            }
+            .build()
+    }
+
+    private suspend fun fetchWatch(videoId: String, position: Long, length: Long) {
+        val uri = Uri.parse("nuvx://watch?v=$videoId")
+        fetch(cacheKeyOf(uri), uri, position, length)
     }
 }

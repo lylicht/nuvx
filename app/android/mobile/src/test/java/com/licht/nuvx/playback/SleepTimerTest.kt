@@ -26,4 +26,20 @@ class SleepTimerTest {
             assertEquals(minutes, SleepTimer.minutesAt(SleepTimer.fractionOf(minutes)))
         }
     }
+
+    @Test
+    fun replacingOrCancellingTimerNotifiesFadeController() {
+        var notifications = 0
+        SleepTimer.onCancelListener = { notifications++ }
+        try {
+            SleepTimer.start(15)
+            SleepTimer.startAfterTrack()
+            SleepTimer.start(30)
+            SleepTimer.cancel()
+            assertEquals(4, notifications)
+        } finally {
+            SleepTimer.onCancelListener = null
+            SleepTimer.cancel()
+        }
+    }
 }

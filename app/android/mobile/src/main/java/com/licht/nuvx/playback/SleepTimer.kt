@@ -12,6 +12,8 @@ object SleepTimer {
 
     val afterTrack = MutableStateFlow(false)
 
+    var onCancelListener: (() -> Unit)? = null
+
     val PRESETS = listOf(15, 30, 45, 60)
 
     const val STEP_MINUTES = 5
@@ -29,12 +31,14 @@ object SleepTimer {
     val isRunning: Boolean get() = deadline.value != null || afterTrack.value
 
     fun start(minutes: Int) {
+        onCancelListener?.invoke()
         afterTrack.value = false
         this.minutes.value = minutes
         deadline.value = SystemClock.elapsedRealtime() + minutes * 60_000L
     }
 
     fun startAfterTrack() {
+        onCancelListener?.invoke()
         minutes.value = null
         deadline.value = null
         afterTrack.value = true
@@ -44,6 +48,7 @@ object SleepTimer {
         minutes.value = null
         deadline.value = null
         afterTrack.value = false
+        onCancelListener?.invoke()
     }
 
     fun remainingMs(): Long? =

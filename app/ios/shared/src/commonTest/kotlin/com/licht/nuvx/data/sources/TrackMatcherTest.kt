@@ -19,6 +19,22 @@ import kotlin.test.assertTrue
 
 class TrackMatcherTest {
 
+    @Test
+    fun searchesAndMatchesTitlesMadeEntirelyOfBrackets() {
+        val target = TrackMatcher.Target("(Nice Dream)", "Radiohead")
+        assertEquals(listOf("nice dream radiohead", "nice dream"), TrackMatcher.queries(target))
+        assertTrue(TrackMatcher.matches(song("Nice Dream", "Radiohead"), target.title, target.artist))
+        assertTrue(TrackMatcher.matches(song("(Nice Dream)", "Radiohead"), "Nice Dream", "Radiohead"))
+        assertTrue(TrackMatcher.matches(song("(sic)", "Slipknot"), "sic", "Slipknot"))
+    }
+
+    @Test
+    fun bracketOnlyTitlesKeepVersionMarkersAndIgnoreUploadLabels() {
+        assertTrue(TrackMatcher.matches(song("Nice Dream (Live)", "Radiohead"), "(Nice Dream) (Live)", "Radiohead"))
+        assertFalse(TrackMatcher.matches(song("Nice Dream", "Radiohead"), "(Nice Dream) (Live)", "Radiohead"))
+        assertTrue(TrackMatcher.queries(TrackMatcher.Target("(Official Video)", "Radiohead")).isEmpty())
+    }
+
     private fun song(
         title: String,
         artist: String,

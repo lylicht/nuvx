@@ -208,9 +208,9 @@ class QueueWindow(
 
         val firstNew = canonicalCount
         canonicalCount = newCanonicalSize
-        logicalOrder += freshOrder(firstNew, activeCycleId)
+        logicalOrder = withFreshIndices(logicalOrder, firstNew, activeCycleId)
         plannedCycles.entries.forEach { planned ->
-            planned.setValue(planned.value + freshOrder(firstNew, planned.key))
+            planned.setValue(withFreshIndices(planned.value, firstNew, planned.key))
         }
         rebuildInverse()
         return this
@@ -443,13 +443,26 @@ class QueueWindow(
         return cycle + 1L
     }
 
-    private fun freshOrder(firstNew: Int, cycle: Long): IntArray {
-        val fresh = (firstNew until canonicalCount).toList()
-        return if (shuffled && currentIndex != null) {
-            fresh.shuffled(Random(seedForExtension(cycle, firstNew))).toIntArray()
-        } else {
-            fresh.toIntArray()
+    private fun withFreshIndices(order: IntArray, firstNew: Int, cycle: Long): IntArray {
+        val fresh = IntArray(canonicalCount - firstNew) { firstNew + it }
+        if (!shuffled || currentIndex == null) return order + fresh
+
+        val kept = exposedEnd(order, cycle)
+        val mixed = (order.copyOfRange(kept, order.size) + fresh).toList()
+            .shuffled(Random(seedForExtension(cycle, firstNew)))
+        return order.copyOfRange(0, kept) + mixed.toIntArray()
+    }
+
+    private fun exposedEnd(order: IntArray, cycle: Long): Int {
+        var position = if (cycle == activeCycleId) logicalCursor + 1 else 0
+        var exposed = 0
+        while (position < order.size && exposed < WINDOW_AHEAD) {
+            val canonical = order[position]
+            val skipped = cycle == activeCycleId && canonical in consumed
+            if (!skipped) exposed += 1
+            position += 1
         }
+        return position
     }
 
     private fun shuffledOrderAnchoredAt(anchor: Int, cycle: Long): IntArray {

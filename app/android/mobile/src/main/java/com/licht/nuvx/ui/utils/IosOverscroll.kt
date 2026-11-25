@@ -59,6 +59,9 @@ private class IosOverscrollEffect : OverscrollEffect {
     private var settleJobs: List<Job> = emptyList()
 
     override val isInProgress: Boolean
+        get() = false
+
+    private val hasPull: Boolean
         get() = rawPullX.floatValue != 0f || rawPullY.floatValue != 0f
 
     override fun applyToScroll(
@@ -96,7 +99,7 @@ private class IosOverscrollEffect : OverscrollEffect {
         val consumed = performFling(velocity)
         val leftover = velocity - consumed
         stopSettling()
-        if (!isInProgress && leftover == Velocity.Zero) return
+        if (!hasPull && leftover == Velocity.Zero) return
 
         coroutineScope {
             val jobs = listOf(
@@ -139,6 +142,7 @@ private class IosOverscrollEffect : OverscrollEffect {
                 } else {
                     normalBounceStiffness
                 },
+                visibilityThreshold = 0.5f,
             ),
         ) { value, _ ->
             if (job?.isActive != false) pull.floatValue = value

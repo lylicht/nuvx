@@ -2,6 +2,7 @@ package com.licht.nuvx
 
 import com.licht.nuvx.data.NerdStats
 import com.licht.nuvx.data.jiosaavn.RawSongItem
+import com.licht.nuvx.data.jiosaavn.isValidSaavnCdnUrl
 import com.licht.nuvx.data.jiosaavn.prioritizeExplicit
 import com.licht.nuvx.data.jiosaavn.selectBestSaavnStream
 import com.licht.nuvx.data.model.Song
@@ -583,6 +584,18 @@ class SourcesTest {
 
         assertEquals(url, selected.url)
         assertNull(selected.kbps)
+    }
+
+    @Test
+    fun `JioSaavn rejects untrusted decrypted media URLs`() {
+        listOf(
+            "file:///etc/passwd",
+            "https://saavncdn.com.attacker.invalid/song.mp4",
+            "https://attacker.invalid/saavncdn.com/song.mp4",
+            "https://user@aac.saavncdn.com/song.mp4",
+        ).forEach { assertNull(selectBestSaavnStream(it, supports320 = true)) }
+        assertTrue(isValidSaavnCdnUrl("https://aac.saavncdn.com/song.mp4"))
+        assertTrue(isValidSaavnCdnUrl("https://www.jiosaavn.com/song.mp4"))
     }
 
     @Test

@@ -113,6 +113,7 @@ internal fun CompactSongRow(
     downloadedTint: Color? = null,
     isCurrent: Boolean = false,
     isPlaying: Boolean = false,
+    showPlays: Boolean = false,
 ) {
     Row(
         modifier = Modifier
@@ -142,7 +143,7 @@ internal fun CompactSongRow(
                 color = if (isCurrent) palette.accent else palette.onBackground,
             )
             Text(
-                text = song.artist,
+                text = listOfNotNull(song.artist, song.plays.takeIf { showPlays }).joinToString(" · "),
                 style = MaterialTheme.typography.bodyMedium,
                 color = palette.onBackgroundVariant,
                 maxLines = 1,

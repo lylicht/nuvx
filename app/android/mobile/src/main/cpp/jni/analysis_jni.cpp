@@ -194,6 +194,11 @@ Java_com_licht_nuvx_playback_smart_TrackFeatures_nativeResample(
     jfloatArray samples,
     jdouble input_rate,
     jdouble output_rate) {
+  if (samples == nullptr) {
+    jclass exception = env->FindClass("java/lang/IllegalArgumentException");
+    if (exception != nullptr) env->ThrowNew(exception, "samples must not be null");
+    return nullptr;
+  }
   const jsize count = env->GetArrayLength(samples);
   std::vector<float> input(static_cast<size_t>(count));
   if (count > 0) {
@@ -211,6 +216,41 @@ Java_com_licht_nuvx_playback_smart_TrackFeatures_nativeResample(
   if (produced > 0) {
     env->SetFloatArrayRegion(result, 0, produced, resampled.data());
   }
+  return result;
+}
+
+JNIEXPORT jfloatArray JNICALL
+Java_com_licht_nuvx_playback_smart_TrackFeatures_nativeResampleChunks(
+    JNIEnv* env,
+    jclass /* clazz */,
+    jobjectArray chunks,
+    jint sample_count,
+    jdouble input_rate,
+    jdouble output_rate) {
+  if (chunks == nullptr || sample_count <= 0) return nullptr;
+  const jsize chunk_count = env->GetArrayLength(chunks);
+  std::vector<float> input(static_cast<size_t>(sample_count));
+  jsize offset = 0;
+  for (jsize index = 0; index < chunk_count; ++index) {
+    auto chunk = static_cast<jfloatArray>(env->GetObjectArrayElement(chunks, index));
+    if (chunk == nullptr) return nullptr;
+    const jsize size = env->GetArrayLength(chunk);
+    if (size > sample_count - offset) {
+      env->DeleteLocalRef(chunk);
+      return nullptr;
+    }
+    if (size > 0) env->GetFloatArrayRegion(chunk, 0, size, input.data() + offset);
+    env->DeleteLocalRef(chunk);
+    if (env->ExceptionCheck()) return nullptr;
+    offset += size;
+  }
+  if (offset != sample_count) return nullptr;
+
+  const std::vector<float> resampled = nuvx::smart::Resample(input, input_rate, output_rate);
+  const jsize produced = static_cast<jsize>(resampled.size());
+  jfloatArray result = env->NewFloatArray(produced);
+  if (result == nullptr) return nullptr;
+  if (produced > 0) env->SetFloatArrayRegion(result, 0, produced, resampled.data());
   return result;
 }
 

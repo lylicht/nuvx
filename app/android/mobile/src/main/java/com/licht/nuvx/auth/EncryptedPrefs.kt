@@ -25,20 +25,24 @@ internal object EncryptedPrefs {
             val staleKeyset = isUnverifiable(e) &&
                 context.getSharedPreferences(name, Context.MODE_PRIVATE).contains(KEYSET_ENTRY)
             if (!staleKeyset) {
-                Log.w(TAG, "EncryptedSharedPreferences unavailable for $name, falling back: ${describe(e)}")
-                return context.getSharedPreferences(plainName, Context.MODE_PRIVATE)
+                return memoryOnly(context, plainName, name, e)
             }
             Log.w(TAG, "$name's keyset no longer matches this device's Keystore (${describe(e)}); recreating it")
             context.deleteSharedPreferences(name)
             try {
                 create(context, name)
             } catch (retry: Throwable) {
-                Log.w(TAG, "$name could not be recreated, falling back: ${describe(retry)}")
-                return context.getSharedPreferences(plainName, Context.MODE_PRIVATE)
+                return memoryOnly(context, plainName, name, retry)
             }
         }
         moveIn(context, plainName, encrypted, name)
         return encrypted
+    }
+
+    private fun memoryOnly(context: Context, plainName: String, name: String, error: Throwable): SharedPreferences {
+        Log.w(TAG, "Secure storage unavailable for $name; disabling persistence: ${describe(error)}")
+        runCatching { context.deleteSharedPreferences(plainName) }
+        return MemoryOnlySharedPreferences()
     }
 
     private fun create(context: Context, name: String): SharedPreferences =
@@ -65,13 +69,15 @@ internal object EncryptedPrefs {
             }
         }
         if (!edit.commit()) {
-            Log.w(TAG, "could not write $plainName into $name; keeping the plain copy")
+            Log.w(TAG, "could not migrate $plainName into $name; deleting the plaintext copy")
+            runCatching { context.deleteSharedPreferences(plainName) }
             return
         }
         val stored = encrypted.all
         val unmatched = entries.keys.filter { stored[it] != entries[it] }
         if (unmatched.isNotEmpty()) {
-            Log.w(TAG, "${unmatched.size} of ${entries.size} entries from $plainName did not read back; keeping the plain copy")
+            Log.w(TAG, "${unmatched.size} of ${entries.size} entries from $plainName did not read back; deleting the plaintext copy")
+            runCatching { context.deleteSharedPreferences(plainName) }
             return
         }
         context.deleteSharedPreferences(plainName)

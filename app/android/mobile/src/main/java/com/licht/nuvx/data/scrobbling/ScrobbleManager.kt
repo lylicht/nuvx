@@ -2,6 +2,7 @@ package com.licht.nuvx.data.scrobbling
 
 import com.licht.nuvx.data.DebugLog as Log
 import com.licht.nuvx.data.model.Song
+import com.licht.nuvx.data.model.durationMillis
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -169,13 +170,7 @@ class ScrobbleManager(
         }
     }
 
-    private fun parseDurationSeconds(text: String): Int {
-        val parts = text.split(":")
-        if (parts.size != 2) return 0
-        val minutes = parts[0].toIntOrNull() ?: return 0
-        val seconds = parts[1].toIntOrNull() ?: return 0
-        return minutes * 60 + seconds
-    }
+    private fun parseDurationSeconds(text: String): Int = (text.durationMillis() / 1000).toInt()
 
     private fun String.forScrobble(): String = if (usePrimaryArtistOnly) primaryArtist() else this
 

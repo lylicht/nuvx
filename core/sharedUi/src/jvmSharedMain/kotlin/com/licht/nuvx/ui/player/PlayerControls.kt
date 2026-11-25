@@ -46,15 +46,19 @@ internal fun PlaybackOriginCaption(
     textAlign: TextAlign,
     contentPadding: PaddingValues,
     modifier: Modifier = Modifier,
+    backdropLuminance: Float? = null,
 ) {
     val chrome = LocalPlayerChrome.current
+    val shadowAlpha = backdropLuminance?.let {
+        (it.coerceIn(0f, 0.6f) / 0.6f).let { strength -> 0.55f + 0.45f * strength }
+    } ?: 0.55f
     Text(
         text = text,
         style = MaterialTheme.typography.labelSmall.copy(
             shadow = Shadow(
-                color = Color.Black.copy(alpha = 0.55f),
+                color = Color.Black.copy(alpha = shadowAlpha),
                 offset = Offset(0f, 1f),
-                blurRadius = 4f,
+                blurRadius = if (backdropLuminance == null) 4f else 16f,
             ),
         ),
         color = Color.White.copy(alpha = if (chrome) CHROME_FULL_ALPHA else 1f),
@@ -62,7 +66,7 @@ internal fun PlaybackOriginCaption(
         overflow = TextOverflow.Ellipsis,
         textAlign = textAlign,
         modifier = modifier
-            .additiveChrome(chrome)
+            .let { if (backdropLuminance == null) it.additiveChrome(chrome) else it }
             .clickable(onClick = onClick)
             .padding(contentPadding),
     )

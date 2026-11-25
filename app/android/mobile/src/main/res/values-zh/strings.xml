@@ -1554,4 +1554,6 @@
         <item quantity="one">Delete this song from your device? This cannot be undone.</item>
         <item quantity="other">Delete %1$d songs from your device? This cannot be undone.</item>
     </plurals>
+    <string name="remember_shuffle_across_queues">在不同队列间记住随机播放</string>
+    <string name="remember_shuffle_across_queues_subtitle">开始播放其他专辑或播放列表时保持随机播放</string>
 </resources>

@@ -77,7 +77,7 @@
     <string name="connected">Bağlandı</string>
     <string name="account_integrations">Hesap ve entegrasyonlar</string>
     <string name="account_scrobbling">Hesap ve scrobbling</string>
-    <string name="rich_presence">Zengin varlık</string>
+    <string name="rich_presence">Rich Presence</string>
     <string name="scrobbling">Scrobbling</string>
     <string name="now_playing">Şu an çalıyor</string>
     <string name="selected">Seçildi</string>
@@ -197,7 +197,7 @@
     <string name="skip_silence_subtitle">Bir saniyeden uzun boşlukları kırp</string>
     <string name="skip_silence_float_subtitle">32 bit float çıkışta kullanılamaz</string>
     <string name="equalizer">Ekolayzır</string>
-    <string name="equalizer_subtitle">Cihazınızın sistem paneli</string>
+    <string name="equalizer_subtitle">Ton, yedi bant ve denge</string>
     <string name="show_nerd_stats">Meraklılar için istatistikleri göster</string>
     <string name="show_nerd_stats_subtitle">Oynatıcıda codec, bit hızı ve örnekleme oranı</string>
     <string name="theme">Tema</string>
@@ -239,10 +239,10 @@
     <string name="system">Sistem</string>
     <string name="light">Açık</string>
     <string name="dark">Koyu</string>
-    <string name="full_screen_cover_art_subtitle">Kapağı kare bir kılıf yerine oynatıcının kenarlarına kadar uzatır</string>
+    <string name="full_screen_cover_art_subtitle">Kapağı kare bir çerçeve yerine oynatıcının kenarlarına kadar uzatır</string>
     <string name="full_screen_detail_cover">Tam ekran albüm/çalma listesi kapağı</string>
     <string name="full_screen_detail_cover_subtitle">Albüm ve çalma listesi kapaklarını çerçeve yerine sayfanın kenarlarına kadar uzatır</string>
-    <string name="animated_cover_art_subtitle">Bazı sürümlerin geldiği döngülü videoyu sabit bir kılıf yerine oynatır</string>
+    <string name="animated_cover_art_subtitle">Bazı albümlerde bulunan döngülü videoyu sabit bir kapak yerine oynatır</string>
     <string name="dont_repeat_songs_subtitle">AutoPlay bu oturumda zaten çalınmış veya önerilmiş bir şarkıyı önermez</string>
     <string name="download_quality_subtitle">Bağlantı ne olursa olsun parça başına %1$s</string>
     <string name="filter_non_music_audio">Müzik olmayan sesleri filtrele</string>
@@ -276,7 +276,7 @@
     <string name="buttons">Düğmeler</string>
     <string name="clear_name">Adı temizle</string>
     <string name="connect_account_first">Önce bir hesap bağlayın</string>
-    <string name="connected_presence_off">Bağlandı, varlık kapalı</string>
+    <string name="connected_presence_off">Bağlandı, durum paylaşımı kapalı</string>
     <string name="copy_log">Günlüğü kopyala</string>
     <string name="couldnt_find">%1$s bulunamadı</string>
     <string name="couldnt_open_link">Bu bağlantı açılamadı</string>
@@ -609,7 +609,7 @@
     <string name="smb_description">nuvx\'u paylaşılan bir müzik klasörüne yönlendir — SMB kullanan bir NAS ya da Windows paylaşımı.</string>
     <string name="smb_server_hint">nas.local veya 192.168.1.10:4445</string>
     <string name="smb_share_hint">Paylaşım adı, ör. Music</string>
-    <string name="smb_folder_hint">Klasör (isteğe bağlı)</string>
+    <string name="smb_folder_hint">Paylaşım içindeki klasör, ör. media/music (isteğe bağlı)</string>
     <string name="smb_disconnect">Bağlantıyı kes</string>
     <string name="smb_test_failed">Ulaşılamadı: %1$s</string>
     <string name="playlist">çalma listesi</string>
@@ -1208,7 +1208,7 @@
     <string name="song_info_error">Bazı bilgiler yüklenemedi.</string>
     <string name="song_info_retry">Tekrar dene</string>
     <string name="artist_signatures">Sanatçı imzaları</string>
-    <string name="artist_signatures_subtitle">Apple Music\'te başlık logosu yokken el yazısı imza gösterir</string>
+    <string name="artist_signatures_subtitle">Apple Music\'te başlık logosu olmadığında el yazısı imza gösterir</string>
     <string name="artist_signatures_url">İmza API URL\'si</string>
     <string name="artist_signatures_url_hint">https://signatures.example.com</string>
     <string name="artist_signatures_unconfigured">Yapılandırılmadı — API URL\'sini ayarlamak için dokunun</string>
@@ -1534,4 +1534,6 @@
         <item quantity="one">Delete this song from your device? This cannot be undone.</item>
         <item quantity="other">Delete %1$d songs from your device? This cannot be undone.</item>
     </plurals>
+    <string name="remember_shuffle_across_queues">Yeni kuyruklarda karisik calmayi hatirla</string>
+    <string name="remember_shuffle_across_queues_subtitle">Baska bir album veya calma listesi baslatirken karisik calmayi acik tut</string>
 </resources>

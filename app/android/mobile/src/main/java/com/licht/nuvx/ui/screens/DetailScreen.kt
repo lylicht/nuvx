@@ -7,6 +7,7 @@ import com.licht.nuvx.R
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
@@ -15,6 +16,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
 import com.licht.nuvx.ui.components.liquidGlassRim
+import com.licht.nuvx.ui.components.dismissKeyboardOnScroll
 import com.licht.nuvx.ui.components.continuous
 import com.licht.nuvx.ui.components.FadingText
 import com.licht.nuvx.ui.components.longPressMenuClickable
@@ -25,11 +27,13 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -226,6 +230,7 @@ fun DetailScreen(
     currentSong: Song?,
     isPlaying: Boolean,
     onSongClick: (List<Song>, Int) -> Unit,
+    onPlayCollection: (List<Song>) -> Unit,
     onSongLongPress: (Song) -> Unit,
     onSongSwipe: (Song) -> Unit,
     onShuffle: (List<Song>) -> Unit,
@@ -254,7 +259,8 @@ fun DetailScreen(
     val rawSongs = (page.songs as? UiState.Success)?.data.orEmpty()
     val folderSort = folder?.sort
     val songs = remember(rawSongs, songSort, folderSort) {
-        if (folderSort != null) rawSongs.sortedForLibrary(folderSort) else rawSongs.sortedForDetail(songSort)
+        if (folderSort != null) rawSongs.sortedForLibrary(folderSort)
+        else rawSongs.sortedForDetail(songSort, addedOrderOf(page.browseId, page.type))
     }
     val originalTrackNumbers = remember(rawSongs) {
         val byTag = rawSongs.useTrackTags()
@@ -347,6 +353,17 @@ fun DetailScreen(
     }
 
     val searchStop = with(LocalDensity.current) { topBarContentPadding().roundToPx() }
+    val density = LocalDensity.current
+    val keyboardReserveTarget = if (searching) {
+        with(density) { WindowInsets.ime.getBottom(this).toDp() }
+    } else {
+        0.dp
+    }
+    val keyboardReserve by animateDpAsState(
+        targetValue = keyboardReserveTarget,
+        label = "detail search keyboard reserve",
+    )
+    val searchScope = rememberCoroutineScope()
     LaunchedEffect(searching) {
         if (searching) {
             focusSearch = true
@@ -388,7 +405,7 @@ fun DetailScreen(
                     reorder(palette)
                 } else LazyColumn(
                     state = listState,
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier.fillMaxSize().dismissKeyboardOnScroll(),
                     contentPadding = PaddingValues(bottom = contentPadding.calculateBottomPadding()),
                 ) {
             item(key = "header") {
@@ -402,7 +419,7 @@ fun DetailScreen(
                         fullBleed = fullBleedSleeve,
                         canvas = canvas,
                         songs = songs,
-                        onPlay = { com.licht.nuvx.playback.QueueShuffle.disableForNextQueue(); onSongClick(songs, 0) },
+                        onPlay = { com.licht.nuvx.playback.QueueShuffle.disableForNextQueue(); onPlayCollection(songs) },
                         onShuffle = { onShuffle(songs) },
                         onArtistClick = onArtistClick.takeIf { folder == null },
                         onToggleLibrary = onToggleLibrary,
@@ -419,7 +436,10 @@ fun DetailScreen(
                         onQueryChange = { query = it },
                         onClose = closeSearch,
                         autoFocus = focusSearch,
-                        onFocused = { focusSearch = false },
+                        onFocused = {
+                            focusSearch = false
+                            searchScope.launch { listState.animateScrollToItem(SEARCH_ITEM_INDEX, -searchStop) }
+                        },
                         palette = palette,
                         type = page.type,
                     )
@@ -549,6 +569,7 @@ fun DetailScreen(
                                                 downloadedTint = downloadedTint,
                                                 isCurrent = isCurrentRow(song),
                                                 isPlaying = isCurrentRow(song) && isPlaying,
+                                                showPlays = true,
                                             )
                                         }
                                     }
@@ -589,6 +610,7 @@ fun DetailScreen(
                             isPlaying = isCurrent && isPlaying,
                             activeTint = palette.accent,
                             searchPlayingStyle = true,
+                            showPlays = numbered,
                         )
                         if (position < matches.lastIndex) {
                             HorizontalDivider(
@@ -664,6 +686,11 @@ fun DetailScreen(
                 }
             }
             if (isArtist) aboutItem()
+            if (searching) {
+                item(key = "detail-search-ime-reserve") {
+                    Spacer(Modifier.height(keyboardReserve))
+                }
+            }
         }
 
                 if (folder != null && folderState != null && folderState.selecting) {
@@ -690,24 +717,43 @@ fun DetailScreen(
 }
 }
 
-internal fun List<Song>.sortedForDetail(sort: SongSort): List<Song> = when (sort) {
+internal enum class AddedOrder { FILE_DATES, APPENDED, NEWEST_FIRST }
+
+internal fun addedOrderOf(browseId: String, type: BrowseType): AddedOrder = when {
+    browseId == "VLLM" || browseId == "LM" || browseId == "local:offline:liked" -> AddedOrder.NEWEST_FIRST
+    type == BrowseType.PLAYLIST -> AddedOrder.APPENDED
+    else -> AddedOrder.FILE_DATES
+}
+
+internal fun List<Song>.sortedForDetail(
+    sort: SongSort,
+    addedOrder: AddedOrder = AddedOrder.FILE_DATES,
+): List<Song> = when (sort) {
     SongSort.DEFAULT -> this
     SongSort.TITLE_ASC -> sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.title })
     SongSort.TITLE_DESC -> sortedWith(compareByDescending(String.CASE_INSENSITIVE_ORDER) { it.title })
-    SongSort.DATE_ADDED_ASC -> withIndex()
-        .sortedWith(
-            compareBy<IndexedValue<Song>> { (_, song) ->
-                song.localDateAddedSeconds ?: Long.MAX_VALUE
-            }.thenBy { (position, _) -> position },
-        )
-        .map { it.value }
-    SongSort.DATE_ADDED_DESC -> withIndex()
-        .sortedWith(
-            compareByDescending<IndexedValue<Song>> { (_, song) ->
-                song.localDateAddedSeconds ?: Long.MIN_VALUE
-            }.thenByDescending { (position, _) -> position },
-        )
-        .map { it.value }
+    SongSort.DATE_ADDED_ASC -> when (addedOrder) {
+        AddedOrder.APPENDED -> this
+        AddedOrder.NEWEST_FIRST -> asReversed()
+        AddedOrder.FILE_DATES -> withIndex()
+            .sortedWith(
+                compareBy<IndexedValue<Song>> { (_, song) ->
+                    song.localDateAddedSeconds ?: Long.MAX_VALUE
+                }.thenBy { (position, _) -> position },
+            )
+            .map { it.value }
+    }
+    SongSort.DATE_ADDED_DESC -> when (addedOrder) {
+        AddedOrder.APPENDED -> asReversed()
+        AddedOrder.NEWEST_FIRST -> this
+        AddedOrder.FILE_DATES -> withIndex()
+            .sortedWith(
+                compareByDescending<IndexedValue<Song>> { (_, song) ->
+                    song.localDateAddedSeconds ?: Long.MIN_VALUE
+                }.thenByDescending { (position, _) -> position },
+            )
+            .map { it.value }
+    }
 }
 
 internal fun List<Song>.matching(query: String): List<IndexedValue<Song>> {

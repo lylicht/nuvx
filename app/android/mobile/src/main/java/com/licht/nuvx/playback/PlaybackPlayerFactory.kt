@@ -18,6 +18,7 @@ internal class PlaybackPlayerFactory(
 ) {
     fun build(
         spatial: SpatialAudioProcessor,
+        vocalReduction: VocalReductionProcessor,
         equalizer: EqualizerProcessor,
         filter: TransitionFilterProcessor,
         loudness: LoudnessProcessor,
@@ -29,6 +30,7 @@ internal class PlaybackPlayerFactory(
                 outputRouter = outputRouter,
                 activeFilter = activeFilter,
                 spatial = spatial,
+                vocalReduction = vocalReduction,
                 equalizer = equalizer,
                 transition = filter,
                 loudness = loudness,

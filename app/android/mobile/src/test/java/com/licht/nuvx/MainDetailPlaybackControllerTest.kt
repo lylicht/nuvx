@@ -23,6 +23,7 @@ class MainDetailPlaybackControllerTest {
         var source: QueueSource? = null
         var bounded = false
         var token: String? = null
+        var replaceUpcomingQueue = false
         var contextRequests = 0
         var detailLoadId: DetailLoadId? = null
     }
@@ -57,7 +58,7 @@ class MainDetailPlaybackControllerTest {
         locked: Boolean = false,
         casting: Boolean = false,
     ) = MainDetailPlaybackController(
-        playFrom = { songs, index, source, bounded, token, detailLoadId ->
+        playFrom = { songs, index, source, bounded, token, detailLoadId, replaceUpcomingQueue ->
             recorder.invoked = true
             recorder.songs = songs
             recorder.index = index
@@ -65,6 +66,7 @@ class MainDetailPlaybackControllerTest {
             recorder.bounded = bounded
             recorder.token = token
             recorder.detailLoadId = detailLoadId
+            recorder.replaceUpcomingQueue = replaceUpcomingQueue
         },
         takePlaybackContext = { requestedPage ->
             recorder.contextRequests++
@@ -88,6 +90,18 @@ class MainDetailPlaybackControllerTest {
         assertEquals("page", recorder.source?.id)
         assertTrue(recorder.bounded)
         assertEquals(0, recorder.index)
+        assertFalse(recorder.replaceUpcomingQueue)
+    }
+
+    @Test
+    fun `explicit collection Play requests replacement of upcoming queue`() {
+        val recorder = Recorder()
+        val songs = listOf(song("a"), song("b"))
+
+        controller(recorder).play(page(BrowseType.PLAYLIST, songs), songs, 0, replaceUpcomingQueue = true)
+
+        assertTrue(recorder.invoked)
+        assertTrue(recorder.replaceUpcomingQueue)
     }
 
     @Test

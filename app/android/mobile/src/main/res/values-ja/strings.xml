@@ -1555,4 +1555,6 @@
         <item quantity="one">Delete this song from your device? This cannot be undone.</item>
         <item quantity="other">Delete %1$d songs from your device? This cannot be undone.</item>
     </plurals>
+    <string name="remember_shuffle_across_queues">次のキューでもシャッフルを維持</string>
+    <string name="remember_shuffle_across_queues_subtitle">別のアルバムやプレイリストを開始してもシャッフルを維持します</string>
 </resources>
