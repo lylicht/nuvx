@@ -114,6 +114,7 @@ import com.licht.nuvx.data.model.DetailPage
 import com.licht.nuvx.data.model.Song
 import com.licht.nuvx.data.model.UiState
 import com.licht.nuvx.data.model.withoutVideos
+import com.licht.nuvx.data.model.withoutTrending
 import com.licht.nuvx.data.model.UserPlaylist
 import com.licht.nuvx.data.model.EntityType
 import com.licht.nuvx.data.model.SearchHistoryEntity
@@ -550,12 +551,14 @@ internal fun NuvxApp(
     val hideHomeVideos by AppSettings.hideHomeVideos.collectAsStateWithLifecycle()
     val hideTopPicks by AppSettings.hideTopPicks.collectAsStateWithLifecycle()
     val hideHomeMoods by AppSettings.hideHomeMoods.collectAsStateWithLifecycle()
-    val visibleHomeState = remember(homeState, hideHomeVideos, hideRecents) {
+    val hideTrending by AppSettings.hideTrending.collectAsStateWithLifecycle()
+    val visibleHomeState = remember(homeState, hideHomeVideos, hideRecents, hideTrending) {
         val loaded = homeState as? UiState.Success
-        if (loaded != null && (hideHomeVideos || hideRecents)) {
+        if (loaded != null && (hideHomeVideos || hideRecents || hideTrending)) {
             var shelves = loaded.data
             if (hideRecents) shelves = shelves.filterNot { it.title == YtMusicRepository.RECENT_TITLE }
             if (hideHomeVideos) shelves = shelves.withoutVideos()
+            if (hideTrending) shelves = shelves.withoutTrending()
             UiState.Success(shelves)
         } else {
             homeState

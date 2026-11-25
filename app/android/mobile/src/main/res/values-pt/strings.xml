@@ -1582,4 +1582,6 @@
         <item quantity="one">Delete this song from your device? This cannot be undone.</item>
         <item quantity="other">Delete %1$d songs from your device? This cannot be undone.</item>
     </plurals>
+    <string name="hide_trending">Ocultar recomendações em alta</string>
+    <string name="hide_trending_subtitle">Remove da página inicial músicas em alta e seções da comunidade</string>
 </resources>

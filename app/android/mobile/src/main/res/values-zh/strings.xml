@@ -1554,4 +1554,6 @@
         <item quantity="one">Delete this song from your device? This cannot be undone.</item>
         <item quantity="other">Delete %1$d songs from your device? This cannot be undone.</item>
     </plurals>
+    <string name="hide_trending">隐藏热门趋势推荐</string>
+    <string name="hide_trending_subtitle">从首页移除热门歌曲和社区内容</string>
 </resources>

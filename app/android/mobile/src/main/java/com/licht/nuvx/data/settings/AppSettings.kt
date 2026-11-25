@@ -233,6 +233,8 @@ object AppSettings {
 
     val hideHomeMoods = homeFeedSettings.hideHomeMoods
 
+    val hideTrending = homeFeedSettings.hideTrending
+
     val squareVideoThumbnails = homeFeedSettings.squareVideoThumbnails
 
     val hideExplicit = homeFeedSettings.hideExplicit
@@ -678,6 +680,8 @@ object AppSettings {
     fun setHideTopPicks(value: Boolean) = homeFeedSettings.setHideTopPicks(value)
 
     fun setHideHomeMoods(value: Boolean) = homeFeedSettings.setHideHomeMoods(value)
+
+    fun setHideTrending(value: Boolean) = homeFeedSettings.setHideTrending(value)
 
     fun setHideExplicit(value: Boolean) = homeFeedSettings.setHideExplicit(value)
 

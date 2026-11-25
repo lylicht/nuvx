@@ -1577,4 +1577,6 @@
         <item quantity="one">Delete this song from your device? This cannot be undone.</item>
         <item quantity="other">Delete %1$d songs from your device? This cannot be undone.</item>
     </plurals>
+    <string name="hide_trending">ट्रेंडिंग सुझाव छिपाएँ</string>
+    <string name="hide_trending_subtitle">होम से ट्रेंडिंग गाने और कम्युनिटी सेक्शन हटाएँ</string>
 </resources>

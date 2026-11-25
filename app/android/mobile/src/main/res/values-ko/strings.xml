@@ -1415,4 +1415,6 @@
         <item quantity="one">Delete this song from your device? This cannot be undone.</item>
         <item quantity="other">Delete %1$d songs from your device? This cannot be undone.</item>
     </plurals>
+    <string name="hide_trending">인기 급상승 추천 숨기기</string>
+    <string name="hide_trending_subtitle">홈에서 인기 급상승 노래와 커뮤니티 섹션을 숨깁니다</string>
 </resources>

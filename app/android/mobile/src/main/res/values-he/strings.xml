@@ -1582,4 +1582,6 @@
         <item quantity="one">Delete this song from your device? This cannot be undone.</item>
         <item quantity="other">Delete %1$d songs from your device? This cannot be undone.</item>
     </plurals>
+    <string name="hide_trending">הסתרת המלצות פופולריות</string>
+    <string name="hide_trending_subtitle">הסרת שירים ומדורים קהילתיים פופולריים מדף הבית</string>
 </resources>

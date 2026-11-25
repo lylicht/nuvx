@@ -1494,4 +1494,6 @@
         <item quantity="one">Delete this song from your device? This cannot be undone.</item>
         <item quantity="other">Delete %1$d songs from your device? This cannot be undone.</item>
     </plurals>
+    <string name="hide_trending">Ẩn đề xuất thịnh hành</string>
+    <string name="hide_trending_subtitle">Xóa bài hát và mục cộng đồng thịnh hành khỏi Trang chủ</string>
 </resources>

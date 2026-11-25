@@ -1426,4 +1426,6 @@
     <string name="nuvx_host_remove">Remove</string>
     <string name="nuvx_host_remote_title">Allow remote control</string>
     <string name="nuvx_host_remote_subtitle">Paired phones can play through this phone with their speaker button</string>
+    <string name="hide_trending">Hide Trending recommendations</string>
+    <string name="hide_trending_subtitle">Removes trending songs and community shelves from Home</string>
 </resources>

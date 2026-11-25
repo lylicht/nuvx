@@ -1516,4 +1516,6 @@
         <item quantity="one">Delete this song from your device? This cannot be undone.</item>
         <item quantity="other">Delete %1$d songs from your device? This cannot be undone.</item>
     </plurals>
+    <string name="hide_trending">Nascondi i consigli di tendenza</string>
+    <string name="hide_trending_subtitle">Rimuove da Home i brani e le sezioni community di tendenza</string>
 </resources>
