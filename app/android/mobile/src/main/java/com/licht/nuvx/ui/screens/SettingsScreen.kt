@@ -160,6 +160,7 @@ fun SettingsScreen(
     val wifiQuality by AppSettings.audioQualityWifi.collectAsStateWithLifecycle()
     val cellularQuality by AppSettings.audioQualityCellular.collectAsStateWithLifecycle()
     val metered by AppSettings.meteredConnection.collectAsStateWithLifecycle()
+    val networkTransport by AppSettings.networkTransport.collectAsStateWithLifecycle()
     val crossfade by AppSettings.crossfadeSeconds.collectAsStateWithLifecycle()
     val sleepTimerFadeOut by AppSettings.sleepTimerFadeOutSeconds.collectAsStateWithLifecycle()
     val smartFade by AppSettings.smartFadeEnabled.collectAsStateWithLifecycle()
@@ -492,7 +493,7 @@ fun SettingsScreen(
                 search = search,
                 downloadQuality = downloadQuality,
                 wifiOnlyDownloads = wifiOnlyDownloads,
-                metered = metered,
+                networkTransport = networkTransport,
                 exportDownloads = exportDownloads,
                 syncDownloadedPlaylists = syncDownloadedPlaylists,
                 onOpenChoice = onOpenChoice,
