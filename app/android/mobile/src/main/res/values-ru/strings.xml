@@ -1614,4 +1614,6 @@
     <string name="remember_shuffle_across_queues_subtitle">Оставлять перемешивание включенным при запуске другого альбома или плейлиста</string>
     <string name="haptic_feedback">Тактильный отклик</string>
     <string name="haptic_feedback_subtitle">Вибрация при нажатии кнопок, паузе, возобновлении и смене трека.</string>
+    <string name="hide_trending">Скрыть популярные рекомендации</string>
+    <string name="hide_trending_subtitle">Убирает популярные треки и разделы сообщества с главной страницы</string>
 </resources>

@@ -1538,4 +1538,6 @@
     <string name="remember_shuffle_across_queues_subtitle">Baska bir album veya calma listesi baslatirken karisik calmayi acik tut</string>
     <string name="haptic_feedback">Dokunsal geri bildirim</string>
     <string name="haptic_feedback_subtitle">Kontroller kullanıldığında ve oynatma duraklatıldığında, sürdürüldüğünde veya parça değiştiğinde titrer.</string>
+    <string name="hide_trending">Trend önerilerini gizle</string>
+    <string name="hide_trending_subtitle">Trend şarkıları ve topluluk bölümlerini Ana Sayfa’dan kaldırır</string>
 </resources>

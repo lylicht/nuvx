@@ -232,6 +232,7 @@ fun SettingsScreen(
     val hideHomeVideos by AppSettings.hideHomeVideos.collectAsStateWithLifecycle()
     val hideTopPicks by AppSettings.hideTopPicks.collectAsStateWithLifecycle()
     val hideHomeMoods by AppSettings.hideHomeMoods.collectAsStateWithLifecycle()
+    val hideTrending by AppSettings.hideTrending.collectAsStateWithLifecycle()
     val hideExplicit by AppSettings.hideExplicit.collectAsStateWithLifecycle()
     val focusedFeed by AppSettings.focusedFeed.collectAsStateWithLifecycle()
     val smartVersionAlignment by AppSettings.smartVersionAlignment.collectAsStateWithLifecycle()
@@ -543,6 +544,7 @@ fun SettingsScreen(
                 hideHomeVideos = hideHomeVideos,
                 hideTopPicks = hideTopPicks,
                 hideHomeMoods = hideHomeMoods,
+                hideTrending = hideTrending,
                 squareVideoThumbnails = squareVideoThumbnails,
                 classicSearch = classicSearch,
                 hideExplicit = hideExplicit,

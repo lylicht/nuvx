@@ -1564,4 +1564,6 @@
     <string name="remember_shuffle_across_queues_subtitle">เปิดโหมดสุ่มเพลงไว้เมื่อเริ่มอัลบั้มหรือเพลย์ลิสต์อื่น</string>
     <string name="haptic_feedback">การตอบสนองแบบสัมผัส</string>
     <string name="haptic_feedback_subtitle">สั่นเมื่อใช้ปุ่มควบคุมและเมื่อหยุดชั่วคราว เล่นต่อ หรือเปลี่ยนเพลง</string>
+    <string name="hide_trending">ซ่อนรายการแนะนำที่กำลังมาแรง</string>
+    <string name="hide_trending_subtitle">นำเพลงและหมวดชุมชนที่กำลังมาแรงออกจากหน้าแรก</string>
 </resources>

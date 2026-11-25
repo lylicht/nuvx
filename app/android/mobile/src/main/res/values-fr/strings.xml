@@ -1582,4 +1582,6 @@
     <string name="remember_shuffle_across_queues_subtitle">Conserver la lecture aleatoire au demarrage d un autre album ou playlist</string>
     <string name="haptic_feedback">Retour haptique</string>
     <string name="haptic_feedback_subtitle">Vibre lors des commandes, des pauses, des reprises et des changements de titre.</string>
+    <string name="hide_trending">Masquer les recommandations tendance</string>
+    <string name="hide_trending_subtitle">Retire de l’accueil les titres tendance et les sections communautaires</string>
 </resources>

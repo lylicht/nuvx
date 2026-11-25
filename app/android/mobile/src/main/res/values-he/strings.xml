@@ -1586,4 +1586,6 @@
     <string name="remember_shuffle_across_queues_subtitle">להשאיר את הערבוב פעיל בעת התחלת אלבום או רשימת השמעה אחרת</string>
     <string name="haptic_feedback">משוב הפטי</string>
     <string name="haptic_feedback_subtitle">המכשיר רוטט בשימוש בפקדים ובהשהיה, בחידוש או בהחלפת רצועה.</string>
+    <string name="hide_trending">הסתרת המלצות פופולריות</string>
+    <string name="hide_trending_subtitle">הסרת שירים ומדורים קהילתיים פופולריים מדף הבית</string>
 </resources>
