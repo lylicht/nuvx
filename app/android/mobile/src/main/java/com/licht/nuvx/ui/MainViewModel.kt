@@ -319,7 +319,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         localPageState = ::localPageState,
         withArtwork = { songs, fallback -> songs.withArtwork(fallback) },
         setPlaylistOwned = playlistController::setPlaylistOwned,
-        fillIn = { browseId, token, fallback -> detailContextController.fillIn(browseId, token, fallback) },
+        fillIn = { detailLoadId, browseId, token, fallback -> detailContextController.fillIn(detailLoadId, browseId, token, fallback) },
         openSpotifyPage = { browseId, title, subtitle, thumbnailUrl ->
             spotifyPageResolver.openPage(browseId, title, subtitle, thumbnailUrl)
         },
@@ -466,8 +466,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     private fun applyBoundedContextSnapshot(snapshot: BoundedContextRequests.Snapshot) =
         detailContextController.applyBoundedContextSnapshot(snapshot)
 
-    fun takePlaybackContext(browseId: String): DetailPage? =
-        detailContextController.takePlaybackContext(browseId)
+    fun takePlaybackContext(page: DetailPage): DetailPage? =
+        detailContextController.takePlaybackContext(page)
 
     private fun List<Song>.withArtwork(fallback: String?): List<Song> {
         if (fallback == null) return this
