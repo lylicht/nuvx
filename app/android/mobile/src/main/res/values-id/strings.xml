@@ -1556,4 +1556,6 @@
     </plurals>
     <string name="remember_shuffle_across_queues">Ingat mode acak di antrean berikutnya</string>
     <string name="remember_shuffle_across_queues_subtitle">Tetap acak saat memulai album atau playlist lain</string>
+    <string name="haptic_feedback">Umpan balik haptik</string>
+    <string name="haptic_feedback_subtitle">Bergetar saat kontrol digunakan dan saat pemutaran dijeda, dilanjutkan, atau berganti lagu.</string>
 </resources>

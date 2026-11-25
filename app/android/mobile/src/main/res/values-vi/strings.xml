@@ -1496,4 +1496,6 @@
     </plurals>
     <string name="remember_shuffle_across_queues">Ghi nho che do phat ngau nhien cho hang doi moi</string>
     <string name="remember_shuffle_across_queues_subtitle">Giu phat ngau nhien khi bat dau album hoac danh sach phat khac</string>
+    <string name="haptic_feedback">Phản hồi xúc giác</string>
+    <string name="haptic_feedback_subtitle">Rung khi dùng các nút điều khiển và khi phát bị tạm dừng, tiếp tục hoặc chuyển bài.</string>
 </resources>

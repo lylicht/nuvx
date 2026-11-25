@@ -1518,4 +1518,6 @@
     </plurals>
     <string name="remember_shuffle_across_queues">Ricorda la modalita casuale nelle nuove code</string>
     <string name="remember_shuffle_across_queues_subtitle">Mantieni la riproduzione casuale quando avvii un altro album o una playlist</string>
+    <string name="haptic_feedback">Feedback aptico</string>
+    <string name="haptic_feedback_subtitle">Vibra quando usi i controlli e quando la riproduzione si mette in pausa, riprende o cambia brano.</string>
 </resources>

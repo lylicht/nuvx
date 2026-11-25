@@ -8,6 +8,7 @@ import android.os.VibrationAttributes
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
+import android.os.SystemClock
 import android.provider.Settings
 import androidx.annotation.RequiresApi
 import androidx.compose.runtime.Composable
@@ -19,8 +20,34 @@ actual class Haptics internal constructor(context: Context) {
     private val app = context.applicationContext
 
     actual fun play(haptic: Haptic) {
-        HapticDevice.of(app)?.play(haptic)
+        if (!HapticsSettings.enabled) return
+        if (HapticDevice.of(app)?.play(haptic) == true) PlaybackHapticGate.mark()
     }
+}
+
+actual object HapticsSettings {
+    @Volatile
+    actual var enabled: Boolean = true
+}
+
+fun playPlaybackHaptic(context: Context, haptic: Haptic) {
+    if (!HapticsSettings.enabled || PlaybackHapticGate.recent()) return
+    if (HapticDevice.of(context.applicationContext)?.play(haptic) == true) PlaybackHapticGate.mark()
+}
+
+fun markPlaybackHapticAction() {
+    PlaybackHapticGate.mark()
+}
+
+private object PlaybackHapticGate {
+    private const val WINDOW_MS = 600L
+    @Volatile private var lastHapticAtMs = 0L
+
+    fun mark() {
+        lastHapticAtMs = SystemClock.elapsedRealtime()
+    }
+
+    fun recent(): Boolean = SystemClock.elapsedRealtime() - lastHapticAtMs < WINDOW_MS
 }
 
 @Composable
@@ -73,6 +100,10 @@ private fun rhythmOf(haptic: Haptic): List<Beat> = when (haptic) {
         Beat(Beat.Kind.Click, 0.85f, 0),
         Beat(Beat.Kind.LowTick, 0.4f, 22),
     )
+    Haptic.TrackChange -> listOf(
+        Beat(Beat.Kind.Tick, 0.4f, 0),
+        Beat(Beat.Kind.Click, 0.7f, 16),
+    )
     Haptic.Pulse -> listOf(
         Beat(Beat.Kind.Click, 1f, 0),
         Beat(Beat.Kind.Click, 0.85f, 20),
@@ -92,8 +123,8 @@ private class HapticDevice private constructor(
 ) {
     private val compiled = HashMap<Haptic, VibrationEffect>()
 
-    fun play(haptic: Haptic) {
-        if (!systemHapticsEnabled()) return
+    fun play(haptic: Haptic): Boolean {
+        if (!systemHapticsEnabled()) return false
 
         val effect = synchronized(compiled) {
             compiled.getOrPut(haptic) { compile(rhythmOf(haptic)) }
@@ -104,6 +135,7 @@ private class HapticDevice private constructor(
             @Suppress("DEPRECATION")
             vibrator.vibrate(effect, LEGACY_ATTRIBUTES)
         }
+        return true
     }
 
     private fun compile(beats: List<Beat>): VibrationEffect = when {

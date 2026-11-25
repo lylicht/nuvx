@@ -1580,4 +1580,6 @@
     </plurals>
     <string name="remember_shuffle_across_queues">Conserver la lecture aleatoire entre les files</string>
     <string name="remember_shuffle_across_queues_subtitle">Conserver la lecture aleatoire au demarrage d un autre album ou playlist</string>
+    <string name="haptic_feedback">Retour haptique</string>
+    <string name="haptic_feedback_subtitle">Vibre lors des commandes, des pauses, des reprises et des changements de titre.</string>
 </resources>

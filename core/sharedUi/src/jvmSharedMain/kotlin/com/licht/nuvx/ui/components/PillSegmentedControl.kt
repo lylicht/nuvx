@@ -30,6 +30,7 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
+import com.licht.nuvx.ui.haptics.HapticsSettings
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.IntOffset
@@ -144,7 +145,7 @@ fun PillSegmentedControl(
                             .width(with(density) { widths[index].toDp() })
                             .clickable(enabled = enabled, interactionSource = null, indication = null) {
                                 if (index != selected) {
-                                    haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                    if (HapticsSettings.enabled) haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                     onSelect(index)
                                 }
                             }

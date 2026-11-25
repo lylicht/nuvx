@@ -48,6 +48,7 @@ internal fun PlaybackSettingsGroup(
     automixPerformance: AutomixPerformanceMode,
     skipSilence: Boolean,
     spatialAudio: Boolean,
+    hapticFeedbackEnabled: Boolean,
     playingDolbyAtmos: Boolean,
     swipeToPlayNext: Boolean,
     dontRepeatSuggestions: Boolean,
@@ -329,6 +330,21 @@ internal fun PlaybackSettingsGroup(
                     onClick = { AppSettings.setSpatialAudio(!spatialAudio) },
                 )
             }
+        }
+        val hapticFeedbackTitle = stringResource(R.string.haptic_feedback)
+        row(hapticFeedbackTitle, "haptic", "vibration", "feedback", "touch", "watch") {
+            SettingsRow(
+                icon = SfIcons.SmartButton,
+                title = hapticFeedbackTitle,
+                subtitle = stringResource(R.string.haptic_feedback_subtitle),
+                trailing = {
+                    IosSwitch(
+                        checked = hapticFeedbackEnabled,
+                        onCheckedChange = AppSettings::setHapticFeedbackEnabled,
+                    )
+                },
+                onClick = { AppSettings.setHapticFeedbackEnabled(!hapticFeedbackEnabled) },
+            )
         }
         val equalizerTitle = stringResource(R.string.equalizer)
         row(equalizerTitle, "eq", "bass", "treble") {

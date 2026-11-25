@@ -1579,4 +1579,6 @@
     </plurals>
     <string name="remember_shuffle_across_queues">Zufallswiedergabe fuer neue Warteschlangen beibehalten</string>
     <string name="remember_shuffle_across_queues_subtitle">Zufallswiedergabe beim Start eines anderen Albums oder einer anderen Playlist beibehalten</string>
+    <string name="haptic_feedback">Haptisches Feedback</string>
+    <string name="haptic_feedback_subtitle">Vibriert bei der Bedienung und wenn die Wiedergabe pausiert, fortgesetzt oder der Titel gewechselt wird.</string>
 </resources>

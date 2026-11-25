@@ -155,6 +155,7 @@ object AppSettings {
     val directSourceStream = audioOutputSettings.directSourceStream
 
     val spatialAudio = audioOutputSettings.spatialAudio
+    val hapticFeedbackEnabled = audioOutputSettings.hapticFeedbackEnabled
     val karaokeEnabled = audioOutputSettings.karaokeEnabled
     val karaokeVocalLevel = audioOutputSettings.karaokeVocalLevel
 
@@ -562,6 +563,7 @@ object AppSettings {
 
     fun setSpatialAudio(value: Boolean) = audioOutputSettings.setSpatialAudio(value)
 
+    fun setHapticFeedbackEnabled(value: Boolean) = audioOutputSettings.setHapticFeedbackEnabled(value)
     fun setKaraokeEnabled(value: Boolean) = audioOutputSettings.setKaraokeEnabled(value)
 
     fun setKaraokeVocalLevel(value: Float) = audioOutputSettings.setKaraokeVocalLevel(value)

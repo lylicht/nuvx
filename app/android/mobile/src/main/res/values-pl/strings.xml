@@ -1617,4 +1617,6 @@
     </plurals>
     <string name="remember_shuffle_across_queues">Pamietaj o trybie losowym w kolejnych kolejkach</string>
     <string name="remember_shuffle_across_queues_subtitle">Zachowaj tryb losowy po rozpoczeciu odtwarzania innego albumu lub playlisty</string>
+    <string name="haptic_feedback">Wibracje haptyczne</string>
+    <string name="haptic_feedback_subtitle">Wibruje podczas obsługi elementów sterujących oraz przy wstrzymaniu, wznowieniu lub zmianie utworu.</string>
 </resources>

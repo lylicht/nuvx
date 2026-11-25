@@ -1417,4 +1417,6 @@
     </plurals>
     <string name="remember_shuffle_across_queues">다음 재생목록에서도 셔플 유지</string>
     <string name="remember_shuffle_across_queues_subtitle">다른 앨범이나 재생목록을 시작할 때도 셔플을 켜 둡니다</string>
+    <string name="haptic_feedback">햅틱 피드백</string>
+    <string name="haptic_feedback_subtitle">컨트롤을 조작하거나 재생이 일시 중지·재개되거나 트랙이 바뀔 때 진동합니다.</string>
 </resources>

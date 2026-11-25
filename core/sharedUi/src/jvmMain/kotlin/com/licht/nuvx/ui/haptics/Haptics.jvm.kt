@@ -10,3 +10,7 @@ private val NoHaptics = Haptics()
 
 @Composable
 actual fun rememberHaptics(): Haptics = NoHaptics
+
+actual object HapticsSettings {
+    actual var enabled: Boolean = true
+}

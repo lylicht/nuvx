@@ -1551,4 +1551,6 @@
     </plurals>
     <string name="remember_shuffle_across_queues">Mantener el modo aleatorio entre colas</string>
     <string name="remember_shuffle_across_queues_subtitle">Mantener el modo aleatorio al iniciar otro album o lista de reproduccion</string>
+    <string name="haptic_feedback">Respuesta háptica</string>
+    <string name="haptic_feedback_subtitle">Vibra al usar los controles y cuando la reproducción se pausa, reanuda o cambia de canción.</string>
 </resources>
