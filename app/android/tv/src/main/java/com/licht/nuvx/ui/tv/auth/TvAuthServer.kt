@@ -19,6 +19,7 @@ import java.io.InputStream
 import java.io.PrintWriter
 import java.net.Inet4Address
 import java.net.NetworkInterface
+import java.net.URI
 import java.net.ServerSocket
 import java.net.Socket
 import java.net.SocketTimeoutException
@@ -147,6 +148,30 @@ object TvAuthServer {
         return difference == 0
     }
 
+    internal fun isAllowedOrigin(
+        origin: String?,
+        hostHeader: String?,
+        localIp: String? = getLocalIpAddress(),
+        localPort: Int = serverSocket?.localPort ?: DEFAULT_PORT,
+    ): Boolean {
+        if (origin.isNullOrBlank() || hostHeader.isNullOrBlank()) return false
+        return runCatching {
+            val originUri = URI(origin)
+            val hostUri = URI("http://$hostHeader")
+            val originHost = originUri.host?.lowercase() ?: return@runCatching false
+            val requestHost = hostUri.host?.lowercase() ?: return@runCatching false
+            if (!originUri.scheme.equals("http", ignoreCase = true) || originUri.rawUserInfo != null ||
+                originUri.rawPath !in listOf(null, "", "/") || originUri.rawQuery != null || originUri.rawFragment != null ||
+                hostUri.rawUserInfo != null || hostUri.rawPath !in listOf(null, "", "/")
+            ) return@runCatching false
+            val originPort = if (originUri.port == -1) 80 else originUri.port
+            val requestPort = if (hostUri.port == -1) 80 else hostUri.port
+            val localHosts = setOfNotNull("localhost", "127.0.0.1", localIp?.lowercase())
+            originHost in localHosts && requestHost == originHost &&
+                originPort == localPort && requestPort == localPort
+        }.getOrDefault(false)
+    }
+
     private fun handleClient(client: Socket, onCookieReceived: ((String) -> Unit)?) {
         if (!clientSlots.tryAcquire()) {
             try { client.close() } catch (_: Exception) {}
@@ -170,6 +195,9 @@ object TvAuthServer {
                 var contentLength = 0
                 var bodyCharset: Charset = StandardCharsets.UTF_8
                 var pairingHeader: String? = null
+                var requestOrigin: String? = null
+                var requestHost: String? = null
+                var secFetchSite: String? = null
                 while (true) {
                     val line = readHttpLine(client, input, deadline) ?: break
                     headerBytes += line.length + 2
@@ -196,7 +224,29 @@ object TvAuthServer {
                         bodyCharset = runCatching { Charset.forName(charsetName) }.getOrDefault(StandardCharsets.UTF_8)
                     } else if (line.startsWith("X-Nuvx-Pairing:", ignoreCase = true)) {
                         pairingHeader = line.substringAfter(":").trim()
+                    } else if (line.startsWith("Origin:", ignoreCase = true)) {
+                        requestOrigin = line.substringAfter(":").trim()
+                    } else if (line.startsWith("Host:", ignoreCase = true)) {
+                        requestHost = line.substringAfter(":").trim()
+                    } else if (line.startsWith("Sec-Fetch-Site:", ignoreCase = true)) {
+                        secFetchSite = line.substringAfter(":").trim().lowercase()
                     }
+                }
+
+                if (method.equals("OPTIONS", ignoreCase = true)) {
+                    val allowed = isAllowedOrigin(requestOrigin, requestHost)
+                    writer.print(if (allowed) "HTTP/1.1 204 No Content\r\n" else "HTTP/1.1 403 Forbidden\r\n")
+                    writer.print("Cache-Control: no-store\r\nContent-Length: 0\r\nConnection: close\r\n\r\n")
+                    writer.flush()
+                    return@Thread
+                }
+
+                val protectedPath = path.startsWith("/api/") || path == "/submit"
+                val crossSite = requestOrigin != null && !isAllowedOrigin(requestOrigin, requestHost)
+                val untrustedFetchSite = secFetchSite == "cross-site" || secFetchSite == "same-site"
+                if (protectedPath && (crossSite || untrustedFetchSite)) {
+                    sendJsonResponse(writer, """{"error":"cross-origin request rejected"}""", 403)
+                    return@Thread
                 }
 
                 var requestBody = ""
@@ -350,6 +400,7 @@ object TvAuthServer {
         val statusText = when (status) {
             400 -> "400 Bad Request"
             401 -> "401 Unauthorized"
+            403 -> "403 Forbidden"
             413 -> "413 Payload Too Large"
             else -> "200 OK"
         }
