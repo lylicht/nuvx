@@ -365,9 +365,10 @@ object TrackMatcher {
             text = words.dropLast(1).joinToString(" ")
         }
 
-        val words = text.split(WORD_SPLIT)
+        var words = text.split(WORD_SPLIT)
             .map { it.replace(NON_ALNUM, "") }
             .filter { it.isNotEmpty() && it !in NOISE_WORDS }
+        if (words.isEmpty() && context.isNotEmpty()) words = context.toList()
 
         val core = words.filter { it !in JOINING_WORDS }.joinToString("")
 

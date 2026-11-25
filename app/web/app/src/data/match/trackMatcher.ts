@@ -261,6 +261,7 @@ export function parseTitle(raw: string, artist = ''): TitleParts {
       words = words.slice(0, -1);
     } else break;
   }
+  if (words.length === 0 && context.size > 0) words = [...context];
 
   const core = containsCJK ? text.replace(CJK_CORE_STRIP, '') : words.join('');
   return { words, core, versions, context };
