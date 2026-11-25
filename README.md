@@ -12,7 +12,7 @@
 
 ### Music in full color
 
-An open-source YouTube Music player for your phone, TV, car, wrist, desktop and browser.
+**An open-source music player for Android, iOS, desktop, TV, the car, your wrist and the web.**
 
 <br/>
 
@@ -24,68 +24,56 @@ An open-source YouTube Music player for your phone, TV, car, wrist, desktop and 
 
 <br/>
 
-[**Download**](#download) · [**Features**](#features) · [**Build**](#build-from-source) · [**Contributing**](#contributing) · [**Support**](#support) · [**Disclaimer**](#disclaimer)
+[**Download**](#download) · [**Features**](#features) · [**Build from source**](#build-from-source) · [**Contribute**](#contributing) · [**Support**](#support) · [**License**](#license)
 
 [Web player](https://web.nuvx.lol) · [Discord](https://discord.gg/h4Wsu824Uf) · [Website](https://www.nuvx.lol)
 
 </div>
 
 > [!IMPORTANT]
-> nuvx is not affiliated with, endorsed by, or connected to YouTube or Google in any way. Use it at your own discretion.
-
-IMPORTANT: This repo is forked from Bitchord; https://github.com/kushagrasinghx/BitChord
+> **Independent third-party app.** nuvx is not affiliated with, endorsed by or connected to Google, YouTube or Spotify. Use it in accordance with the terms of the services you access.
 ---
 
 <div align="center">
 
-<img src="docs/nuvx-banner-now-playing.png" alt="Music in full color. nuvx Now Playing framed by cobalt and copper panels." width="100%" />
-
-<h1><a id="features"></a>Features</h1>
-
-<table>
-  <tr>
-    <td width="50%" valign="top">
-
-
-
-#### Playback
-- **Search, browse and play** anything on YouTube Music, with new releases, moods, your library and queue.
-- **Lossless and Dolby Atmos** where a source has them, with separate quality for Wi-Fi and mobile data.
-- **Fallback sources** — when YouTube finds no stream, nuvx tries other sources before giving up.
-- **Offline downloads** with a storage limit and a free-space guard.
-- **Equalizer and loudness normalization**, shared between the apps.
-- **Bit-perfect USB output** on Android — lossless tracks go to a USB DAC unchanged.
-
-#### Together & across devices
-- **Listen Together** — share an invite and keep queue and playback in sync with friends.
-- **Local Wi-Fi Sync** — playlists and playback between your own devices, on your network, encrypted.
-- **Remote control** — play on one device, control it from another; Wear OS controls the phone.
-- **Discord Rich Presence** and **Last.fm scrobbling**.
-- **Transfer from Spotify** — copy Liked Songs or any playlist into YouTube Music (desktop).
-
-    </td>
-    <td width="50%" valign="top">
-
-#### Experience
-- **Synced lyrics** — line and word timing from several providers, in the full-screen player.
-- **Community Canvases** — motion artwork on Now Playing. [Browse the project](core/canvas/README.md)
-- **Replay recaps** — what you played this month, last month, this year and more.
-- **A player for every screen** — TV remote navigation, a car head-unit app, a watch companion, and a desktop mini player window that snaps to any corner.
-
-#### Your data
-- **Nuvx-only playlists** — keep new playlists on the device instead of writing them to YouTube Music.
-- **Earlier versions of playlists** — put back a playlist as it was, with Undo.
-- **Portable backups** — one JSON file the phone and the computer both read; M3U and CSV import and export.
-- **Privacy & data center** — what stays on the device, what leaves it and when, and Copy diagnostics without personal data.
-- **Restricted networks** — works with Tor/Orbot and VLESS/REALITY clients. [How to connect](docs/CONNECTING_FROM_RESTRICTED_NETWORKS.md)
-
-    </td>
-  </tr>
-</table>
-
-<sub>Not every feature is on every device yet; see the [iOS parity notes](app/ios/docs/ANDROID_PARITY.md).</sub>
+<img src="docs/nuvx-banner-now-playing.png" alt="nuvx Now Playing — Music in full color" width="100%" />
 
 </div>
+
+## Features
+
+**Everything you need for your music, across your screens.** nuvx combines a customizable player, synced lyrics, local library tools and connected playback in a single open-source project.
+
+### 🎧 Music, your way
+
+- **Search, discover and play** tracks on YouTube Music, explore new releases and moods, and take control of your queue.
+- **Choose your sound:** lossless and Dolby Atmos when supported by the source, separate Wi-Fi and mobile quality settings, equalizer and loudness normalization.
+- **Listen offline** with downloads, storage limits and a free-space guard.
+- **Keep playback going** with fallback sources and Android bit-perfect USB output for compatible DACs.
+
+### ✨ An immersive listening experience
+
+- **Synced lyrics** with line and word timing from supported providers.
+- **Community Canvases** with moving artwork on Now Playing. [Explore the project](core/canvas/README.md).
+- **Replay recaps** to see what you listened to over the month, year or all time.
+- **Made for each screen:** a corner-snapping desktop mini player, TV remote navigation, a car head-unit app and a Wear OS companion.
+
+### 🔗 Better together
+
+- **Listen Together:** share an invite, queue tracks and keep playback in sync with friends.
+- **Local Wi-Fi Sync:** sync playlists and playback between your approved devices over an encrypted local connection.
+- **Remote control:** play music on one device and control it from another.
+- **Integrations:** Discord Rich Presence, Last.fm scrobbling and desktop playlist transfer from Spotify.
+
+### 🗂️ Your library stays yours
+
+- **Local-only playlists** let you organize music without writing changes to YouTube Music.
+- **Playlist history and Undo** make it easier to recover an earlier version.
+- **Portable backups** work across Android and desktop, with M3U and CSV import/export.
+- **Privacy controls and diagnostics** show what leaves your device while avoiding personal data in copied reports.
+- **Restricted network support** with external Tor/Orbot or VLESS/REALITY clients. [Setup guide](docs/CONNECTING_FROM_RESTRICTED_NETWORKS.md).
+
+> **Platform availability:** Not every feature is on every device yet. For details, see the [iOS parity notes](app/ios/docs/ANDROID_PARITY.md).
 
 ---
 
@@ -222,8 +210,12 @@ nuvx is an independent, community-driven third-party player. It is **not** assoc
 
 <div align="center">
 
-<h1><a id="license"></a>License</h1>
+<h1><a id="license"></a>License & attribution</h1>
 
 </div>
 
 nuvx uses [GPL-3.0](LICENSE) by default. Files with a different SPDX identifier keep that file-level license; their scopes and attributions are listed in the [license map](docs/licenses/LICENSES.md), with full AGPL and LGPL texts linked there. Bundled third-party code keeps its own licenses. The [DST decoder](app/android/mobile/src/main/cpp/dsd/dst), for example, is under LGPL-2.1-or-later. The Android bit-perfect output also contains Mornye-adapted code under LGPL-3.0-only; see the [license map](docs/licenses/LICENSES.md) and [the attribution](core/native/third_party/README.md). Android APKs include the project license texts and native notices under `assets/licenses/`; Android dependency notices remain under `META-INF/`. The web app serves the Kira MIT notice under `/licenses/`. Website search indexing is described in [docs/WEBSITE_SEARCH_INDEXING.md](docs/WEBSITE_SEARCH_INDEXING.md).
+
+### Original project
+
+**nuvx is forked from [BitChord](https://github.com/kushagrasinghx/BitChord).** Thanks to BitChord’s original creators and contributors for the foundation on which nuvx builds.
