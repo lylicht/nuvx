@@ -11,6 +11,12 @@ import org.junit.Test
 
 class TrackIdentityMismatchTest {
 
+    @Test
+    fun `three second source duration drift remains a match`() {
+        assertTrue(SourceResolver.sameRecordingAs(candidateSec = 303, playingSec = 300))
+        assertFalse(SourceResolver.sameRecordingAs(candidateSec = 304, playingSec = 300))
+    }
+
     private fun song(
         title: String,
         artist: String,
