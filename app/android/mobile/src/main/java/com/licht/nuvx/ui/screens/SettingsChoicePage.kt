@@ -238,7 +238,9 @@ internal fun <T> ChoiceGroup(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clickable(enabled = available) {
-                        haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        if (com.licht.nuvx.ui.haptics.HapticsSettings.enabled) {
+                            haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        }
                         onSelect(option)
                     }
                     .alpha(if (available) 1f else 0.45f)

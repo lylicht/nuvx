@@ -126,6 +126,18 @@ assert.equal((await post("/api/presence", { id, platform: "browser", open: true 
 const stats = await liveStats();
 assert.ok(stats.android >= 1);
 assert.equal(stats.listening, 0, "open clients are not counted as party listeners");
+
+const firstPc = crypto.randomUUID();
+const secondPc = crypto.randomUUID();
+const beforePc = await liveStats();
+assert.equal((await post("/api/presence", { id: firstPc, platform: "pc", open: true })).status, 200);
+assert.equal((await post("/api/presence", { id: secondPc, platform: "pc", open: true })).status, 200);
+const withPc = await liveStats();
+assert.equal(withPc.pc, beforePc.pc + 2, "two desktop installations are counted separately");
+assert.equal(withPc.online, beforePc.online + 2, "PCs contribute to the total online count");
+assert.equal((await post("/api/presence", { id: firstPc, platform: "pc", open: false })).status, 200);
+assert.equal((await post("/api/presence", { id: secondPc, platform: "pc", open: false })).status, 200);
+assert.equal((await liveStats()).pc, beforePc.pc, "desktop exits remove presence immediately");
 assert.match(await (await fetch(`${base}/api/stats/live/badge.svg`)).text(), /LISTENING NOW/);
 
 host.ws.close();

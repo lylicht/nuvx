@@ -12,11 +12,13 @@ internal object InnertubeAccountParser {
     fun parseAccount(response: JsonElement): Account? {
         val header = InnertubeParser.collectRenderers(response, "activeAccountHeaderRenderer").firstOrNull()
             ?: return null
-        val name = header.o("accountName").runs()
-        if (name.isBlank()) return null
         val email = header.o("email").runs()
             .ifBlank { header.o("email").s("simpleText").orEmpty() }
             .ifBlank { header.o("channelHandle").runs() }
+        val name = header.o("accountName").runs()
+            .takeIf(::hasVisibleText)
+            ?: email.takeIf(::hasVisibleText)
+            ?: "YouTube Music"
         return Account(
             name = name,
             email = email,
@@ -26,22 +28,30 @@ internal object InnertubeAccountParser {
 
     fun parseAccountChannels(root: JsonElement): List<AccountChannel> =
         InnertubeParser.collectRenderers(root, "accountItem").mapNotNull { item ->
-            val name = item.o("accountName").runs()
+            val accountName = item.o("accountName").runs()
                 .ifBlank { item.o("accountName").s("simpleText").orEmpty() }
-            if (name.isBlank()) return@mapNotNull null
             val pageId = item.findString("pageId")
             val dataSyncId = normalizeDataSyncId(item.findString("datasyncIdToken"))
             if (pageId == null && dataSyncId == null) return@mapNotNull null
+            val handle = item.o("channelHandle").runs()
+                .ifBlank { item.o("channelHandle").s("simpleText").orEmpty() }
+                .ifBlank { item.o("accountByline").runs() }
+                .ifBlank { item.o("accountByline").s("simpleText").orEmpty() }
+            val name = accountName.takeIf(::hasVisibleText)
+                ?: handle.takeIf(::hasVisibleText)
+                ?: "YouTube Music"
             AccountChannel(
                 name = name,
-                subtitle = item.o("channelHandle").runs()
-                    .ifBlank { item.o("channelHandle").s("simpleText").orEmpty() }
-                    .ifBlank { item.o("accountByline").runs() }
-                    .ifBlank { item.o("accountByline").s("simpleText").orEmpty() },
+                subtitle = handle,
                 thumbnailUrl = item.o("accountPhoto").a("thumbnails").best(),
                 pageId = pageId,
                 dataSyncId = dataSyncId,
                 activeOnWeb = (item["isSelected"] as? JsonPrimitive)?.content == "true",
             )
         }.distinctBy { it.key }
+
+    private fun hasVisibleText(value: String): Boolean = value.any {
+        !it.isWhitespace() && !it.isISOControl() && it != '\u3164' && it != '\uFFA0' &&
+            Character.getType(it) != Character.FORMAT.toInt()
+    }
 }

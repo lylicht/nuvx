@@ -285,6 +285,7 @@ import com.licht.nuvx.ui.player.LocalPlayerDock
 import com.licht.nuvx.ui.player.PlayerDock
 import com.licht.nuvx.ui.screens.DetailScreen
 import com.licht.nuvx.ui.screens.sortedForDetail
+import com.licht.nuvx.ui.screens.addedOrderOf
 import com.licht.nuvx.ui.screens.ExploreScreen
 import com.licht.nuvx.ui.screens.LocalFolder
 import com.licht.nuvx.ui.screens.LocalFolderState
@@ -315,6 +316,8 @@ import com.licht.nuvx.data.canvas.AppleArtistArtRepository
 import com.licht.nuvx.data.canvas.keyColors
 import com.licht.nuvx.ui.theme.SystemBarIcons
 import com.licht.nuvx.ui.utils.guardSheetFromContentTouches
+import com.licht.nuvx.ui.utils.LocalSheetTouchGuard
+import com.licht.nuvx.ui.utils.SheetTouchGuard
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeSource
 import kotlinx.coroutines.launch
@@ -1039,10 +1042,12 @@ internal fun NuvxApp(
         source: QueueSource,
         boundedContext: Boolean = false,
         continuationToken: String? = null,
-    ) = playbackStarter.playFrom(allSongs, allIndex, source, boundedContext, continuationToken)
+        detailLoadId: com.licht.nuvx.data.model.DetailLoadId? = null,
+        replaceUpcomingQueue: Boolean = false,
+    ) = playbackStarter.playFrom(allSongs, allIndex, source, boundedContext, continuationToken, detailLoadId, replaceUpcomingQueue)
     val detailPlayback = MainDetailPlaybackController(
-        playFrom = { songs, index, source, boundedContext, continuationToken ->
-            playFrom(songs, index, source, boundedContext, continuationToken)
+        playFrom = { songs, index, source, boundedContext, continuationToken, detailLoadId, replaceUpcomingQueue ->
+            playFrom(songs, index, source, boundedContext, continuationToken, detailLoadId, replaceUpcomingQueue)
         },
         takePlaybackContext = viewModel::takePlaybackContext,
         controlsLocked = { ListenTogether.state.value.controlsLocked },
@@ -1827,6 +1832,7 @@ internal fun NuvxApp(
                                     else navigator.pop()
                                 },
                                 onSongClick = playDetailSongs,
+                                onPlayCollection = { songs -> detailPlayback.play(page, songs, 0, replaceUpcomingQueue = true) },
                                 onSongLongPress = { openSongMenu(detailPlayback.albumSong(page, it)) },
                                 onSongSwipe = { onSongSwipe(detailPlayback.albumSong(page, it)) },
                                 onShuffle = { songs ->
@@ -2570,7 +2576,10 @@ internal fun NuvxApp(
                                                 subtitle = detail.subtitle,
                                                 thumbnailUrl = detail.thumbnailUrl,
                                                 type = detail.type,
-                                                songs = releaseSongs.sortedForDetail(songSort).map { song ->
+                                                songs = releaseSongs.sortedForDetail(
+                                                    songSort,
+                                                    addedOrderOf(detail.browseId, detail.type),
+                                                ).map { song ->
                                                     if (detail.type == BrowseType.ALBUM) {
                                                         song.copy(albumName = song.albumName ?: detail.title)
                                                     } else {
@@ -2696,6 +2705,12 @@ internal fun NuvxApp(
                         },
                         onNext = { controller?.seekToNextMediaItem() },
                         onPrevious = { controller?.seekToPrevious() },
+                        onDismissMiniPlayer = {
+                            if (controlsLocked) showHostOnlyNotice() else controller?.let { active ->
+                                active.stop()
+                                active.clearMediaItems()
+                            }
+                        },
                         onExpand = if (reducePlayerMotion) {
                             { showNowPlaying = true }
                         } else {
@@ -2728,6 +2743,12 @@ internal fun NuvxApp(
                             },
                             onNext = { controller?.seekToNextMediaItem() },
                             onPrevious = { controller?.seekToPrevious() },
+                            onDismiss = {
+                                if (controlsLocked) showHostOnlyNotice() else controller?.let { active ->
+                                    active.stop()
+                                    active.clearMediaItems()
+                                }
+                            },
                             onExpand = if (reducePlayerMotion) {
                                 { showNowPlaying = true }
                             } else {
@@ -3054,6 +3075,7 @@ internal fun NuvxApp(
                     confirmValueChange = confirmSheetValue,
                 )
             }
+            val sheetTouchGuard = remember(nowPlayingSheetState) { SheetTouchGuard() }
             DisposableEffect(nowPlayingSheetState) {
                 playerSheetMotion.sheet = nowPlayingSheetState
                 playerDock.sheetOffset = playerSheetMotion::position
@@ -3073,6 +3095,7 @@ internal fun NuvxApp(
                 sheetMaxWidth = Dp.Unspecified,
                 properties = ModalBottomSheetProperties(shouldDismissOnBackPress = reducePlayerMotion),
             ) {
+                CompositionLocalProvider(LocalSheetTouchGuard provides sheetTouchGuard) {
                 BackHandler(enabled = !reducePlayerMotion) { playerSheetMotion.close() }
                 val sheetWindow = (LocalView.current.parent as? DialogWindowProvider)?.window
                 DacVolumeKeys()
@@ -3094,7 +3117,7 @@ internal fun NuvxApp(
                                 )
                             }
                         }
-                        .guardSheetFromContentTouches(nowPlayingSheetState)
+                        .guardSheetFromContentTouches(nowPlayingSheetState, sheetTouchGuard)
                         .onSizeChanged {
                             playerDock.sheetTravel = it.height.toFloat()
                             playerSheetMotion.laidOut = true
@@ -3126,6 +3149,7 @@ internal fun NuvxApp(
                     ) { song ->
                         songMenuBody(song)
                     }
+                }
                 }
             }
         }
@@ -3363,7 +3387,7 @@ internal fun NuvxApp(
                 onAddToQueue = act(addSongsToQueue),
                 onPlay = act { songs ->
                     QueueShuffle.disableForNextQueue()
-                    play(songs, 0)
+                    playFrom(songs, 0, QueueSource(target.title, PlaybackSourceType.BROWSE, target.browseId), replaceUpcomingQueue = target.type == BrowseType.ALBUM || target.type == BrowseType.PLAYLIST)
                 }.takeIf { target.fromCard },
                 onShuffle = act { songs ->
                     QueueShuffle.enableForNextQueue()

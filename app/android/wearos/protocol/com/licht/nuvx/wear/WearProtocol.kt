@@ -105,6 +105,7 @@ object WearProtocol {
     const val KEY_OUTPUT_ACTIVE = "output_active"
 
     const val KEY_WATCH_SPEAKER = "watch_speaker"
+    const val KEY_HAPTIC_FEEDBACK = "haptic_feedback_enabled"
 
     const val KEY_TRACKS = "tracks"
 

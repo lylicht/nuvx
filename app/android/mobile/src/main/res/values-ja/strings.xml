@@ -1555,6 +1555,10 @@
         <item quantity="one">Delete this song from your device? This cannot be undone.</item>
         <item quantity="other">Delete %1$d songs from your device? This cannot be undone.</item>
     </plurals>
+    <string name="remember_shuffle_across_queues">次のキューでもシャッフルを維持</string>
+    <string name="remember_shuffle_across_queues_subtitle">別のアルバムやプレイリストを開始してもシャッフルを維持します</string>
+    <string name="haptic_feedback">触覚フィードバック</string>
+    <string name="haptic_feedback_subtitle">操作時や、再生の一時停止・再開・曲の切り替え時に振動します。</string>
     <string name="hide_trending">トレンドのおすすめを非表示</string>
     <string name="hide_trending_subtitle">ホームからトレンド曲とコミュニティのセクションを削除します</string>
 </resources>

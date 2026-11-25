@@ -206,6 +206,7 @@ object TrackMatcher {
                 words = words.dropLast(1)
             } else break
         }
+        if (words.isEmpty() && context.isNotEmpty()) words = context.toList()
 
         val coreString = if (containsCJK) {
             text.replace(Regex("""[\s\p{Punct}・～〜ー-]+"""), "")

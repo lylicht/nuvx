@@ -52,6 +52,16 @@ object TrackFeatures {
         return nativeResample(samples, inputRate, outputRate).takeIf { it.isNotEmpty() }
     }
 
+    fun resampleChunks(chunks: List<FloatArray>, inputRate: Double, outputRate: Double = sampleRate): FloatArray? {
+        if (!available || chunks.isEmpty() || !inputRate.isFinite() || !outputRate.isFinite() ||
+            inputRate <= 0.0 || outputRate <= 0.0
+        ) return null
+        val input = chunks.toTypedArray()
+        val sampleCount = input.sumOf { it.size.toLong() }
+        if (sampleCount <= 0L || sampleCount > Int.MAX_VALUE) return null
+        return nativeResampleChunks(input, sampleCount.toInt(), inputRate, outputRate)?.takeIf { it.isNotEmpty() }
+    }
+
     data class Features(
         val duration: Double,
         val bpm: Double,
@@ -153,4 +163,11 @@ object TrackFeatures {
         inputRate: Double,
         outputRate: Double,
     ): FloatArray
+
+    @JvmStatic private external fun nativeResampleChunks(
+        chunks: Array<FloatArray>,
+        sampleCount: Int,
+        inputRate: Double,
+        outputRate: Double,
+    ): FloatArray?
 }

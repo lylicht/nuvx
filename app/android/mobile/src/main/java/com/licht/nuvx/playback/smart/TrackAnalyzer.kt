@@ -355,11 +355,11 @@ class TrackAnalyzer(private val context: Context, private val cache: AudioCache)
         effectiveDuration: Double,
     ): Structural {
         val structRate = TrackFeatures.sampleRate
-        val decoded = copy.open()?.use { AudioDecoder.decodeRegion(it, 0.0, effectiveDuration) { stopped } }
+        val decoded = copy.open()?.use { AudioDecoder.decodeRegionChunks(it, 0.0, effectiveDuration) { stopped } }
             ?: return Structural(null)
         val (pcm, _) = decoded
 
-        val decodedSeconds = if (pcm.sampleRate > 0) pcm.samples.size / pcm.sampleRate else 0.0
+        val decodedSeconds = if (pcm.sampleRate > 0) pcm.sampleCount / pcm.sampleRate else 0.0
         if (decodedSeconds < effectiveDuration * MIN_DECODED_FRACTION) {
             Log.w(
                 TAG,
@@ -383,9 +383,9 @@ class TrackAnalyzer(private val context: Context, private val cache: AudioCache)
         }
 
         val samples = if (abs(pcm.sampleRate - structRate) > 1.0) {
-            TrackFeatures.resample(pcm.samples, pcm.sampleRate, structRate) ?: return Structural(null)
+            TrackFeatures.resampleChunks(pcm.chunks, pcm.sampleRate, structRate) ?: return Structural(null)
         } else {
-            pcm.samples
+            pcm.flatten()
         }
 
         return Structural(TrackFeatures.analyze(samples, effectiveDuration))

@@ -8,7 +8,7 @@ A Cloudflare Worker that serves:
   and playback state, never audio; every device streams on its own.
 - **Live stats**: `GET /api/stats/live` reports `online` from recent app presence pings and `listening` from
   connected devices in parties with playback running. `POST /api/presence` updates the online count.
-  `GET /api/stats/live/badge.svg` displays the online count.
+  `GET /api/stats/live/badge.svg` displays the online count. The desktop app reports `platform: pc` using a random persistent UUID every five minutes while its main process is running; older desktop builds without this heartbeat are not included.
 - **Discord community stats**: `GET /api/community` serves the server member count, current bot-channel listeners,
   and up to ten opted-in leaderboard entries. The nuvx Discord bot publishes snapshots to `POST /api/community`.
   Set `BOT_STATS_TOKEN` as a Worker secret and the matching `BOT_STATS_TOKEN` in the bot environment.

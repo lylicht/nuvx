@@ -1,7 +1,11 @@
 package com.licht.nuvx.playback
 
 import com.licht.nuvx.data.model.PlaybackSourceType
+import com.licht.nuvx.data.model.BrowseType
+import com.licht.nuvx.data.model.DetailLoadId
+import com.licht.nuvx.data.model.DetailPage
 import com.licht.nuvx.data.model.Song
+import com.licht.nuvx.data.model.UiState
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -47,13 +51,39 @@ class BoundedContextRequestsTest {
         assertEquals("last", BoundedContextRequests.snapshot.value?.continuationToken)
     }
 
-    private fun request(id: String, continuation: String? = null) =
+    @Test
+    fun `only a service owned snapshot updates the same continuing detail load`() {
+        val loadId = DetailLoadId()
+        val token = BoundedContextRequests.put(request("one", continuation = "next", detailLoadId = loadId))
+        val page = DetailPage(
+            browseId = "VLrelease",
+            title = "Release",
+            subtitle = "",
+            thumbnailUrl = null,
+            songs = UiState.Success(listOf(song("one"))),
+            type = BrowseType.PLAYLIST,
+            continuation = "next",
+            detailLoadId = loadId,
+        )
+        val pending = requireNotNull(BoundedContextRequests.snapshot.value)
+        assertFalse(pending.canUpdateDetail(page))
+
+        val request = requireNotNull(BoundedContextRequests.take(token))
+        assertTrue(BoundedContextRequests.publish(request, listOf(song("one"), song("two")), "later"))
+        val active = requireNotNull(BoundedContextRequests.snapshot.value)
+        assertTrue(active.canUpdateDetail(page))
+        assertFalse(active.canUpdateDetail(page.copy(detailLoadId = DetailLoadId())))
+        assertFalse(active.canUpdateDetail(page.copy(continuation = null)))
+    }
+
+    private fun request(id: String, continuation: String? = null, detailLoadId: DetailLoadId? = null) =
         BoundedContextRequests.Request(
             songs = listOf(song(id)),
             startIndex = 0,
             source = QueueSource("Release", PlaybackSourceType.BROWSE, "VLrelease"),
             continuationToken = continuation,
             shuffle = false,
+            detailLoadId = detailLoadId,
         )
 
     private fun song(id: String) = Song(

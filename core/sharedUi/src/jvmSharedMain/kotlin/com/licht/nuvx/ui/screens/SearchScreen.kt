@@ -2,6 +2,7 @@ package com.licht.nuvx.ui.screens
 
 import com.licht.nuvx.ui.icons.SfIcons
 import com.licht.nuvx.ui.components.trackArtSize
+import com.licht.nuvx.ui.components.dismissKeyboardOnScroll
 import androidx.compose.ui.layout.ContentScale
 import com.licht.nuvx.data.model.toSong
 import com.licht.nuvx.ui.components.SwipeToQueueBox
@@ -202,7 +203,7 @@ fun SearchScreen(
 
         LazyColumn(
             state = listState,
-            modifier = Modifier.weight(1f).fillMaxWidth(),
+            modifier = Modifier.weight(1f).fillMaxWidth().dismissKeyboardOnScroll(),
             contentPadding = PaddingValues(bottom = contentPadding.calculateBottomPadding()),
         ) {
             when {

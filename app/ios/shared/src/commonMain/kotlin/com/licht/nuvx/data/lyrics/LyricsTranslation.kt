@@ -85,6 +85,26 @@ object LyricsTranslation {
     private const val TRANSLATION_AGENT = "Nuvx/1.6.1"
 
     private val markerRegex = Regex("[^]*")
+
+    internal fun splitMarked(body: String): List<String> {
+        if (markerRegex.containsMatchIn(body)) return body.split(markerRegex).map { it.trim() }
+
+        val parts = mutableListOf<String>()
+        val current = mutableListOf<String>()
+        for (line in body.split('\n')) {
+            val candidate = line.trim { it.isWhitespace() || it == '\u200E' || it == '\u200F' }
+            val counter = candidate.takeIf { it.length == 4 && it.all { char -> char.isDigit() } }
+                ?.fold(0) { value, digit -> value * 10 + digit.digitToInt() }
+            if (counter == parts.size + 1) {
+                parts += current.joinToString("\n").trim()
+                current.clear()
+            } else {
+                current += line
+            }
+        }
+        parts += current.joinToString("\n").trim()
+        return parts
+    }
     private val json = Json { ignoreUnknownKeys = true }
 
     private data class TextSlot(
@@ -394,7 +414,7 @@ object LyricsTranslation {
                 segment.jsonArray.getOrNull(0)?.jsonPrimitive?.contentOrNull.orEmpty()
             }
             val source = root.getOrNull(2)?.jsonPrimitive?.contentOrNull.orEmpty()
-            val parts = translatedBody.split(markerRegex).map { it.trim() }
+            val parts = splitMarked(translatedBody)
             if (parts.size != batch.slots.size || parts.any { it.isBlank() }) return null
             BatchAnswer(parts, source, batch.payload.length)
         }.getOrNull()
@@ -416,7 +436,7 @@ object LyricsTranslation {
                 segment.jsonArray.getOrNull(3)?.jsonPrimitive?.contentOrNull.orEmpty()
             }
             val source = root.getOrNull(2)?.jsonPrimitive?.contentOrNull.orEmpty()
-            val parts = romanizedBody.split(markerRegex).map { it.trim() }
+            val parts = splitMarked(romanizedBody)
             if (source.isBlank() || parts.size != batch.slots.size || parts.any { it.isBlank() }) {
                 return null
             }

@@ -381,7 +381,7 @@ object AudioCache {
         cacheKeyOf = ::cacheKeyOf,
         heldByYouTube = ::heldByYouTube,
         dropYouTubeEntry = ::dropYouTubeEntry,
-        fetch = ::fetch,
+        fetch = { cacheKey, uri, position, length -> fetch(cacheKey, uri, position, length) },
         fetchWhole = ::fetchWhole,
         preloadBytes = PRELOAD_BYTES,
         prefetchDelayMs = PREFETCH_DELAY_MS,

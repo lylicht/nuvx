@@ -141,6 +141,24 @@ class QueueCoordinatorTest {
     }
 
     @Test
+    fun `collection Play can replace upcoming manual queue`() {
+        val result = QueueCoordinator.buildContextQueue(
+            currentTimeline = listOf(
+                testSong("current"),
+                testSong("old-queued", tier = QueueTier.USER_QUEUE),
+            ),
+            currentIndex = 0,
+            newContextSongs = listOf(testSong("mix-1"), testSong("mix-2")),
+            selectedIndex = 0,
+            contextSource = QueueSource("Mix", PlaybackSourceType.BROWSE, "mix"),
+            replaceUpcomingQueue = true,
+        )
+
+        assertEquals(listOf("mix-1", "mix-2"), result.timeline.map(Song::videoId))
+        assertEquals(0, result.startIndex)
+    }
+
+    @Test
     fun `buildContextQueue starting from first track has startIndex 0 and empty preceding context`() {
         val userQ = testSong("u1", tier = QueueTier.USER_QUEUE, entryId = "entry-u1")
         val currentTimeline = listOf(testSong("now"), userQ)
@@ -336,8 +354,7 @@ class QueueCoordinatorTest {
     }
 
     @Test
-    fun `consumePlayedUserQueue prunes user queue items when entering context`() {
-        var currentIndex = 2
+    fun `consumePlayedUserQueue retains played user queue items for previous`() {
         val songs = listOf(
             testSong("u1", tier = QueueTier.USER_QUEUE),
             testSong("u2", tier = QueueTier.USER_QUEUE),
@@ -345,13 +362,16 @@ class QueueCoordinatorTest {
             testSong("c2", tier = QueueTier.CONTEXT),
         )
         val items = songs.map { it.toMediaItem() }.toMutableList()
-        val player = createFakePlayer(items, currentIndex = { currentIndex })
+        val testPlayer = TestPlayer(items, activeIndex = 2)
 
-        QueueCoordinator.consumePlayedUserQueue(player, tierAt(songs, items))
+        QueueCoordinator.consumePlayedUserQueue(testPlayer.player, tierAt(songs, items))
 
-        assertEquals(2, items.size)
-        assertEquals("c1", items[0].mediaId)
-        assertEquals("c2", items[1].mediaId)
+        assertEquals(listOf("u1", "u2", "c1", "c2"), items.map { it.mediaId })
+        assertEquals(0, testPlayer.queueEditCallCount)
+        testPlayer.player.seekToPreviousMediaItem()
+        assertEquals(1, testPlayer.activeIndex)
+        testPlayer.player.seekToPreviousMediaItem()
+        assertEquals(0, testPlayer.activeIndex)
     }
 
     @Test

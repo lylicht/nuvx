@@ -183,6 +183,7 @@ class CrossfadeController(
 
     fun start() {
         listener.listenTo(active())
+        SleepTimer.onCancelListener = { if (phase == CrossfadePhase.SLEEP_FADE) sleepFade.cancel() }
         tickerJob?.cancel()
         tickerJob = scope.launch {
             while (isActive) {
@@ -195,6 +196,7 @@ class CrossfadeController(
     fun release() {
         tickerJob?.cancel()
         tickerJob = null
+        SleepTimer.onCancelListener = null
         loopMix.release()
         speedController.endEase(clickless = false)
         readAhead.releaseHold()
@@ -233,7 +235,20 @@ class CrossfadeController(
         if (speedController.isEasing && phase == CrossfadePhase.IDLE) speedController.driveEase()
 
         when (phase) {
-            CrossfadePhase.IDLE -> transitionPlanner.considerAutoTransition()
+            CrossfadePhase.IDLE -> {
+                if (SleepTimer.afterTrack.value) {
+                    val player = active()
+                    val duration = player.duration
+                    val fadeMs = AppSettings.sleepTimerFadeOutSeconds.value * 1000L
+                    if (player.isPlaying && duration != C.TIME_UNSET && duration > 0L) {
+                        val remaining = duration - player.currentPosition
+                        when {
+                            fadeMs <= 0L && remaining <= 0L -> finishSleepTimerNow()
+                            fadeMs > 0L && remaining <= fadeMs -> sleepFade.begin(minOf(fadeMs, remaining.coerceAtLeast(1L)))
+                        }
+                    }
+                } else transitionPlanner.considerAutoTransition()
+            }
             CrossfadePhase.ARMING -> driveArming()
             CrossfadePhase.FADING -> driveFade()
             CrossfadePhase.SLEEP_FADE -> sleepFade.drive()
@@ -241,6 +256,27 @@ class CrossfadeController(
             CrossfadePhase.LOOP_ARMING -> loopMix.driveArming(armDeadline)
             CrossfadePhase.LOOP_RUNNING -> loopMix.driveMix()
         }
+    }
+
+    fun startSleepFadeOut(fadeMs: Long) {
+        if (phase == CrossfadePhase.SLEEP_FADE) sleepFade.cancel()
+        if (fadeMs <= 0L) {
+            finishSleepTimerNow()
+        } else if (phase == CrossfadePhase.IDLE) {
+            sleepFade.begin(fadeMs)
+        }
+    }
+
+    fun cancelSleepFadeOut() {
+        if (phase == CrossfadePhase.SLEEP_FADE) sleepFade.cancel()
+    }
+
+    private fun finishSleepTimerNow() {
+        active().pause()
+        active().volume = 1f
+        standby().pause()
+        standby().volume = 1f
+        SleepTimer.cancel()
     }
 
     fun plannedTransitionFor(mediaId: String): Long? =

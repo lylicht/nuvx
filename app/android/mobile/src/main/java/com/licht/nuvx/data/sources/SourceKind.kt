@@ -16,6 +16,7 @@ enum class SourceKind(
         labels = listOf("FLAC", "Lossless", "Hi-Res"),
         needsServer = true,
         canServeLossless = true,
+        worthPrefetching = true,
         rank = 3,
     ),
 

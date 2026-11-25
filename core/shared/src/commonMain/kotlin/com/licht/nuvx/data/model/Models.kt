@@ -40,6 +40,7 @@ data class Song(
     val playbackSourceType: PlaybackSourceType? = null,
     val playbackSourceId: String? = null,
     val feedbackToken: String? = null,
+    val plays: String? = null,
 ) {
     val fromAutoplay: Boolean get() = queueTier == QueueTier.AUTOPLAY
 
@@ -330,6 +331,9 @@ data class LibraryPage(
         get() = likedSongs.isEmpty() && librarySongs.isEmpty() && shelves.isEmpty()
 }
 
+/** Process-local identity for one detail load, separate from the collection browse ID. */
+class DetailLoadId
+
 data class DetailPage(
     val browseId: String,
     val title: String,
@@ -345,6 +349,7 @@ data class DetailPage(
     val subscriberCountText: String? = null,
     val monthlyListenerCount: String? = null,
     val subscription: SubscriptionState? = null,
+    val detailLoadId: DetailLoadId? = null,
 )
 
 data class LibraryState(
