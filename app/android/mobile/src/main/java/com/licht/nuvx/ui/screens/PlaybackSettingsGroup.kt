@@ -252,6 +252,17 @@ internal fun PlaybackSettingsGroup(
                 }
             }
         }
+        val audioFocusTitle = stringResource(R.string.audio_focus)
+        row(audioFocusTitle, "audio", "focus", "notifications", "calls") {
+            val option by AppSettings.audioFocusOption.collectAsStateWithLifecycle()
+            SettingsRow(
+                icon = SfIcons.VolumeUp,
+                title = audioFocusTitle,
+                subtitle = stringResource(if (option.requestsFocus) R.string.audio_focus_auto_pause_subtitle else R.string.audio_focus_keep_playing_subtitle),
+                value = stringResource(if (option.requestsFocus) R.string.audio_focus_auto_pause else R.string.audio_focus_keep_playing),
+                onClick = { onOpenChoice(SettingsChoiceKind.AUDIO_FOCUS) },
+            )
+        }
         val automixPerformanceTitle = stringResource(R.string.automix_performance)
         row(automixPerformanceTitle, "cpu", "battery") {
             BypassedByBitPerfect(bitPerfectReady) {

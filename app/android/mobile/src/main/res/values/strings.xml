@@ -235,6 +235,12 @@
     <string name="switch_to_list_view">Switch to list view</string>
     <string name="audio_quality">Audio quality</string>
     <string name="playback">Playback</string>
+    <string name="audio_focus" translatable="false">Audio focus</string>
+    <string name="audio_focus_auto_pause" translatable="false">Auto pause and resume</string>
+    <string name="audio_focus_auto_pause_subtitle" translatable="false">Pause when another app requests audio focus</string>
+    <string name="audio_focus_keep_playing" translatable="false">Keep playing</string>
+    <string name="audio_focus_keep_playing_subtitle" translatable="false">Keep playing over sounds from other apps</string>
+    <string name="audio_focus_footer" translatable="false">On older Android versions, system audio focus still pauses playback to avoid overlapping phone call audio.</string>
     <string name="appearance">Appearance</string>
     <string name="storage">Storage</string>
     <string name="your_data">Your data</string>

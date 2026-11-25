@@ -4,8 +4,10 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.widget.Toast
+import android.media.AudioManager
 import android.os.Bundle
 import android.os.SystemClock
+import android.os.Build
 import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
@@ -139,6 +141,10 @@ class PlaybackService : MediaLibraryService() {
     private val songCache = ConcurrentHashMap<String, Song>()
 
     private var player: ExoPlayer? = null
+
+    private val audioManager by lazy { getSystemService(AudioManager::class.java) }
+    private var audioModeListener: AudioManager.OnModeChangedListener? = null
+    private var pausedForPhoneCall = false
 
     private var spare: ExoPlayer? = null
 
@@ -579,6 +585,11 @@ class PlaybackService : MediaLibraryService() {
         )
         player = exoPlayer
         spare = sparePlayer
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            audioModeListener = AudioManager.OnModeChangedListener(::handleAudioModeChanged).also {
+                audioManager?.addOnModeChangedListener(mainExecutor, it)
+            }
+        }
         sparePlayer.audioSessionId = exoPlayer.audioSessionId
         outputRouter.registerDeviceCallback()
         outputRouter.applyOutputRoute()
@@ -1171,6 +1182,12 @@ class PlaybackService : MediaLibraryService() {
 
     private fun observeSettings() {
         scope.launch {
+            AppSettings.audioFocusOption.collectLatest {
+                player?.let { current -> playerFactory.setSessionOwner(current, owns = true) }
+                spare?.let { standby -> playerFactory.setSessionOwner(standby, owns = false) }
+            }
+        }
+        scope.launch {
             AppSettings.skipSilence.collect { on -> eachPlayer { it.skipSilenceEnabled = on } }
         }
         scope.launch {
@@ -1282,6 +1299,23 @@ class PlaybackService : MediaLibraryService() {
         }
     }
 
+    private fun handleAudioModeChanged(mode: Int) {
+        val active = player ?: return
+        val inCallMode = mode == AudioManager.MODE_IN_CALL ||
+            mode == AudioManager.MODE_IN_COMMUNICATION ||
+            mode == AudioManager.MODE_RINGTONE ||
+            (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && mode == AudioManager.MODE_CALL_SCREENING)
+        if (inCallMode && AppSettings.audioFocusOption.value == com.licht.nuvx.data.settings.AudioFocusOption.KEEP_PLAYING) {
+            if (active.isPlaying) {
+                pausedForPhoneCall = true
+                active.pause()
+            }
+        } else if (mode == AudioManager.MODE_NORMAL && pausedForPhoneCall) {
+            pausedForPhoneCall = false
+            active.play()
+        }
+    }
+
     private fun applyEqualizer() {
         val enabled = AppSettings.equalizerEnabled.value
         val curve = when (AppSettings.equalizerMode.value) {
@@ -1323,6 +1357,10 @@ class PlaybackService : MediaLibraryService() {
 
 
     override fun onDestroy() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            audioModeListener?.let { audioManager?.removeOnModeChangedListener(it) }
+            audioModeListener = null
+        }
         hostSpeaker.stop()
         if (com.licht.nuvx.data.sync.LanHost.speaker === hostSpeaker) com.licht.nuvx.data.sync.LanHost.speaker = null
         computerSpeaker.stop(resumeHere = false)

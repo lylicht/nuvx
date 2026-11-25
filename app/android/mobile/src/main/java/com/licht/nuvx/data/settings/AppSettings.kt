@@ -55,6 +55,13 @@ enum class ThemeMode(val label: String) {
     SYSTEM("System"), LIGHT("Light"), DARK("Dark")
 }
 
+enum class AudioFocusOption {
+    AUTO_PAUSE,
+    KEEP_PLAYING;
+
+    val requestsFocus: Boolean get() = this == AUTO_PAUSE
+}
+
 enum class AppFont { DEFAULT, LEGACY }
 
 enum class EqualizerMode {
@@ -124,6 +131,8 @@ object AppSettings {
     val meteredConnection = MutableStateFlow<Boolean?>(null)
 
     val crossfadeSeconds = transitionSettings.crossfadeSeconds
+
+    val audioFocusOption = MutableStateFlow(AudioFocusOption.AUTO_PAUSE)
 
     val smartFadeEnabled = transitionSettings.smartFadeEnabled
 
@@ -437,6 +446,9 @@ object AppSettings {
         audioOutputSettings.read()
         equalizerSettings.read()
         playbackSpeed.value = prefs.getFloat(KEY_SPEED, 1.0f)
+        audioFocusOption.value = runCatching {
+            AudioFocusOption.valueOf(prefs.getString(KEY_AUDIO_FOCUS_OPTION, null) ?: AudioFocusOption.AUTO_PAUSE.name)
+        }.getOrDefault(AudioFocusOption.AUTO_PAUSE)
         appearanceSettings.readThemeAndFont()
         autoplay.value = prefs.getBoolean(KEY_AUTOPLAY, true)
         shuffleEnabled.value = prefs.getBoolean(KEY_SHUFFLE_ENABLED, false)
@@ -497,6 +509,11 @@ object AppSettings {
     fun setShuffleEnabled(value: Boolean) {
         shuffleEnabled.value = value
         prefs.edit().putBoolean(KEY_SHUFFLE_ENABLED, value).apply()
+    }
+
+    fun setAudioFocusOption(option: AudioFocusOption) {
+        audioFocusOption.value = option
+        prefs.edit().putString(KEY_AUDIO_FOCUS_OPTION, option.name).apply()
     }
 
     fun setRepeatMode(value: Int) {
@@ -941,6 +958,7 @@ object AppSettings {
 
     fun normalizeSignatureApiUrl(raw: String): String = playerPresentationSettings.normalizeSignatureApiUrl(raw)
 
+    private const val KEY_AUDIO_FOCUS_OPTION = "audio_focus_option"
     private const val KEY_SPEED = "playback_speed"
     private const val KEY_AUTOPLAY = "autoplay"
     private const val KEY_NIGHTLY_UPDATES = "nightly_updates"
