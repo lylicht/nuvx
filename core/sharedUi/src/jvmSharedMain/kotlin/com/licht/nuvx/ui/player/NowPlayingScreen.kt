@@ -297,6 +297,7 @@ fun NowPlayingScreen(
 
     StatusBarIcons(dark = false)
     val hideStatusBar by PlayerSettings.hideStatusBar.collectAsStateWithLifecycle()
+    val keepScreenOnInPlayer by PlayerSettings.keepScreenOnInPlayer.collectAsStateWithLifecycle()
     HideStatusBar(hideStatusBar)
 
     val playerHaze = remember { HazeState() }
@@ -459,7 +460,7 @@ fun NowPlayingScreen(
         showRevertCue = false
     }
 
-    KeepScreenOn(enabled = lyricsOpen)
+    KeepScreenOn(enabled = lyricsOpen || keepScreenOnInPlayer)
 
     PlayerBackHandler(enabled = sideways && (videoMode || fullscreenRequested), onBack = exitFullscreen)
 

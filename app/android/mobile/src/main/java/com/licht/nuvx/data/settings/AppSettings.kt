@@ -216,6 +216,8 @@ object AppSettings {
 
     val hideSongStatus = MutableStateFlow(false)
 
+    val keepScreenOnInPlayer = MutableStateFlow(false)
+
     val showQueueHistory = MutableStateFlow(false)
     val nightlyUpdates = MutableStateFlow(false)
 
@@ -459,6 +461,7 @@ object AppSettings {
         hideVolumeBar.value = prefs.getBoolean(KEY_HIDE_VOLUME_BAR, false)
         hideStatusBarInPlayer.value = prefs.getBoolean(KEY_HIDE_STATUS_BAR_IN_PLAYER, false)
         hideSongStatus.value = prefs.getBoolean(KEY_HIDE_SONG_STATUS, false)
+        keepScreenOnInPlayer.value = prefs.getBoolean(KEY_KEEP_SCREEN_ON_IN_PLAYER, false)
         showQueueHistory.value = prefs.getBoolean(KEY_SHOW_QUEUE_HISTORY, false)
         nightlyUpdates.value = prefs.getBoolean(KEY_NIGHTLY_UPDATES, false)
         swipeToPlayNext.value = prefs.getBoolean(KEY_SWIPE_TO_PLAY_NEXT, false)
@@ -644,6 +647,11 @@ object AppSettings {
     fun setHideSongStatus(value: Boolean) {
         hideSongStatus.value = value
         prefs.edit().putBoolean(KEY_HIDE_SONG_STATUS, value).apply()
+    }
+
+    fun setKeepScreenOnInPlayer(value: Boolean) {
+        keepScreenOnInPlayer.value = value
+        prefs.edit().putBoolean(KEY_KEEP_SCREEN_ON_IN_PLAYER, value).apply()
     }
 
     fun setNightlyUpdates(value: Boolean) {
@@ -963,6 +971,7 @@ object AppSettings {
     private const val KEY_HIDE_VOLUME_BAR = "hide_volume_bar"
     private const val KEY_HIDE_STATUS_BAR_IN_PLAYER = "hide_status_bar_in_player"
     private const val KEY_HIDE_SONG_STATUS = "hide_song_status"
+    private const val KEY_KEEP_SCREEN_ON_IN_PLAYER = "keep_screen_on_in_player"
     private const val KEY_SHOW_QUEUE_HISTORY = "show_queue_history"
     private const val KEY_SWIPE_TO_PLAY_NEXT = "swipe_to_play_next"
     private const val KEY_DONT_REPEAT_SUGGESTIONS = "dont_repeat_suggestions"

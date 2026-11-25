@@ -170,6 +170,7 @@ interface PlayerSettingsSource {
     val canvasOverCellular: StateFlow<Boolean>
     val fullBleedArtwork: StateFlow<Boolean>
     val hideSongStatus: StateFlow<Boolean>
+    val keepScreenOnInPlayer: StateFlow<Boolean>
     val showQueueHistory: StateFlow<Boolean>
     val hideVolumeBar: StateFlow<Boolean>
     val hideStatusBar: StateFlow<Boolean>
