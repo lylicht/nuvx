@@ -1359,8 +1359,6 @@
     <string name="diwali_title">nuvx 祝你排灯节快乐</string>
     <string name="diwali_subtitle">愿这个光明节让你的家充满欢乐，让你的每一天充满音乐。</string>
     <string name="diwali_cta">一起庆祝</string>
-    <string name="excor_fallback">eXcor 备用</string>
-    <string name="excor_fallback_subtitle">InnerTube 找不到音频流时，先尝试 eXcor，再使用较慢的提取器</string>
     <string name="radio">电台</string>
     <string name="search_stations">搜索电台</string>
     <string name="couldnt_load_radio">无法加载电台</string>

@@ -1380,8 +1380,6 @@
     <string name="diwali_subtitle">रोशनी का यह त्योहार आपके घर को खुशियों से और आपके दिनों को संगीत से भर दे।</string>
     <string name="diwali_cta">चलो जश्न मनाएँ</string>
     <string name="automix_overview">Automix का अवलोकन</string>
-    <string name="excor_fallback">eXcor बैकअप</string>
-    <string name="excor_fallback_subtitle">InnerTube को स्ट्रीम न मिले तो धीमे एक्सट्रैक्टर से पहले eXcor आज़माएँ</string>
     <string name="radio">रेडियो</string>
     <string name="search_stations">स्टेशन खोजें</string>
     <string name="couldnt_load_radio">स्टेशन लोड नहीं हो सके</string>
