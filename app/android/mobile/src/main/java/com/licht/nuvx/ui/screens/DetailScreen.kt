@@ -15,6 +15,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
 import com.licht.nuvx.ui.components.liquidGlassRim
+import com.licht.nuvx.ui.components.dismissKeyboardOnScroll
 import com.licht.nuvx.ui.components.continuous
 import com.licht.nuvx.ui.components.FadingText
 import com.licht.nuvx.ui.components.longPressMenuClickable
@@ -388,7 +389,7 @@ fun DetailScreen(
                     reorder(palette)
                 } else LazyColumn(
                     state = listState,
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier.fillMaxSize().dismissKeyboardOnScroll(),
                     contentPadding = PaddingValues(bottom = contentPadding.calculateBottomPadding()),
                 ) {
             item(key = "header") {

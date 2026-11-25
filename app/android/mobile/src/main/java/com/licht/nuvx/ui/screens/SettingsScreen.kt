@@ -97,6 +97,7 @@ import com.licht.nuvx.ui.components.isGlassSupported
 import com.licht.nuvx.ui.components.MessageState
 import com.licht.nuvx.ui.components.SearchField
 import com.licht.nuvx.ui.components.thumbnailBorder
+import com.licht.nuvx.ui.components.dismissKeyboardOnScroll
 import com.licht.nuvx.ui.performance.resolvePerformanceRefreshRate
 import com.licht.nuvx.ui.performance.supportedPerformanceRefreshRates
 import com.licht.nuvx.data.model.Account
@@ -350,6 +351,7 @@ fun SettingsScreen(
     Column(
         modifier = modifier
             .fillMaxWidth()
+            .dismissKeyboardOnScroll()
             .verticalScroll(scrollState)
             .padding(contentPadding),
     ) {
