@@ -125,4 +125,21 @@ class LocalGroupsTest {
         assertEquals(listOf("a", "b", "d"), tracks.matchingArtist("reciter").map { it.videoId })
         assertTrue(tracks.matchingArtist("nobody").isEmpty())
     }
+
+    @Test
+    fun matchingArtist_splitsCommonArtistSeparators() {
+        val tracks = listOf(
+            song("a", "One", artist = "Alpha & Beta"),
+            song("b", "Two", artist = "alpha"),
+            song("c", "Three", artist = "Beta"),
+            song("d", "Four", artist = "Gamma/Delta"),
+            song("e", "Five", artist = "Epsilon, Zeta"),
+        )
+        assertEquals(listOf("a", "b"), tracks.matchingArtist("Alpha").map { it.videoId })
+        assertEquals(listOf("a", "c"), tracks.matchingArtist("Beta").map { it.videoId })
+        assertEquals(listOf("a", "b", "c"), tracks.matchingArtist("Alpha & Beta").map { it.videoId })
+        assertEquals(listOf("d"), tracks.matchingArtist("Gamma").map { it.videoId })
+        assertEquals(listOf("d"), tracks.matchingArtist("Delta").map { it.videoId })
+        assertEquals(listOf("e"), tracks.matchingArtist("Zeta").map { it.videoId })
+    }
 }

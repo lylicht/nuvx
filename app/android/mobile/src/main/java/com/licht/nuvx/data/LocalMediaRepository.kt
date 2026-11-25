@@ -1,8 +1,10 @@
 package com.licht.nuvx.data
 
 import android.Manifest
+import android.app.RecoverableSecurityException
 import android.content.ContentUris
 import android.content.Context
+import android.content.IntentSender
 import android.content.pm.PackageManager
 import android.database.Cursor
 import android.media.MediaMetadataRetriever
@@ -317,26 +319,67 @@ object LocalMediaRepository {
         }
     }
 
-    /** Deletes a song from the device library (issue #368). MediaStore rows,
-     * plain files and SAF documents are all supported; anything we cannot
-     * legitimately write is left untouched. */
-    suspend fun delete(context: Context, song: Song): Boolean = withContext(Dispatchers.IO) {
-        val value = song.localUri ?: return@withContext false
-        runCatching {
-            when {
-                value.startsWith("content://media/") ->
-                    context.contentResolver.delete(Uri.parse(value), null, null) > 0
-                value.startsWith("file://") -> Uri.parse(value).path?.let { File(it).delete() } == true
-                value.startsWith("content://") && Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT -> {
-                    val uri = Uri.parse(value)
-                    if (DocumentsContract.isDocumentUri(context, uri)) {
-                        DocumentsContract.deleteDocument(context.contentResolver, uri)
-                        true
-                    } else false
-                }
-                else -> false
+    data class DeleteOutcome(
+        val deleted: List<Song> = emptyList(),
+        val failed: List<Song> = emptyList(),
+        val permissionRequired: IntentSender? = null,
+        val pending: List<Song> = emptyList(),
+    )
+
+    /** Deletes songs from the device library (issue #368). MediaStore rows,
+     * plain files and SAF documents are all supported. On Android 10+ a
+     * MediaStore row owned by another app needs a user-approved delete request,
+     * which the caller launches from [permissionRequired] and then retries with
+     * [requestPermission] = false. */
+    suspend fun deleteAll(
+        context: Context,
+        songs: List<Song>,
+        requestPermission: Boolean = true,
+    ): DeleteOutcome = withContext(Dispatchers.IO) {
+        val deleted = mutableListOf<Song>()
+        val failed = mutableListOf<Song>()
+        val permissionNeeded = mutableListOf<Song>()
+
+        songs.forEach { song ->
+            val value = song.localUri
+            if (value == null) {
+                failed += song
+                return@forEach
             }
-        }.getOrDefault(false)
+            val uri = Uri.parse(value)
+            try {
+                val ok = when {
+                    value.startsWith("content://media/") ->
+                        context.contentResolver.delete(uri, null, null) > 0
+                    value.startsWith("file://") -> uri.path?.let { File(it).delete() } == true
+                    value.startsWith("content://") && Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT ->
+                        if (DocumentsContract.isDocumentUri(context, uri)) {
+                            DocumentsContract.deleteDocument(context.contentResolver, uri)
+                            true
+                        } else false
+                    else -> false
+                }
+                if (ok) deleted += song else failed += song
+            } catch (e: RecoverableSecurityException) {
+                permissionNeeded += song
+            } catch (e: SecurityException) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) permissionNeeded += song else failed += song
+            } catch (e: Exception) {
+                failed += song
+            }
+        }
+
+        if (!requestPermission || permissionNeeded.isEmpty() || Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+            return@withContext DeleteOutcome(deleted, failed + permissionNeeded)
+        }
+        val sender = runCatching {
+            MediaStore.createDeleteRequest(
+                context.contentResolver,
+                permissionNeeded.mapNotNull { it.localUri?.let(Uri::parse) },
+            ).intentSender
+        }.getOrNull()
+        if (sender == null) DeleteOutcome(deleted, failed + permissionNeeded)
+        else DeleteOutcome(deleted, failed, sender, permissionNeeded)
     }
 
     private fun String.mediaStoreAudioId(): Long? {

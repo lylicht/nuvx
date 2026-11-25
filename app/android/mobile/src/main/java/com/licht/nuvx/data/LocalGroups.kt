@@ -171,6 +171,7 @@ object LocalGroups {
 }
 
 private val FEATURE_SUFFIX = Regex("""\s+(?:feat\.?|ft\.?|featuring)\s+""", RegexOption.IGNORE_CASE)
+private val ARTIST_SEPARATORS = Regex("""\s*[,;&/]\s*""")
 
 private fun artistKey(name: String): String = name
     .split(FEATURE_SUFFIX, limit = 2)
@@ -178,6 +179,20 @@ private fun artistKey(name: String): String = name
     .trim()
     .trim(',', ';')
     .lowercase(Locale.ROOT)
+
+/** All names an artist tag can reasonably be searched by. The full name stays
+ * first so grouping keeps preferring the tag as stored on the song. */
+private fun artistKeys(name: String): Set<String> {
+    val base = artistKey(name)
+    if (base.isEmpty()) return emptySet()
+    return buildSet {
+        add(base)
+        base.split(ARTIST_SEPARATORS).forEach { part ->
+            val token = part.trim().trim(',', ';', '.')
+            if (token.isNotEmpty()) add(token)
+        }
+    }
+}
 
 fun Song.matchesSearch(query: String): Boolean =
     title.contains(query, ignoreCase = true) ||
@@ -187,8 +202,8 @@ fun Song.matchesSearch(query: String): Boolean =
 /** Artist searches must return the whole artist, not just the rows whose tag
  * happens to contain the typed text (issue #368). */
 fun List<Song>.matchingArtist(query: String): List<Song> {
-    val key = artistKey(query)
-    return if (key.isEmpty()) emptyList() else filter { artistKey(it.artist) == key }
+    val keys = artistKeys(query)
+    return if (keys.isEmpty()) emptyList() else filter { artistKeys(it.artist).any { it in keys } }
 }
 
 fun List<Song>.sortedForLibrary(order: LocalMusicSort): List<Song> = when (order) {
