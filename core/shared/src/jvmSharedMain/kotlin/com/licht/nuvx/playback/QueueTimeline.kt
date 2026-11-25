@@ -50,10 +50,11 @@ object QueueTimeline {
         newContextSongs: List<Song>,
         selectedIndex: Int,
         contextSource: QueueSource,
+        replaceUpcomingQueue: Boolean = false,
     ): ContextQueueResult {
         if (newContextSongs.isEmpty()) return ContextQueueResult(emptyList(), 0)
 
-        val upcomingUserQueue = upcomingUserQueue(currentTimeline, currentIndex)
+        val upcomingUserQueue = if (replaceUpcomingQueue) emptyList() else upcomingUserQueue(currentTimeline, currentIndex)
         val contextEntries = newContextSongs.map { it.from(contextSource).asQueueEntry(QueueTier.CONTEXT) }
 
         val safeIndex = selectedIndex.coerceIn(contextEntries.indices)
