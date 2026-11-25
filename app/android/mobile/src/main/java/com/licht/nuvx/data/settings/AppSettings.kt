@@ -223,7 +223,7 @@ object AppSettings {
 
     val dontRepeatSuggestions = MutableStateFlow(false)
 
-    val preferMusicOnly = MutableStateFlow(false)
+    val preferMusicOnly = MutableStateFlow(true)
 
     val hideRecents = homeFeedSettings.hideRecents
 
@@ -463,7 +463,7 @@ object AppSettings {
         nightlyUpdates.value = prefs.getBoolean(KEY_NIGHTLY_UPDATES, false)
         swipeToPlayNext.value = prefs.getBoolean(KEY_SWIPE_TO_PLAY_NEXT, false)
         dontRepeatSuggestions.value = prefs.getBoolean(KEY_DONT_REPEAT_SUGGESTIONS, false)
-        preferMusicOnly.value = prefs.getBoolean(KEY_PREFER_MUSIC_ONLY, false)
+        preferMusicOnly.value = prefs.getBoolean(KEY_PREFER_MUSIC_ONLY, true)
         homeFeedSettings.read()
         appearanceSettings.readVisualEffects()
         lyricsSettings.readPresentationPreferences()
