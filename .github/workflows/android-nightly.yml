@@ -1,26 +1,13 @@
 name: Nuvx releases
 
 on:
+  # Stable releases still use v* tags; every merged PR on main gets a nightly,
+  # even if it only edits documentation or workflow files.
   push:
-    branches: [main]
     tags: ["v*"]
-    paths:
-      - "app/android/**"
-      - "app/desktop/**"
-      - "app/web/extension/**"
-      - "app/web/app/public/models/**"
-      - "core/**"
-      - "!core/worker/**"
-      - "scripts/cargo_notices.py"
-      - "scripts/test_cargo_notices.py"
-      - "scripts/spdx/**"
-      - ".github/workflows/android-nightly.yml"
-      - "gradle/**"
-      - "build.gradle.kts"
-      - "settings.gradle.kts"
-      - "gradle.properties"
-      - "gradlew"
-      - "gradlew.bat"
+  pull_request_target:
+    types: [closed]
+    branches: [main]
   workflow_dispatch:
   # A nightly every 3 hours when main has new commits (GitHub may start it late under load).
   schedule:
@@ -30,10 +17,10 @@ permissions:
   contents: write
 
 concurrency:
-  # Per event: a push to main (which builds nothing) must not cancel the nightly in progress.
-  group: nuvx-release-build-${{ github.ref }}-${{ github.event_name }}
-  # A scheduled build waits for the one before it instead of cancelling it half done.
-  cancel-in-progress: ${{ github.event_name != 'schedule' }}
+  # Serialize nightly builds across PR merges, manual runs and the schedule.
+  # Use separate groups for stable tags so stable releases remain unaffected.
+  group: nuvx-release-build-${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || 'main' }}
+  cancel-in-progress: false
 
 defaults:
   run:
@@ -41,6 +28,9 @@ defaults:
 
 jobs:
   gate:
+    # pull_request_target runs with base-branch permissions; only merged PRs
+    # qualify, and we always build the trusted base SHA, never PR head code.
+    if: github.event_name != 'pull_request_target' || github.event.pull_request.merged == true
     runs-on: ubuntu-24.04
     outputs:
       build: ${{ steps.check.outputs.build }}
@@ -63,7 +53,7 @@ jobs:
 
   prepare:
     needs: gate
-    if: needs.gate.outputs.build == 'true' && (((github.event_name == 'push' || github.event_name == 'workflow_dispatch') && startsWith(github.ref, 'refs/tags/')) || ((github.event_name == 'workflow_dispatch' || github.event_name == 'schedule') && github.ref == 'refs/heads/main'))
+    if: needs.gate.outputs.build == 'true' && (((github.event_name == 'push' || github.event_name == 'workflow_dispatch') && startsWith(github.ref, 'refs/tags/')) || ((github.event_name == 'workflow_dispatch' || github.event_name == 'schedule' || (github.event_name == 'pull_request_target' && github.event.pull_request.merged == true)) && github.ref == 'refs/heads/main'))
     runs-on: ubuntu-24.04
     outputs:
       release_tag: ${{ steps.metadata.outputs.release_tag }}
@@ -722,7 +712,15 @@ jobs:
             gh release delete "$RELEASE_TAG" --yes --cleanup-tag || true
             exit 0
           fi
-          # A finished nightly is published even if main moved on meanwhile; the next night builds the newer commit.
+          # Never let an older queued build replace a newer nightly if main moved
+          # while it compiled. Keep the previous public nightly until the latest
+          # source completes successfully.
+          main_sha=$(gh api "repos/$GH_REPO/git/ref/heads/main" --jq '.object.sha')
+          if [[ "$SOURCE_REF" != "$main_sha" ]]; then
+            echo "Discarding obsolete nightly $RELEASE_TAG: built $SOURCE_REF but main is $main_sha"
+            gh release delete "$RELEASE_TAG" --yes --cleanup-tag
+            exit 0
+          fi
           gh release edit "$RELEASE_TAG" --draft=false --prerelease --latest=false
           # Only the newest nightly stays: every older one is deleted, with its tag.
           gh api --paginate "repos/$GITHUB_REPOSITORY/releases?per_page=100" \
