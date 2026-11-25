@@ -82,6 +82,10 @@ class AuthStore(context: Context) {
         get() = prefs.getString(KEY_DISCORD_TOKEN, null)
         set(value) = prefs.edit().putString(KEY_DISCORD_TOKEN, value).apply()
 
+    var spotifySpdcToken: String?
+        get() = prefs.getString(KEY_SPOTIFY_SPDC_TOKEN, null)
+        set(value) = prefs.edit().putString(KEY_SPOTIFY_SPDC_TOKEN, value).apply()
+
     var webdavPassword: String?
         get() = prefs.getString(KEY_WEBDAV_PASSWORD, null)
         set(value) = prefs.edit().putString(KEY_WEBDAV_PASSWORD, value).apply()
@@ -151,6 +155,7 @@ class AuthStore(context: Context) {
         private const val KEY_CHANNEL_NAME = "channel_name"
         private const val KEY_CHANNEL_AUTH_USER = "channel_auth_user"
         private const val KEY_DISCORD_TOKEN = "discord_token"
+        private const val KEY_SPOTIFY_SPDC_TOKEN = "spotify_spdc_token"
         private const val KEY_WEBDAV_PASSWORD = "webdav_password"
         private const val KEY_SMB_PASSWORD = "smb_password"
     }
