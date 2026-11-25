@@ -6,6 +6,9 @@ Every nuvx release, newest first. Downloads and checksums are on each version's 
 
 ## Unreleased
 
+- **Playback engine cleanup:** remove the unused eXcor extractor, its settings and bundled Android artifact; retain NewPipe fallback and upgrade Android/JVM InnerTubeX to v0.13.1.
+- **Linux account sign-in (#393):** verify Google and Spotify sessions before the browser window closes, so failed logins can be retried without silently claiming success.
+
 ## 1.0.5
 
 - **Save songs to Spotify (#369):** on web, desktop and mobile, the song menu can now add the current or found song to an existing Spotify playlist or to Liked Songs without leaving nuvx.
