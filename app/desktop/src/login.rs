@@ -225,9 +225,7 @@ fn verify_cookie(site: Site, cookie: &str, profile_dir: &std::path::Path) -> Res
                 .session_from_cookie(cookie)
                 .await
                 .map(|_| ()),
-            Site::Spotify => crate::transfer::spotify::Client::connect(Some(cookie), data_dir)
-                .await
-                .map(|_| ()),
+            Site::Spotify => crate::transfer::spotify::Client::verify_sign_in(cookie).await,
         }
     })
     .map_err(|e| format!("{e:#}"))
