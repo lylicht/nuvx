@@ -1534,4 +1534,6 @@
         <item quantity="one">Delete this song from your device? This cannot be undone.</item>
         <item quantity="other">Delete %1$d songs from your device? This cannot be undone.</item>
     </plurals>
+    <string name="remember_shuffle_across_queues">Yeni kuyruklarda karisik calmayi hatirla</string>
+    <string name="remember_shuffle_across_queues_subtitle">Baska bir album veya calma listesi baslatirken karisik calmayi acik tut</string>
 </resources>

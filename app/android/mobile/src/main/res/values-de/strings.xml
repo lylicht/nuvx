@@ -1577,4 +1577,6 @@
         <item quantity="one">Delete this song from your device? This cannot be undone.</item>
         <item quantity="other">Delete %1$d songs from your device? This cannot be undone.</item>
     </plurals>
+    <string name="remember_shuffle_across_queues">Zufallswiedergabe fuer neue Warteschlangen beibehalten</string>
+    <string name="remember_shuffle_across_queues_subtitle">Zufallswiedergabe beim Start eines anderen Albums oder einer anderen Playlist beibehalten</string>
 </resources>

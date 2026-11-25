@@ -1615,4 +1615,6 @@
         <item quantity="one">Delete this song from your device? This cannot be undone.</item>
         <item quantity="other">Delete %1$d songs from your device? This cannot be undone.</item>
     </plurals>
+    <string name="remember_shuffle_across_queues">Pamietaj o trybie losowym w kolejnych kolejkach</string>
+    <string name="remember_shuffle_across_queues_subtitle">Zachowaj tryb losowy po rozpoczeciu odtwarzania innego albumu lub playlisty</string>
 </resources>

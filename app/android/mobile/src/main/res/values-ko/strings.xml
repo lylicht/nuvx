@@ -1415,4 +1415,6 @@
         <item quantity="one">Delete this song from your device? This cannot be undone.</item>
         <item quantity="other">Delete %1$d songs from your device? This cannot be undone.</item>
     </plurals>
+    <string name="remember_shuffle_across_queues">다음 재생목록에서도 셔플 유지</string>
+    <string name="remember_shuffle_across_queues_subtitle">다른 앨범이나 재생목록을 시작할 때도 셔플을 켜 둡니다</string>
 </resources>

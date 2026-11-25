@@ -178,6 +178,8 @@ object AppSettings {
 
     val shuffleEnabled = MutableStateFlow(false)
 
+    val rememberShuffleAcrossQueues = MutableStateFlow(false)
+
     val repeatMode = MutableStateFlow(Player.REPEAT_MODE_OFF)
 
     val showNerdStats = MutableStateFlow(false)
@@ -442,6 +444,7 @@ object AppSettings {
         appearanceSettings.readThemeAndFont()
         autoplay.value = prefs.getBoolean(KEY_AUTOPLAY, true)
         shuffleEnabled.value = prefs.getBoolean(KEY_SHUFFLE_ENABLED, false)
+        rememberShuffleAcrossQueues.value = prefs.getBoolean(KEY_REMEMBER_SHUFFLE_ACROSS_QUEUES, false)
         repeatMode.value = prefs.getInt(KEY_REPEAT_MODE, Player.REPEAT_MODE_OFF)
         showNerdStats.value = prefs.getBoolean(KEY_NERD_STATS, false)
         showListenTogetherButton.value = prefs.getBoolean(KEY_LISTEN_TOGETHER_BUTTON, true)
@@ -499,6 +502,11 @@ object AppSettings {
     fun setShuffleEnabled(value: Boolean) {
         shuffleEnabled.value = value
         prefs.edit().putBoolean(KEY_SHUFFLE_ENABLED, value).apply()
+    }
+
+    fun setRememberShuffleAcrossQueues(value: Boolean) {
+        rememberShuffleAcrossQueues.value = value
+        prefs.edit().putBoolean(KEY_REMEMBER_SHUFFLE_ACROSS_QUEUES, value).apply()
     }
 
     fun setRepeatMode(value: Int) {
@@ -951,6 +959,7 @@ object AppSettings {
     private const val KEY_AUTOPLAY = "autoplay"
     private const val KEY_NIGHTLY_UPDATES = "nightly_updates"
     private const val KEY_SHUFFLE_ENABLED = "shuffle_enabled"
+    private const val KEY_REMEMBER_SHUFFLE_ACROSS_QUEUES = "remember_shuffle_across_queues"
     private const val KEY_REPEAT_MODE = "repeat_mode"
     private const val KEY_NERD_STATS = "show_nerd_stats"
     private const val KEY_LISTEN_TOGETHER_BUTTON = "show_listen_together_button"

@@ -501,6 +501,8 @@
     <string name="pause">Pause</string>
     <string name="shuffle_on">Shuffle on</string>
     <string name="shuffle_off">Shuffle off</string>
+    <string name="remember_shuffle_across_queues">Remember shuffle across queues</string>
+    <string name="remember_shuffle_across_queues_subtitle">Keep shuffle enabled when starting another album or playlist</string>
     <string name="audio_pipeline">Audio Pipeline</string>
     <string name="cast_dialog_title">Cast</string>
     <string name="cast_dialog_subtitle">Play on a Chromecast or Google Cast speaker</string>
