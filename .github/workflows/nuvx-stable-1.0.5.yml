@@ -48,7 +48,7 @@ jobs:
             echo "main advanced; refusing to tag an outdated commit" >&2
             exit 1
           fi
-          tag_sha=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/v1.0.5" --jq '.object.sha' 2>/dev/null || true)
+          tag_sha=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/v1.0.5" --jq '.object.sha // empty' 2>/dev/null || true)
           if [[ -n "$tag_sha" && "$tag_sha" != "$GITHUB_SHA" ]]; then
             echo "Tag v1.0.5 points to a different commit" >&2
             exit 1
