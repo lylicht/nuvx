@@ -502,7 +502,7 @@ object SourceResolver {
 
     private const val STREAM_ATTEMPTS = 3
 
-    private const val UPGRADE_DRIFT_SEC = 2
+    private const val UPGRADE_DRIFT_SEC = 3
 
     private const val SAME_RECORDING_SEC = 3
 
