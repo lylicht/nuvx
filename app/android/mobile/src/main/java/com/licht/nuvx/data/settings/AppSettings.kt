@@ -281,6 +281,7 @@ object AppSettings {
     val playerTheme = playerPresentationSettings.playerTheme
 
     val lastPlayerScreen = playerPresentationSettings.lastPlayerScreen
+    val showTotalDuration = playerPresentationSettings.showTotalDuration
 
     val syncedLyrics = lyricsSettings.syncedLyrics
 
@@ -767,6 +768,7 @@ object AppSettings {
     fun setPlayerTheme(value: PlayerTheme) = playerPresentationSettings.setPlayerTheme(value)
 
     fun setLastPlayerScreen(value: LastPlayerScreen) = playerPresentationSettings.setLastPlayerScreen(value)
+    fun setShowTotalDuration(value: Boolean) = playerPresentationSettings.setShowTotalDuration(value)
 
     fun setAudioCacheLimitBytes(value: Long) = audioCacheSettings.setCacheLimitBytes(value)
 
