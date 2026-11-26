@@ -1568,4 +1568,14 @@
     <string name="hide_trending_subtitle">นำเพลงและหมวดชุมชนที่กำลังมาแรงออกจากหน้าแรก</string>
     <string name="preserve_album_transitions">เล่นอัลบั้มแบบต่อเนื่อง</string>
     <string name="preserve_album_transitions_subtitle">หลีกเลี่ยงการเฟดของ AutoMix ระหว่างเพลงที่ต่อเนื่องกันในอัลบั้มเดียวกัน</string>
+
+    <string name="keep_screen_on_in_player">เปิดหน้าจอค้างไว้</string>
+    <string name="keep_screen_on_in_player_subtitle">เปิดหน้าจอค้างไว้ขณะเปิดหน้ากำลังเล่น</string>
+    <string name="karaoke_title">คาราโอเกะ</string>
+    <string name="karaoke_unavailable_bitperfect">ใช้ไม่ได้ขณะส่งเสียงแบบ bit-perfect</string>
+    <string name="karaoke_available_stereo">ใช้ได้กับการเล่น PCM สเตอริโอ</string>
+    <string name="karaoke_active_description">ลดเสียงร้องตรงกลาง · PCM สเตอริโอ</string>
+    <string name="karaoke_description">ลดเสียงร้องตรงกลางในแทร็กสเตอริโอ</string>
+    <string name="karaoke_vocal_level">ระดับเสียงร้อง</string>
+    <string name="nuvx_files_canceled">ยกเลิกแล้ว</string>
 </resources>

@@ -1502,4 +1502,14 @@
     <string name="hide_trending_subtitle">Xóa bài hát và mục cộng đồng thịnh hành khỏi Trang chủ</string>
     <string name="preserve_album_transitions">Phát album liền mạch</string>
     <string name="preserve_album_transitions_subtitle">Tránh chuyển tiếp AutoMix giữa các bài liên tiếp trong cùng album.</string>
+
+    <string name="keep_screen_on_in_player">Giữ màn hình luôn bật</string>
+    <string name="keep_screen_on_in_player_subtitle">Giữ màn hình sáng khi mục Đang phát đang mở</string>
+    <string name="karaoke_title">Karaoke</string>
+    <string name="karaoke_unavailable_bitperfect">Không khả dụng khi xuất âm thanh bit-perfect</string>
+    <string name="karaoke_available_stereo">Khả dụng khi phát PCM stereo</string>
+    <string name="karaoke_active_description">Giảm giọng hát trung tâm · PCM stereo</string>
+    <string name="karaoke_description">Giảm giọng hát trung tâm trong các bản nhạc stereo</string>
+    <string name="karaoke_vocal_level">Mức giọng hát</string>
+    <string name="nuvx_files_canceled">Đã hủy</string>
 </resources>

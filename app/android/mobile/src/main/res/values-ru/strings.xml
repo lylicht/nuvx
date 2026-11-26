@@ -1618,4 +1618,14 @@
     <string name="hide_trending_subtitle">Убирает популярные треки и разделы сообщества с главной страницы</string>
     <string name="preserve_album_transitions">Воспроизводить альбомы без пауз</string>
     <string name="preserve_album_transitions_subtitle">Отключает переходы AutoMix между последовательными треками одного альбома.</string>
+
+    <string name="keep_screen_on_in_player">Не выключать экран</string>
+    <string name="keep_screen_on_in_player_subtitle">Не выключать экран, пока открыт экран Сейчас играет</string>
+    <string name="karaoke_title">Караоке</string>
+    <string name="karaoke_unavailable_bitperfect">Недоступно при выводе звука bit-perfect</string>
+    <string name="karaoke_available_stereo">Доступно для стереовоспроизведения PCM</string>
+    <string name="karaoke_active_description">Ослабление центрального вокала · стерео PCM</string>
+    <string name="karaoke_description">Ослабить центральный вокал в стереотреках</string>
+    <string name="karaoke_vocal_level">Уровень вокала</string>
+    <string name="nuvx_files_canceled">Отменено</string>
 </resources>

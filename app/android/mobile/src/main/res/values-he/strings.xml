@@ -1590,4 +1590,14 @@
     <string name="hide_trending_subtitle">הסרת שירים ומדורים קהילתיים פופולריים מדף הבית</string>
     <string name="preserve_album_transitions">השמעת אלבומים ברצף</string>
     <string name="preserve_album_transitions_subtitle">מונע מעברי AutoMix בין רצועות עוקבות מאותו אלבום.</string>
+
+    <string name="keep_screen_on_in_player">השארת המסך דולק</string>
+    <string name="keep_screen_on_in_player_subtitle">השארת המסך פעיל כשמסך מתנגן כעת פתוח</string>
+    <string name="karaoke_title">קריוקי</string>
+    <string name="karaoke_unavailable_bitperfect">לא זמין בזמן פלט שמע bit-perfect</string>
+    <string name="karaoke_available_stereo">זמין להשמעת PCM בסטריאו</string>
+    <string name="karaoke_active_description">הפחתת שירה מרכזית · PCM בסטריאו</string>
+    <string name="karaoke_description">הפחתת השירה המרכזית ברצועות סטריאו</string>
+    <string name="karaoke_vocal_level">עוצמת השירה</string>
+    <string name="nuvx_files_canceled">בוטל</string>
 </resources>

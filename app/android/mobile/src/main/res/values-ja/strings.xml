@@ -1563,4 +1563,14 @@
     <string name="hide_trending_subtitle">ホームからトレンド曲とコミュニティのセクションを削除します</string>
     <string name="preserve_album_transitions">アルバムを途切れずに再生</string>
     <string name="preserve_album_transitions_subtitle">同じアルバムの連続する曲間でAutoMixのフェードを避けます。</string>
+
+    <string name="keep_screen_on_in_player">画面を常にオン</string>
+    <string name="keep_screen_on_in_player_subtitle">再生中の画面を開いている間は画面をオンにする</string>
+    <string name="karaoke_title">カラオケ</string>
+    <string name="karaoke_unavailable_bitperfect">ビットパーフェクト出力中は利用できません</string>
+    <string name="karaoke_available_stereo">ステレオ PCM の再生で利用できます</string>
+    <string name="karaoke_active_description">中央ボーカルを低減 · ステレオ PCM</string>
+    <string name="karaoke_description">ステレオ曲の中央ボーカルを低減</string>
+    <string name="karaoke_vocal_level">ボーカルレベル</string>
+    <string name="nuvx_files_canceled">キャンセルしました</string>
 </resources>

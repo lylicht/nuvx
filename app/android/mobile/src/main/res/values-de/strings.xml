@@ -1585,4 +1585,14 @@
     <string name="hide_trending_subtitle">Entfernt angesagte Songs und Community-Bereiche von der Startseite</string>
     <string name="preserve_album_transitions">Alben ohne Unterbrechung abspielen</string>
     <string name="preserve_album_transitions_subtitle">Verhindert AutoMix-Überblendungen zwischen aufeinanderfolgenden Titeln desselben Albums.</string>
+
+    <string name="keep_screen_on_in_player">Bildschirm eingeschaltet lassen</string>
+    <string name="keep_screen_on_in_player_subtitle">Bildschirm eingeschaltet lassen, wenn Aktuelle Wiedergabe geöffnet ist</string>
+    <string name="karaoke_title">Karaoke</string>
+    <string name="karaoke_unavailable_bitperfect">Während bitgenauer Audioausgabe nicht verfügbar</string>
+    <string name="karaoke_available_stereo">Für Stereo PCM Wiedergabe verfügbar</string>
+    <string name="karaoke_active_description">Zentrale Gesangsreduzierung · Stereo PCM</string>
+    <string name="karaoke_description">Reduziere zentrale Stimmen in Stereotiteln</string>
+    <string name="karaoke_vocal_level">Gesangspegel</string>
+    <string name="nuvx_files_canceled">Abgebrochen</string>
 </resources>

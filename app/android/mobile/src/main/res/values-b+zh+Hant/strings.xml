@@ -1545,4 +1545,31 @@
     <string name="hide_trending_subtitle">從首頁移除熱門歌曲和社群內容</string>
     <string name="preserve_album_transitions">專輯不間斷播放</string>
     <string name="preserve_album_transitions_subtitle">避免同一專輯連續曲目之間出現 AutoMix 淡入淡出。</string>
+
+    <automix_overview name="automix_overview">Automix 概覽</automix_overview>
+    <diwali_title name="diwali_title">nuvx 祝你排燈節快樂</diwali_title>
+    <diwali_subtitle name="diwali_subtitle">願這個光明節讓你的家充滿歡樂，讓你的每一天充滿音樂。</diwali_subtitle>
+    <diwali_cta name="diwali_cta">一起慶祝</diwali_cta>
+    <discord_account_checking name="discord_account_checking">Checking Discord account…</discord_account_checking>
+    <discord_account_lookup_failed name="discord_account_lookup_failed">Couldn\'t verify this Discord account. Check your connection or reconnect.</discord_account_lookup_failed>
+    <delete_download_failed name="delete_download_failed">Couldn’t delete the download. Try again.</delete_download_failed>
+    <spotify_import_partial name="spotify_import_partial">Imported \'%1$s\', but %2$d songs could not be added.</spotify_import_partial>
+    <discord_invite_title name="discord_invite_title">Join Discord Server</discord_invite_title>
+    <community_invite_title name="community_invite_title">Join the nuvx community</community_invite_title>
+    <community_invite_discord name="community_invite_discord">Join Discord</community_invite_discord>
+    <telegram_invite_join name="telegram_invite_join">Join Telegram</telegram_invite_join>
+    <discord_invite_body name="discord_invite_body">Meet other Nuvx listeners, share feedback, and get app updates.</discord_invite_body>
+    <discord_invite_join name="discord_invite_join">Join Server</discord_invite_join>
+    <discord_invite_not_now name="discord_invite_not_now">Not Now</discord_invite_not_now>
+    <remember_shuffle_across_queues name="remember_shuffle_across_queues">在不同佇列間記住隨機播放</remember_shuffle_across_queues>
+    <remember_shuffle_across_queues_subtitle name="remember_shuffle_across_queues_subtitle">開始播放其他專輯或播放清單時保持隨機播放</remember_shuffle_across_queues_subtitle>
+    <keep_screen_on_in_player name="keep_screen_on_in_player">保持螢幕開啟</keep_screen_on_in_player>
+    <keep_screen_on_in_player_subtitle name="keep_screen_on_in_player_subtitle">開啟正在播放畫面時保持螢幕喚醒</keep_screen_on_in_player_subtitle>
+    <karaoke_title name="karaoke_title">卡拉 OK</karaoke_title>
+    <karaoke_unavailable_bitperfect name="karaoke_unavailable_bitperfect">位元完美音訊輸出期間無法使用</karaoke_unavailable_bitperfect>
+    <karaoke_available_stereo name="karaoke_available_stereo">適用於立體聲 PCM 播放</karaoke_available_stereo>
+    <karaoke_active_description name="karaoke_active_description">降低中央人聲 · 立體聲 PCM</karaoke_active_description>
+    <karaoke_description name="karaoke_description">降低立體聲曲目中的中央人聲</karaoke_description>
+    <karaoke_vocal_level name="karaoke_vocal_level">人聲音量</karaoke_vocal_level>
+    <nuvx_files_canceled name="nuvx_files_canceled">已取消</nuvx_files_canceled>
 </resources>

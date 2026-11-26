@@ -1590,4 +1590,14 @@
     <string name="hide_trending_subtitle">Remove da página inicial músicas em alta e seções da comunidade</string>
     <string name="preserve_album_transitions">Manter os álbuns sem interrupções</string>
     <string name="preserve_album_transitions_subtitle">Evita transições AutoMix entre faixas consecutivas do mesmo álbum.</string>
+
+    <string name="keep_screen_on_in_player">Manter o ecrã ligado</string>
+    <string name="keep_screen_on_in_player_subtitle">Manter o ecrã ativo enquanto a janela A tocar estiver aberta</string>
+    <string name="karaoke_title">Karaoke</string>
+    <string name="karaoke_unavailable_bitperfect">Indisponível durante a saída de áudio bit-perfect</string>
+    <string name="karaoke_available_stereo">Disponível para reprodução PCM estéreo</string>
+    <string name="karaoke_active_description">Redução dos vocais centrais · PCM estéreo</string>
+    <string name="karaoke_description">Reduz os vocais centrais em faixas estéreo</string>
+    <string name="karaoke_vocal_level">Nível vocal</string>
+    <string name="nuvx_files_canceled">Cancelado</string>
 </resources>

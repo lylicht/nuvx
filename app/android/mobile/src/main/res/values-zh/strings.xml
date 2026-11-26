@@ -1562,4 +1562,14 @@
     <string name="hide_trending_subtitle">从首页移除热门歌曲和社区内容</string>
     <string name="preserve_album_transitions">专辑无间断播放</string>
     <string name="preserve_album_transitions_subtitle">避免同一专辑连续曲目之间出现 AutoMix 淡入淡出。</string>
+
+    <string name="keep_screen_on_in_player">保持屏幕常亮</string>
+    <string name="keep_screen_on_in_player_subtitle">打开正在播放页面时保持屏幕常亮</string>
+    <string name="karaoke_title">卡拉 OK</string>
+    <string name="karaoke_unavailable_bitperfect">位完美音频输出期间不可用</string>
+    <string name="karaoke_available_stereo">适用于立体声 PCM 播放</string>
+    <string name="karaoke_active_description">降低居中人声 · 立体声 PCM</string>
+    <string name="karaoke_description">降低立体声曲目中的居中人声</string>
+    <string name="karaoke_vocal_level">人声音量</string>
+    <string name="nuvx_files_canceled">已取消</string>
 </resources>
