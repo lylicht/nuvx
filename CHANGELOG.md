@@ -8,6 +8,16 @@ Every nuvx release, newest first. Downloads and checksums are on each version's 
 
 ## 1.0.6
 
+- **Desktop library improvements (#461):** browse local MP3/M4A files and indexed downloads by folder in Library, refresh or choose a folder, and play a folder without signing in. New downloads are organized by artist; existing downloads stay in place.
+- **Desktop appearance (#461):** Settings → Appearance → Player at bottom moves the main player bar to the bottom and remembers the preference.
+- **Desktop listening statistics (#461):** expand Library listening statistics to see ranked songs, per-song listening time and plays, and top artists by listening time for each available recap period.
+- **Online playback reliability (#461):** bound desktop stream resolution to 30 seconds and surface a timeout instead of leaving the resolution step loading indefinitely. Google and Spotify sign-in alone do not guarantee stream availability; the reported account-specific failure still needs reproduction and verification.
+- **Spotify playlist additions (#448):** use Pathfinder to search for tracks when adding a song to Spotify.
+
+### Community thanks
+
+Thank you to everyone who reported bugs, requested features, tested builds, or opened pull requests for nuvx. In particular, [@golmamad3123](https://github.com/golmamad3123) for [#461](https://github.com/lylicht/nuvx/issues/461) and the follow-up about Spotify, [@insecurepouggal](https://github.com/insecurepouggal), [@Sina-Naghilou](https://github.com/Sina-Naghilou), [@Arshiarp](https://github.com/Arshiarp), [@vantom0101](https://github.com/vantom0101), [@0xsynix](https://github.com/0xsynix), and [@Nolli20](https://github.com/Nolli20). Thanks also to [@lylicht](https://github.com/lylicht) for maintaining nuvx and to Dependabot for dependency maintenance.
+
 - **Desktop live presence:** Windows, Linux and macOS now send an anonymous, installation-scoped heartbeat so running PCs appear in the online client counter; they leave the count on normal exit.
 - **Playback engine cleanup:** remove the unused eXcor extractor, its settings and bundled Android artifact; retain NewPipe fallback and upgrade Android/JVM InnerTubeX to v0.13.1.
 - **Linux account sign-in (#393):** verify Google and Spotify sessions before the browser window closes, so failed logins can be retried without silently claiming success. Thanks [@Sina-Naghilou](https://github.com/Sina-Naghilou) for reporting the Ubuntu issue.

@@ -76,7 +76,7 @@ impl Backend {
         let wake = self.wake.clone();
         let seek = !at.is_zero();
         let shared2 = shared.clone();
-        let report = (report && self.is_logged_in() && reports_plays()).then(|| (self.clone(), video_id.to_owned()));
+        let report = (report && !video_id.starts_with(crate::downloads::LOCAL_PREFIX) && self.is_logged_in() && reports_plays()).then(|| (self.clone(), video_id.to_owned()));
         let open = move || -> anyhow::Result<crate::audio::TrackDecoder> {
             let mut d = stream::decoder(shared.clone(), seek)?;
             if seek {
@@ -165,6 +165,7 @@ impl Backend {
     }
 
     pub(super) async fn song_version(&self, listed: &str, song_of: Option<&Track>, wait: std::time::Duration) -> Option<Track> {
+        if listed.starts_with(crate::downloads::LOCAL_PREFIX) { return None; }
         let video = song_of.filter(|t| t.id == listed && t.music_video)?;
         if crate::downloads::path(listed).is_some() {
             return None;

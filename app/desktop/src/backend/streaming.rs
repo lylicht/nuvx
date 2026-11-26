@@ -3,10 +3,14 @@ use super::*;
 impl Backend {
     pub(super) async fn open_stream(&self, video_id: &str, prefetch: bool, track: Option<&Track>) -> anyhow::Result<Arc<Shared>> {
         let id = video_id.to_owned();
+        if id.starts_with(crate::downloads::LOCAL_PREFIX) {
+            return tokio::task::spawn_blocking(move || crate::downloads::open_local(&id)).await?;
+        }
         if let Some(shared) = tokio::task::spawn_blocking(move || crate::downloads::open(&id)).await? {
             return Ok(shared);
         }
-        let (source, s) = self.resolve(video_id, false, track, true).await?;
+        let (source, s) = tokio::time::timeout(std::time::Duration::from_secs(30), self.resolve(video_id, false, track, true))
+            .await.map_err(|_| anyhow::anyhow!("Online playback timed out; check your connection and try again"))??;
         if let Some(data) = s.data {
             return Ok(Shared::from_bytes_with_format(data, s.duration_ms, s.loudness_db, s.format, s.info));
         }

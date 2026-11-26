@@ -81,6 +81,7 @@ pub struct Recap {
     /// Most played first.
     pub top: Vec<(String, Entry)>,
     pub top_artist: Option<String>,
+    pub top_artists: Vec<(String, u64)>,
 }
 
 impl Recap {
@@ -147,10 +148,12 @@ fn summarize<'a>(label: &'static str, months: impl Iterator<Item = &'a BTreeMap<
     for e in tracks.values() {
         *artists.entry(e.artist.as_str()).or_default() += e.ms;
     }
-    let top_artist = artists.into_iter().filter(|(a, _)| !a.is_empty()).max_by(|a, b| a.1.cmp(&b.1).then(b.0.cmp(a.0))).map(|(a, _)| a.to_owned());
+    let mut top_artists: Vec<(String, u64)> = artists.into_iter().filter(|(a, _)| !a.is_empty()).map(|(a, ms)| (a.to_owned(), ms)).collect();
+    top_artists.sort_by(|a, b| b.1.cmp(&a.1).then(a.0.cmp(&b.0)));
+    let top_artist = top_artists.first().map(|(name, _)| name.clone());
     let mut top: Vec<(String, Entry)> = tracks.into_iter().map(|(id, e)| (id.to_owned(), e)).collect();
     top.sort_by(|a, b| b.1.plays.cmp(&a.1.plays).then(b.1.ms.cmp(&a.1.ms)).then(a.0.cmp(&b.0)));
-    Recap { label, ms: top.iter().map(|t| t.1.ms).sum(), plays: top.iter().map(|t| t.1.plays).sum(), top, top_artist }
+    Recap { label, ms: top.iter().map(|t| t.1.ms).sum(), plays: top.iter().map(|t| t.1.plays).sum(), top, top_artist, top_artists }
 }
 
 fn track_of(id: &str, e: &Entry) -> Track {
@@ -198,6 +201,7 @@ mod tests {
         assert_eq!(r.iter().map(|r| r.label).collect::<Vec<_>>(), ["This month", "Last month", "This year", "Last year", "All time"]);
         assert_eq!((r[0].plays, r[0].ms, r[0].top[0].1.title.as_str()), (4, 800_000, "A"));
         assert_eq!(r[0].top_artist.as_deref(), Some("X"));
+        assert_eq!(r[0].top_artists.first().map(|(name, _)| name.as_str()), Some("X"));
         assert_eq!((r[2].plays, r[2].top[0].1.title.as_str(), r[2].top_artist.as_deref()), (8, "B", Some("Y")));
         assert_eq!(r[3].plays, 1);
         assert_eq!(r[4].plays, 9);

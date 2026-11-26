@@ -221,6 +221,7 @@ impl App {
             theme_id: crate::preset::DEFAULT_ID.to_owned(),
             chrome_applied: None,
             appearance: theme::Appearance::from_key(&dev_var("NUVX_APPEARANCE").map(str::to_owned).or_else(|| get("appearance")).unwrap_or_default()),
+            player_bar_bottom: get("player_bar_bottom").is_some_and(|v| v == "1"),
             anim_bg: get("anim_bg").is_none_or(|v| v == "1"),
             anim_canvas: get("anim_canvas").is_none_or(|v| v == "1"),
             lastfm_now_playing: get("lastfm_now_playing").is_none_or(|v| v == "1"),
