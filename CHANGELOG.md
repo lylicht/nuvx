@@ -21,7 +21,7 @@ Every nuvx release, newest first. Downloads and checksums are on each version's 
 
 ### Community thanks
 
-Thank you to everyone who reported bugs, requested features, tested builds, or opened pull requests for nuvx. In particular, [@golmamad3123](https://github.com/golmamad3123) for [#461](https://github.com/lylicht/nuvx/issues/461) and the follow-up about Spotify, [@insecurepouggal](https://github.com/insecurepouggal), [@Sina-Naghilou](https://github.com/Sina-Naghilou), [@Arshiarp](https://github.com/Arshiarp), [@vantom0101](https://github.com/vantom0101), [@0xsynix](https://github.com/0xsynix), and [@Nolli20](https://github.com/Nolli20). Thanks also to [@lylicht](https://github.com/lylicht) for maintaining nuvx and to Dependabot for dependency maintenance.
+Thank you to everyone who reported bugs, requested features, tested builds, or opened pull requests for nuvx. In particular, [@golmamad3123](https://github.com/golmamad3123) for [#461](https://github.com/lylicht/nuvx/issues/461) and the follow-up about Spotify, [@insecurepouggal](https://github.com/insecurepouggal), [@Sina-Naghilou](https://github.com/Sina-Naghilou), [@Arshiarp](https://github.com/Arshiarp), [@vantom0101](https://github.com/vantom0101), [@0xsynix](https://github.com/0xsynix), and [@Nolli20](https://github.com/Nolli20). Thanks also to Dependabot for dependency maintenance.
 
 ## 1.0.5
 
