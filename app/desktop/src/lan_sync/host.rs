@@ -442,6 +442,13 @@ impl Inner {
                 if self.revoke(target) { (200, json!({ "ok": true })) } else { err(404, "no_such_device", "That device is not paired.") }
             }
             ("GET", "/v1/files") => (200, super::files::list()),
+            ("DELETE", p) if p.starts_with("/v1/files/") => {
+                let incoming = self.data_dir.join("incoming");
+                match super::files::cancel_upload(&incoming, &mut self.uploads, device, &p["/v1/files/".len()..]) {
+                    Ok(()) => (200, json!({ "ok": true })),
+                    Err((status, e)) => err(status, e, "That upload could not be canceled."),
+                }
+            }
             ("POST", p) if p.starts_with("/v1/files/") => {
                 let incoming = self.data_dir.join("incoming");
                 match super::files::receive(&incoming, &mut self.uploads, device, &p["/v1/files/".len()..], &body) {

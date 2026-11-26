@@ -10,14 +10,47 @@ import okhttp3.OkHttpClient
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
+import okhttp3.Call
 import java.io.IOException
 import java.io.OutputStream
+import java.util.concurrent.CancellationException
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * Copies downloaded songs from the paired computer, over the Local Wi-Fi Sync channel only: encrypted, and only
  * between your own approved devices. Blocking calls.
  */
 object NuvxFiles {
+    /** Cancels the in-flight HTTP request as well as preventing later chunks from starting. */
+    class Transfer {
+        private val cancelled = AtomicBoolean(false)
+        @Volatile private var activeCall: Call? = null
+        val isCancelled: Boolean get() = cancelled.get()
+
+        fun cancel() {
+            cancelled.set(true)
+            activeCall?.cancel()
+        }
+
+        internal fun checkCancelled() {
+            if (cancelled.get()) throw CancellationException("Transfer canceled")
+        }
+
+        internal fun <T> execute(call: Call, block: (Call) -> T): T {
+            checkCancelled()
+            activeCall = call
+            try {
+                checkCancelled()
+                return block(call)
+            } catch (e: IOException) {
+                if (cancelled.get()) throw CancellationException("Transfer canceled")
+                throw e
+            } finally {
+                activeCall = null
+            }
+        }
+    }
+
     data class Remote(
         val id: String,
         val title: String,
@@ -31,20 +64,23 @@ object NuvxFiles {
     private const val BASE = "http://lan.invalid/v1/files"
     private val EXTENSIONS = setOf("m4a", "webm", "opus", "mp3", "flac", "ogg")
 
-    fun list(http: OkHttpClient? = NuvxSync.lanHttp()): Result<List<Remote>> = runCatching {
+    fun list(http: OkHttpClient? = NuvxSync.lanHttp(), transfer: Transfer? = null): Result<List<Remote>> = runCatching {
         val client = http ?: throw IOException("Not paired with a computer")
-        client.newCall(Request.Builder().url(BASE).get().build()).execute().use { r ->
+        val call = client.newCall(Request.Builder().url(BASE).get().build())
+        (transfer?.execute(call) { it.execute() } ?: call.execute()).use { r ->
             if (!r.isSuccessful) throw IOException("HTTP ${r.code}")
             parseList(r.body?.string().orEmpty())
         }
     }
 
     /** Writes the whole file into [out], piece by piece; fails if any piece is missing or the size is off. */
-    fun fetch(file: Remote, out: OutputStream, onProgress: (Long) -> Unit = {}, http: OkHttpClient? = NuvxSync.lanHttp()) {
+    fun fetch(file: Remote, out: OutputStream, onProgress: (Long) -> Unit = {}, http: OkHttpClient? = NuvxSync.lanHttp(), transfer: Transfer? = null) {
         val client = http ?: throw IOException("Not paired with a computer")
         var offset = 0L
         while (offset < file.size) {
-            val piece = client.newCall(Request.Builder().url("$BASE/${file.id}?offset=$offset").get().build()).execute().use { r ->
+            transfer?.checkCancelled()
+            val call = client.newCall(Request.Builder().url("$BASE/${file.id}?offset=$offset").get().build())
+            val piece = (transfer?.execute(call) { it.execute() } ?: call.execute()).use { r ->
                 if (!r.isSuccessful) throw IOException("HTTP ${r.code}")
                 Json.parseToJsonElement(r.body?.string().orEmpty()).jsonObject
             }
@@ -56,8 +92,10 @@ object NuvxFiles {
             out.write(bytes)
             offset += bytes.size
             onProgress(offset)
+            transfer?.checkCancelled()
         }
         if (offset != file.size) throw IOException("Size mismatch")
+        transfer?.checkCancelled()
     }
 
     /** Sends one song from [input] to the computer in small pieces; it joins the computer's downloads at the end. */
@@ -70,11 +108,13 @@ object NuvxFiles {
         size: Long,
         input: java.io.InputStream,
         http: OkHttpClient? = NuvxSync.lanHttp(),
+        transfer: Transfer? = null,
     ) {
         val client = http ?: throw IOException("Not paired with a computer")
         val buffer = ByteArray(UPLOAD_CHUNK)
         var offset = 0L
         while (offset < size) {
+            transfer?.checkCancelled()
             var filled = 0
             while (filled < buffer.size) {
                 val n = input.read(buffer, filled, buffer.size - filled)
@@ -93,14 +133,24 @@ object NuvxFiles {
                     durationMs?.let { put("durationMs", kotlinx.serialization.json.JsonPrimitive(it)) }
                 }
             }.toString()
-            val reply = client.newCall(
+            val call = client.newCall(
                 Request.Builder().url("$BASE/$id").post(body.toRequestBody("application/json".toMediaType())).build(),
-            ).execute().use { r ->
+            )
+            val reply = (transfer?.execute(call) { it.execute() } ?: call.execute()).use { r ->
                 if (!r.isSuccessful) throw IOException("HTTP ${r.code}")
                 Json.parseToJsonElement(r.body?.string().orEmpty()).jsonObject
             }
             if (reply["already"] != null) return
             offset += filled
+        }
+        transfer?.checkCancelled()
+    }
+
+    /** Discards an incomplete upload on the paired host after a send is canceled. */
+    fun cancelUpload(id: String, http: OkHttpClient? = NuvxSync.lanHttp()) {
+        val client = http ?: return
+        runCatching {
+            client.newCall(Request.Builder().url("$BASE/$id").delete().build()).execute().close()
         }
     }
 
