@@ -204,6 +204,18 @@ function setDiscord(state: DiscordState): void {
 }
 
 document.getElementById('version')!.textContent = `v${browser.runtime.getManifest().version}`;
+const notice = document.getElementById('discontinuation-notice') as HTMLDialogElement;
+const noticeToggle = document.getElementById('notice-toggle') as HTMLInputElement;
+void browser.storage.local.get('show_discontinuation_notice').then((stored) => {
+  const enabled = stored.show_discontinuation_notice !== false;
+  noticeToggle.checked = enabled;
+  if (enabled) notice.showModal();
+});
+noticeToggle.addEventListener('change', () => {
+  void browser.storage.local.set({ show_discontinuation_notice: noticeToggle.checked });
+  if (!noticeToggle.checked && notice.open) notice.close();
+});
+document.getElementById('notice-continue')!.addEventListener('click', () => notice.close());
 const site = document.getElementById('site') as HTMLAnchorElement;
 site.href = __SITE_ORIGINS__[0] ?? '#';
 

@@ -176,10 +176,12 @@ jobs:
             draft=$(gh release view "$RELEASE_TAG" --json isDraft --jq .isDraft)
             [[ "$draft" == true ]]
           else
-            notes=$(awk -v heading="## $STABLE_VERSION" '$0 == heading || $0 == heading " (Unreleased)" { found=1; next } found && /^## / { exit } found { print }' CHANGELOG.md)
-            [[ -n "$notes" ]]
-            # Every release opens with the nuvx picture; the apps show it in their update notes too.
-            notes="![nuvx: Music in full color](https://raw.githubusercontent.com/lylicht/nuvx/main/docs/assets/nuvx-music-in-full-color.webp)"$'\n\n'"$notes"
+            notes=$(cat <<'NOTES'
+Final nuvx release. This update includes fixes and improvements across Android phone, Android TV, Android Auto, Wear OS, iOS/iPadOS, Windows, macOS, Linux, and browser extensions.
+
+Nuvx is discontinued after this release. VYRAL is maintained by the new project owner and is where to get future updates: https://github.com/syrrnight/VYRAL
+NOTES
+            )
             gh release create "$RELEASE_TAG" \
               --target "$SOURCE_REF" --draft --title "nuvx $STABLE_VERSION" --notes "$notes"
           fi
@@ -523,7 +525,7 @@ jobs:
           mkdir -p dist/nuvx
           cp universal/x86_64/nuvx dist/nuvx/nuvx-x86_64
           cp universal/aarch64/nuvx dist/nuvx/nuvx-aarch64
-          cp linux/install.sh linux/nuvx.desktop README.md LICENSE dist/nuvx/
+          cp linux/install.sh linux/nuvx.desktop dist/nuvx/
           mkdir -p dist/nuvx/licenses
           cp assets/fonts/LICENSE-*.txt dist/nuvx/licenses/
           cp assets/licenses/*.txt dist/nuvx/licenses/

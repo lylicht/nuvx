@@ -5,7 +5,7 @@
   const endpoints = {
     downloads: 'https://nuvx-listen.lylicht.workers.dev/api/stats/downloads',
     live: 'https://nuvx-listen.lylicht.workers.dev/api/stats/live',
-    stars: 'https://api.github.com/repos/lylicht/nuvx',
+    stars: 'https://api.github.com/repos/syrrnight/VYRAL',
   };
   const write = (name, value) => {
     if (!Number.isFinite(Number(value))) return;

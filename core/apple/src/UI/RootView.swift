@@ -71,6 +71,10 @@ struct RootView: View {
     @AppStorage("hide_podcasts_tab") private var hidePodcastsTab = false
 
     @State private var updateDetails: AppReleaseUpdate?
+    @AppStorage("show_discontinuation_notice") private var showDiscontinuationNoticeSetting = true
+    @State private var showDiscontinuationNotice = false
+    @State private var checkedDiscontinuationNotice = false
+    @Environment(\.openURL) private var openURL
 
     var body: some View {
         rootAppearance
@@ -221,6 +225,17 @@ struct RootView: View {
 
     private var rootAlerts: some View {
         rootSecondarySheets
+        .onAppear {
+            guard !checkedDiscontinuationNotice else { return }
+            checkedDiscontinuationNotice = true
+            showDiscontinuationNotice = showDiscontinuationNoticeSetting
+        }
+        .alert("nuvx is being discontinued", isPresented: $showDiscontinuationNotice) {
+            Button("Open VYRAL") { openURL(URL(string: "https://github.com/syrrnight/VYRAL")!) }
+            Button("Continue", role: .cancel) {}
+        } message: {
+            Text("nuvx is no longer supported. No further updates will be released by nuvx or licht. VYRAL is maintained by the new project owner and is where to get future updates.")
+        }
         .alert("Only 5 playlists can be pinned", isPresented: Binding(
             get: { appModel.pinLimitAlert },
             set: { appModel.pinLimitAlert = $0 }
@@ -1428,7 +1443,7 @@ private struct AppPrompts: View {
                         }
                     case .supportStar:
                         Button("Star on GitHub") {
-                            open("https://github.com/lylicht/nuvx")
+                            open("https://github.com/syrrnight/VYRAL")
                         }
                         Button("Not now", role: .cancel) {}
                         Button("Don’t show again", role: .destructive) {

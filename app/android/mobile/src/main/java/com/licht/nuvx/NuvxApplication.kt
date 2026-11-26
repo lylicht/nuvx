@@ -139,7 +139,7 @@ class NuvxApplication : Application(), SingletonImageLoader.Factory, Configurati
                     chain.request().newBuilder()
                         .header(
                             "User-Agent",
-                            "nuvx/${BuildConfig.VERSION_NAME} (Android; +https://github.com/lylicht/nuvx)",
+                            "nuvx/${BuildConfig.VERSION_NAME} (Android; +https://github.com/syrrnight/VYRAL)",
                         )
                         .build(),
                 )

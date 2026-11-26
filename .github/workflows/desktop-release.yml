@@ -149,7 +149,7 @@ jobs:
           mkdir -p dist/nuvx
           cp universal/x86_64/nuvx dist/nuvx/nuvx-x86_64
           cp universal/aarch64/nuvx dist/nuvx/nuvx-aarch64
-          cp linux/install.sh linux/nuvx.desktop README.md LICENSE dist/nuvx/
+          cp linux/install.sh linux/nuvx.desktop dist/nuvx/
           mkdir -p dist/nuvx/licenses
           cp assets/fonts/LICENSE-*.txt dist/nuvx/licenses/
           cp assets/licenses/*.txt dist/nuvx/licenses/

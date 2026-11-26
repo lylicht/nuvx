@@ -27,6 +27,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -53,6 +55,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.media3.session.MediaController
 import com.licht.nuvx.R
 import com.licht.nuvx.data.model.BrowseType
@@ -165,6 +168,9 @@ fun TvApp(
 
     val update by viewModel.updateAvailable.collectAsState()
     var updateDismissed by remember { mutableStateOf(false) }
+    val showNoticeSetting by com.licht.nuvx.data.settings.AppSettings.showDiscontinuationNotice.collectAsState()
+    var showNotice by remember { mutableStateOf(com.licht.nuvx.data.settings.AppSettings.showDiscontinuationNotice.value) }
+    val uriHandler = LocalUriHandler.current
 
     val signedIn by viewModel.signedIn.collectAsState()
     LaunchedEffect(signedIn) {
@@ -236,6 +242,15 @@ fun TvApp(
         val pendingUpdate = update
         if (pendingUpdate != null && !updateDismissed && !isRunningSetup && !showAccountDialog) {
             TvUpdateDialog(update = pendingUpdate, onDismiss = { updateDismissed = true })
+        }
+        if (showNotice && showNoticeSetting && !isRunningSetup) {
+            AlertDialog(
+                onDismissRequest = { showNotice = false },
+                title = { androidx.compose.material3.Text("nuvx is being discontinued") },
+                text = { androidx.compose.material3.Text("nuvx is no longer supported. No further updates will be released by nuvx or licht. VYRAL is maintained by the new project owner and is where to get future updates.") },
+                confirmButton = { TextButton(onClick = { uriHandler.openUri("https://github.com/syrrnight/VYRAL") }) { androidx.compose.material3.Text("Open VYRAL") } },
+                dismissButton = { TextButton(onClick = { showNotice = false }) { androidx.compose.material3.Text("Continue") } },
+            )
         }
     }
 }

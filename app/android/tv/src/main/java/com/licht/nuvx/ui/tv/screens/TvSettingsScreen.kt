@@ -89,6 +89,7 @@ fun TvSettingsScreen(
     val refreshRate by TvRefreshRateController.preference.collectAsState()
     val reduceMotion by AppSettings.reduceAnimation.collectAsState()
     val reduceTransparency by AppSettings.reduceDynamicBlur.collectAsState()
+    val showDiscontinuationNotice by AppSettings.showDiscontinuationNotice.collectAsState()
 
     var blurb by remember { mutableStateOf(DefaultBlurb) }
     var sheet by remember { mutableStateOf<SettingsSheet?>(null) }
@@ -380,6 +381,14 @@ fun TvSettingsScreen(
                     value = BuildConfig.VERSION_NAME,
                     onFocused = { blurb = DefaultBlurb },
                     onClick = { sheet = SettingsSheet.About },
+                )
+            }
+            item {
+                TvListRow(
+                    title = "Show discontinuation notice",
+                    value = onOff(showDiscontinuationNotice),
+                    onFocused = { blurb = "Show the VYRAL handover notice each time nuvx starts." },
+                    onClick = { AppSettings.setShowDiscontinuationNotice(!showDiscontinuationNotice) },
                 )
             }
         }

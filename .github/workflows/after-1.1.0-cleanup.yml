@@ -1,0 +1,89 @@
+name: Archive source after 1.1.0
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  archive:
+    if: github.event.release.tag_name == 'v1.1.0' && github.event.release.draft == false
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Verify all device packages are attached
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh release view v1.1.0 --json assets --jq '.assets[].name' > assets.txt
+          require_asset() { grep -Fxq "$1" assets.txt || { echo "Missing release asset: $1" >&2; exit 1; }; }
+          require_asset nuvx-setup-1.1.0.exe
+          require_asset nuvx-setup-1.1.0-linux-universal.tar.gz
+          require_asset nuvx-setup-1.1.0-macos-universal.dmg
+          require_asset nuvx-v1.1.0.apk
+          require_asset NuvxTV-v1.1.0.apk
+          require_asset NuvxAuto-v1.1.0.apk
+          require_asset NuvxWear-v1.1.0.apk
+          require_asset nuvx-extension-chrome-1.1.0.zip
+          require_asset nuvx-extension-firefox-1.1.0.zip
+          require_asset nuvx-1.1.0-universal.ipa
+          require_asset SHA256SUMS
+          require_asset SHA256-ios.txt
+      - name: Preserve v1.1.0; remove older releases and tags
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh release list --limit 1000 --json tagName --jq '.[].tagName' |
+            while IFS= read -r tag; do
+              [[ "$tag" == v1.1.0 ]] || gh release delete "$tag" --yes
+            done
+          git ls-remote --tags origin | awk '{sub("refs/tags/", "", $2); sub("\\^\\{\\}", "", $2); print $2}' | sort -u |
+            while IFS= read -r tag; do
+              [[ "$tag" == v1.1.0 ]] || gh api --method DELETE "repos/$GH_REPO/git/refs/tags/$tag"
+            done
+      - name: Replace main with an empty tree
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          git clone "https://x-access-token:${GH_TOKEN}@github.com/${GH_REPO}.git" archive
+          cd archive
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch main
+          git rm -r -f --ignore-unmatch .
+          git commit --allow-empty -m "chore: archive source after 1.1.0"
+          git push origin main
+      - name: Remove every branch except main
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh api --paginate "repos/$GH_REPO/branches?per_page=100" --jq '.[].name' |
+            while IFS= read -r branch; do
+              [[ "$branch" == main ]] || gh api --method DELETE "repos/$GH_REPO/git/refs/heads/$branch"
+            done
+      - name: Delete workflow registrations
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh api --paginate "repos/$GH_REPO/actions/workflows?per_page=100" --jq '.workflows[].id' |
+            while IFS= read -r id; do
+              gh api --method DELETE "repos/$GH_REPO/actions/workflows/$id" || true
+            done

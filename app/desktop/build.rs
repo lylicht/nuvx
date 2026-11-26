@@ -1,4 +1,4 @@
-const VERSION_CODE: u64 = 9;
+const VERSION_CODE: u64 = 10;
 
 fn main() {
     println!("cargo:rerun-if-changed=assets/icon/icon.ico");

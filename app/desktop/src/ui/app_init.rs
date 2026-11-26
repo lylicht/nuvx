@@ -224,6 +224,8 @@ impl App {
             player_bar_bottom: get("player_bar_bottom").is_some_and(|v| v == "1"),
             anim_bg: get("anim_bg").is_none_or(|v| v == "1"),
             anim_canvas: get("anim_canvas").is_none_or(|v| v == "1"),
+            show_discontinuation_notice: get("show_discontinuation_notice").is_none_or(|v| v == "1"),
+            discontinuation_notice_open: get("show_discontinuation_notice").is_none_or(|v| v == "1"),
             lastfm_now_playing: get("lastfm_now_playing").is_none_or(|v| v == "1"),
             lastfm_primary_only: get("lastfm_primary_only").is_none_or(|v| v == "1"),
             reduce_motion: get("reduce_motion").is_some_and(|v| v == "1"),

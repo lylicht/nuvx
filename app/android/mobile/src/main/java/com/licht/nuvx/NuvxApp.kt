@@ -400,6 +400,24 @@ internal fun NuvxApp(
     var showReplayShare by rememberSaveable { mutableStateOf(false) }
     var replaySharePage by rememberSaveable { mutableStateOf<ReplayStoryPage?>(null) }
     var showSpotifyCanvasAuth by remember { mutableStateOf(false) }
+    val showDiscontinuationNoticeSetting by AppSettings.showDiscontinuationNotice.collectAsStateWithLifecycle()
+    var showDiscontinuationNotice by rememberSaveable { mutableStateOf(AppSettings.showDiscontinuationNotice.value) }
+
+    if (showDiscontinuationNotice && showDiscontinuationNoticeSetting) {
+        AlertDialog(
+            onDismissRequest = { showDiscontinuationNotice = false },
+            title = { Text("nuvx is being discontinued") },
+            text = { Text("nuvx is no longer supported. No further updates will be released by nuvx or licht. VYRAL is maintained by the new project owner and is where to get future updates.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/syrrnight/VYRAL")))
+                }) { Text("Open VYRAL") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDiscontinuationNotice = false }) { Text("Continue") }
+            },
+        )
+    }
 
     var editingSource by remember { mutableStateOf<SourceConfig?>(null) }
     var choosingSourceQuality by remember { mutableStateOf<SourceConfig?>(null) }

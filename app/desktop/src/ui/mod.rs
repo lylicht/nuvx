@@ -331,6 +331,8 @@ pub struct App {
     player_bar_bottom: bool,
     anim_bg: bool,
     anim_canvas: bool,
+    show_discontinuation_notice: bool,
+    discontinuation_notice_open: bool,
     lastfm_now_playing: bool,
     lastfm_primary_only: bool,
     pub(super) reduce_motion: bool,
