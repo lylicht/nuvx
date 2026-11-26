@@ -327,6 +327,7 @@ pub struct App {
     theme_id: String,
     chrome_applied: Option<String>,
     appearance: theme::Appearance,
+    player_bar_bottom: bool,
     anim_bg: bool,
     anim_canvas: bool,
     lastfm_now_playing: bool,

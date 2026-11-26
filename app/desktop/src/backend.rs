@@ -244,6 +244,8 @@ impl Backend {
     }
 
     async fn lyrics_for(&self, t: &Track) -> LyricsSet {
+        // A local file has no remote video ID; never send its filename to the lyrics providers.
+        if t.id.starts_with(crate::downloads::LOCAL_PREFIX) { return LyricsSet::default(); }
         let artist = t.artist_line();
         let query = lyrics::Query {
             video_id: &t.id,

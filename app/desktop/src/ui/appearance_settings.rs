@@ -33,6 +33,10 @@ pub(super) fn settings_appearance(app: &mut App, ui: &mut Ui) {
             app.appearance = a;
         }
         divider(ui);
+        setting_row(ui, "Player at bottom", Some("Move the main player bar below the library. The expanded player keeps its existing controls."), |ui| {
+            toggle(ui, &mut app.player_bar_bottom, "Player at bottom");
+        });
+        divider(ui);
         setting_row(ui, "Animated background", Some("The album art slowly drifts behind everything."), |ui| {
             toggle(ui, &mut app.anim_bg, "Animated background");
         });

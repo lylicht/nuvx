@@ -172,7 +172,7 @@ impl eframe::App for App {
                 .exact_size(titlebar::HEIGHT)
                 .frame(egui::Frame::new())
                 .show_separator_line(false)
-                .show(ui, |ui| shell::player_bar(self, ui, now));
+                .show(ui, |ui| shell::player_bar(self, ui, now, false));
         }
         if !self.fullscreen && !covered {
             use crate::preset::SidebarStyle;
@@ -194,11 +194,13 @@ impl eframe::App for App {
                 .frame(side_frame)
                 .show_separator_line(false)
                 .show(ui, |ui| shell::sidebar(self, ui));
-            egui::Panel::top("player").resizable(false)
+            let bottom = self.player_bar_bottom;
+            let player = if bottom { egui::Panel::bottom("player") } else { egui::Panel::top("player") };
+            player.resizable(false)
                 .exact_size(titlebar::HEIGHT)
                 .frame(egui::Frame::new())
                 .show_separator_line(false)
-                .show(ui, |ui| shell::player_bar(self, ui, now));
+                .show(ui, |ui| shell::player_bar(self, ui, now, bottom));
             let q = theme::anim_bool(&ctx, "queue-drawer", self.queue_open && !self.np_open, 0.25);
             if q > 0.01 {
                 egui::Panel::right("queue").resizable(false)
@@ -370,6 +372,7 @@ impl eframe::App for App {
         if dev_var("NUVX_FONT").is_none() {
             storage.set_string("font", theme::font_choice());
         }
+        storage.set_string("player_bar_bottom", b(self.player_bar_bottom));
         storage.set_string("anim_bg", b(self.anim_bg));
         storage.set_string("anim_canvas", b(self.anim_canvas));
         storage.set_string("lastfm_now_playing", b(self.lastfm_now_playing));

@@ -1,12 +1,12 @@
 use super::*;
 
-pub fn player_bar(app: &mut App, ui: &mut Ui, now: f64) {
+pub fn player_bar(app: &mut App, ui: &mut Ui, now: f64, bottom: bool) {
     let full = ui.max_rect();
     let ctx = ui.ctx().clone();
     if theme::light() {
         ui.painter().rect_filled(full, 0.0, theme::surface_fill());
     }
-    ui.painter().hline(full.x_range(), full.bottom() - 0.5, egui::Stroke::new(1.0, theme::glass(0.08)));
+    ui.painter().hline(full.x_range(), if bottom { full.top() + 0.5 } else { full.bottom() - 0.5 }, egui::Stroke::new(1.0, theme::glass(0.08)));
     let cy = full.center().y;
 
     let status = app.audio.status.clone();
@@ -30,7 +30,7 @@ pub fn player_bar(app: &mut App, ui: &mut Ui, now: f64) {
 
     const STEP: f32 = 31.5;
     const RSTEP: f32 = 35.0;
-    let right = full.right() - super::super::titlebar::right_gap(&ctx, full, 16.0);
+    let right = full.right() - if bottom { 16.0 } else { super::super::titlebar::right_gap(&ctx, full, 16.0) };
     let avatar = Rect::from_center_size(pos2(right - 16.0, cy), Vec2::splat(32.0));
     let lcd_c = full.center().x - full.width() * 0.011;
     let half_room = (lcd_c - (full.left() + 22.0 + 4.0 * STEP + 54.0)).min(avatar.left() - 12.0 - 2.0 * RSTEP - 54.0 - lcd_c);

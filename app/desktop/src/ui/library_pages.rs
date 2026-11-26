@@ -82,13 +82,58 @@ fn recap_row(app: &mut App, ui: &mut Ui) {
                 }
             }
         });
-    });    ui.add_space(6.0);
+    });
+    egui::CollapsingHeader::new("Listening statistics").show(ui, |ui| {
+        for recap in &recaps {
+            egui::CollapsingHeader::new(recap.label).id_salt(("listening-stats", recap.label)).show(ui, |ui| {
+                ui.label(RichText::new("Top songs").font(theme::semibold(15.0)));
+                for (i, (_, entry)) in recap.top.iter().take(10).enumerate() {
+                    ui.label(format!("{}. {} · {} plays · {}m {}s", i + 1, entry.title, entry.plays, entry.ms / 60_000, entry.ms / 1_000 % 60));
+                }
+                ui.label(RichText::new("Top artists by listening time").font(theme::semibold(15.0)));
+                for (i, (artist, ms)) in recap.top_artists.iter().take(10).enumerate() {
+                    ui.label(format!("{}. {} · {}m {}s", i + 1, artist, ms / 60_000, ms / 1_000 % 60));
+                }
+            });
+        }
+    });
+    ui.add_space(6.0);
+}
+
+fn local_music(app: &mut App, ui: &mut Ui) {
+    ui.add_space(8.0);
+    ui.horizontal(|ui| {
+        ui.label(RichText::new("Local music").font(theme::semibold(18.0)));
+        if pill(ui, "Refresh folders", None, false).clicked() {
+            crate::downloads::refresh_local(Some(ui.ctx().clone()));
+        }
+        if pill(ui, "Choose folder", Some(icon::FOLDER_OPEN), false).clicked() {
+            crate::downloads::pick_folder(ui.ctx());
+        }
+    });
+    let groups = crate::downloads::local_groups();
+    if groups.is_empty() {
+        ui.label(RichText::new("No local songs found. Choose a download/music folder containing MP3 or M4A files, or refresh after adding songs.").color(theme::text_dim()));
+    }
+    for (folder, songs) in groups {
+        egui::CollapsingHeader::new(format!("{folder} · {} songs", songs.len())).id_salt(("local-folder", &folder)).show(ui, |ui| {
+            if pill(ui, "Play folder", Some(icon::PLAY), true).clicked() {
+                app.actions.push(Action::Play(songs.clone(), 0));
+            }
+            for (i, song) in songs.iter().enumerate() {
+                if ui.button(&song.title).clicked() {
+                    app.actions.push(Action::Play(songs.clone(), i));
+                }
+            }
+        });
+    }
 }
 
 pub(super) fn library(app: &mut App, ui: &mut Ui, tab: LibTab, now: f64) {
     page_title(ui, "Library");
     // Recaps come from this computer's own history, so they show signed out too.
     recap_row(app, ui);
+    local_music(app, ui);
     if !app.logged_in && (tab != LibTab::Playlists || (!app.create_playlists_locally && app.local_playlists.is_empty())) {
         ui.add_space(10.0);
         ui.label(RichText::new("Sign in to see your playlists, liked songs and history.").color(theme::text_dim()));
