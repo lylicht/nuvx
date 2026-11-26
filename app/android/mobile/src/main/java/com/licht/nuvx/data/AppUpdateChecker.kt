@@ -64,8 +64,8 @@ object AppUpdateChecker {
     private val _download = MutableStateFlow<DownloadState>(DownloadState.Idle)
     val download = _download.asStateFlow()
 
-    private var workObserver: Observer<WorkInfo>? = null
-    private var workLiveData: LiveData<WorkInfo>? = null
+    private var workObserver: Observer<WorkInfo?>? = null
+    private var workLiveData: LiveData<WorkInfo?>? = null
     private var observedWorkId: String? = null
     private var observedContext: Context? = null
 
@@ -95,7 +95,7 @@ object AppUpdateChecker {
             _download.value = DownloadState.Idle
             return
         }
-        val observer = Observer<WorkInfo> { work ->
+        val observer = Observer<WorkInfo?> { work ->
             if (work == null) {
                 _download.value = DownloadState.Idle
                 return@Observer

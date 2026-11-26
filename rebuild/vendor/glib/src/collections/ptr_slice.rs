@@ -891,13 +891,14 @@ impl<T: TransparentPtrType> PtrSlice<T> {
             return;
         }
 
-        unsafe {
-            while self.len > len {
-                self.len -= 1;
-                let p = self.ptr.as_ptr().add(self.len);
-                ptr::drop_in_place::<T>(p as *mut T);
+        while self.len > len {
+            let last = self.len - 1;
+            let item = &mut self.as_mut_slice()[last] as *mut T;
+            self.len = last;
+            unsafe {
+                ptr::drop_in_place(item);
                 ptr::write(
-                    p,
+                    item.cast::<<T as GlibPtrDefault>::GlibType>(),
                     Ptr::from(ptr::null_mut::<<T as GlibPtrDefault>::GlibType>()),
                 );
             }
