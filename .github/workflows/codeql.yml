@@ -49,7 +49,7 @@ jobs:
         - language: c-cpp
           build-mode: none
         - language: java-kotlin
-          build-mode: autobuild
+          build-mode: manual
         - language: javascript-typescript
           build-mode: none
         - language: python
@@ -88,10 +88,17 @@ jobs:
     - uses: ./.github/actions/setup-rust-android
       if: matrix.language == 'java-kotlin'
     - uses: actions/setup-java@v6
-      if: matrix.language == 'swift'
+      if: matrix.language == 'java-kotlin' || matrix.language == 'swift'
       with:
         distribution: temurin
         java-version: '25'
+    - uses: gradle/actions/setup-gradle@v6
+      if: matrix.language == 'java-kotlin'
+    - uses: android-actions/setup-android@v4.0.4
+      if: matrix.language == 'java-kotlin'
+    - name: Install Android SDK packages for CodeQL
+      if: matrix.language == 'java-kotlin'
+      run: sdkmanager "platforms;android-37.0" "platforms;android-37.1" "build-tools;37.0.0" "ndk;30.0.16248370" "cmake;3.22.1"
     - uses: actions/setup-python@v7
       if: matrix.language == 'swift'
       with:
@@ -152,6 +159,14 @@ jobs:
       working-directory: app/ios
       run: |
         xcodebuild -project mobile/Nuvx.xcodeproj -scheme Nuvx -configuration Release           -sdk iphoneos -destination 'generic/platform=iOS' -derivedDataPath build/codeql           build CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY= -quiet
+    - name: Build Android app variants (traced)
+      if: matrix.language == 'java-kotlin'
+      run: |
+        python3 scripts/cargo_notices.py --manifest core/rust/nuvx-ffi/Cargo.toml \
+          --targets aarch64-linux-android,armv7-linux-androideabi,i686-linux-android,x86_64-linux-android \
+          --output app/android/legal-assets/licenses/cargo-notices.txt
+        bash gradlew :app:assembleProdRelease :tv:assembleProdTvRelease :tv:assembleProdAutoRelease :wearos:assembleProdRelease \
+          -Pnuvx.androidVersionCode=9 -Pnuvx.androidVersionName=1.1.0
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v4
       with:
