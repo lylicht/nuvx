@@ -125,29 +125,30 @@ class LocalFolderState {
     val selecting: Boolean get() = selectedIds.isNotEmpty()
 
     fun select(song: Song) {
-        selectedIds = selectedIds + song.videoId
+        selectedIds = selectedIds + song.selectionKey()
     }
 
     fun toggle(song: Song) {
-        selectedIds = if (song.videoId in selectedIds) selectedIds - song.videoId else selectedIds + song.videoId
+        val key = song.selectionKey()
+        selectedIds = if (key in selectedIds) selectedIds - key else selectedIds + key
     }
 
     fun select(group: LocalGroup) {
         selectedGroups = selectedGroups + group.browseId
-        selectedIds = selectedIds + group.songs.map { it.videoId }
+        selectedIds = selectedIds + group.songs.map { it.selectionKey() }
     }
 
     fun toggle(group: LocalGroup) {
         if (group.browseId in selectedGroups) {
             selectedGroups = selectedGroups - group.browseId
-            selectedIds = selectedIds - group.songs.mapTo(HashSet()) { it.videoId }
+            selectedIds = selectedIds - group.songs.mapTo(HashSet()) { it.selectionKey() }
         } else {
             select(group)
         }
     }
 
     fun selectAll(songs: List<Song>) {
-        selectedIds = songs.mapTo(linkedSetOf()) { it.videoId }
+        selectedIds = songs.mapTo(linkedSetOf()) { it.selectionKey() }
     }
 
     fun clear() {
@@ -155,6 +156,8 @@ class LocalFolderState {
         selectedGroups = emptySet()
     }
 }
+
+private fun Song.selectionKey(): String = localUri?.let { "local:$it" } ?: "video:$videoId"
 
 @Composable
 fun rememberLocalFolderGroups(
@@ -256,7 +259,7 @@ internal fun LazyListScope.localFolderItems(
                 val song = songs[index]
                 SongGridCard(
                     song = song,
-                    selected = song.videoId in state.selectedIds,
+                    selected = song.selectionKey() in state.selectedIds,
                     isCurrent = isCurrentRow(song),
                     isPlaying = isCurrentRow(song) && isPlaying,
                     palette = palette,
@@ -268,7 +271,7 @@ internal fun LazyListScope.localFolderItems(
             itemsIndexed(songs, key = { index, song -> "song-${song.videoId}-$index" }) { index, song ->
                 SongRow(
                     song = song,
-                    selected = song.videoId in state.selectedIds,
+                    selected = song.selectionKey() in state.selectedIds,
                     isCurrent = isCurrentRow(song),
                     isPlaying = isCurrentRow(song) && isPlaying,
                     searchPlayingStyle = true,
@@ -710,8 +713,8 @@ internal fun LocalFolderSelectionBar(
     modifier: Modifier = Modifier,
 ) {
     val count = state.selectedIds.size
-    val allSelected = songs.isNotEmpty() && songs.all { it.videoId in state.selectedIds }
-    fun chosen() = songs.filter { it.videoId in state.selectedIds }.also { state.clear() }
+    val allSelected = songs.isNotEmpty() && songs.all { it.selectionKey() in state.selectedIds }
+    fun chosen() = songs.filter { it.selectionKey() in state.selectedIds }.also { state.clear() }
     val shape = RoundedCornerShape(14.dp)
     val dark = isSystemInDarkTheme()
     Row(

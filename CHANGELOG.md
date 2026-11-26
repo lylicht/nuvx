@@ -6,6 +6,9 @@ Every nuvx release, newest first. Downloads and checksums are on each version's 
 
 ## Unreleased
 
+- **Offline library (#463):** count selected local tracks by their file URI so separate files with the same video ID remain distinct, and keep playback queues in the selected sort order for offline playlists.
+- **Rust security:** truncate vendored GLib pointer slices through safe slice replacement and drop, removing the flagged raw pointer dereference in `PtrSlice::truncate`.
+
 ## 1.0.6
 
 - **Desktop library improvements (#461):** browse local MP3/M4A files and indexed downloads by folder in Library, refresh or choose a folder, and play a folder without signing in. New downloads are organized by artist; existing downloads stay in place.

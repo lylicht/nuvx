@@ -1,5 +1,6 @@
 package com.licht.nuvx.ui
 
+import com.licht.nuvx.data.OfflinePlaylists
 import com.licht.nuvx.data.model.BrowseType
 import com.licht.nuvx.data.model.DetailPage
 import com.licht.nuvx.data.model.DetailLoadId
@@ -31,7 +32,9 @@ internal class MainDetailPlaybackController(
             .filter { it in songKeys }
         val inPageOrder = songKeys == pageKeysInSongOrder
         val useBounded =
-            (page.type == BrowseType.ALBUM || page.type == BrowseType.PLAYLIST) &&
+            (page.type == BrowseType.ALBUM ||
+                (page.type == BrowseType.PLAYLIST &&
+                    !OfflinePlaylists.isOfflinePlaylist(page.browseId))) &&
                 selectedKey?.let(pageSongKeys::contains) == true &&
                 !casting()
         val latestPage = if (useBounded && inPageOrder) {
