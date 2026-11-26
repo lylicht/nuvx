@@ -3851,6 +3851,7 @@ dependencies = [
  "mp4ameta",
  "nuvx-core",
  "p256 0.14.0",
+ "rand 0.10.3",
  "raw-window-handle",
  "reqwest",
  "rfd",
