@@ -10,6 +10,10 @@ const COMMUNITY: &str = "https://canvas.nuvx.lol";
 const INDEX_TTL: Duration = Duration::from_secs(30 * 60);
 const SEARCH: &str = "https://api.spotify.com/v1/search";
 const CANVAZ: &str = "https://spclient.wg.spotify.com/canvaz-cache/v0/canvases";
+const PATHFINDER: &str = "https://api-partner.spotify.com/pathfinder/v2/query";
+const KNOWN_CANVAS_HASH: &str = "575138ab27cd5c1b3e54da54d0a7cc8d85485402de26340c2145f0f6bb5e7a9f";
+const HASH_TTL: Duration = Duration::from_secs(12 * 60 * 60);
+const HASH_MISS_TTL: Duration = Duration::from_secs(30 * 60);
 
 /// The key the canvas upload Worker files a song under (`core/worker/src/canvas.ts` `canvasKey`).
 pub fn community_key(title: &str, artist: &str) -> String {
@@ -71,6 +75,76 @@ fn first_match(search: &Value, title: &str, artist: &str) -> Option<String> {
     })
 }
 
+static CANVAS_HASH: Mutex<Option<(Instant, Option<String>)>> = Mutex::new(None);
+
+fn declared_canvas_hash(js: &str) -> Option<String> {
+    for (index, _) in js.match_indices("canvas") {
+        let mut rest = &js[index + "canvas".len()..];
+        rest = rest.trim_start();
+        let Some(rest) = rest.strip_prefix(',') else { continue };
+        let rest = rest.trim_start();
+        let Some(rest) = rest.strip_prefix('"') else { continue };
+        let Some(rest) = rest.strip_prefix("query\"") else { continue };
+        let rest = rest.trim_start();
+        let Some(rest) = rest.strip_prefix(',') else { continue };
+        let rest = rest.trim_start();
+        let Some(rest) = rest.strip_prefix('"') else { continue };
+        let Some((hash, _)) = rest.split_once('"') else { continue };
+        if hash.len() == 64 && hash.bytes().all(|b| b.is_ascii_hexdigit()) {
+            return Some(hash.to_owned());
+        }
+    }
+    None
+}
+
+async fn canvas_hash(http: &reqwest::Client, refresh: bool) -> String {
+    if !refresh && let Some((at, hash)) = CANVAS_HASH.lock().ok().and_then(|g| g.as_ref().map(|(at, h)| (*at, h.clone())))
+        && at.elapsed() < if hash.is_some() { HASH_TTL } else { HASH_MISS_TTL }
+    {
+        return hash.unwrap_or_else(|| KNOWN_CANVAS_HASH.to_owned());
+    }
+    let found = async {
+        let html = http.get("https://open.spotify.com/").timeout(Duration::from_secs(10)).send().await.ok()?.error_for_status().ok()?.text().await.ok()?;
+        let scripts = html.split("<script").skip(1).filter_map(|tag| {
+            let tag = tag.split('>').next()?;
+            let start = tag.find("src=\"")? + 5;
+            let url = tag[start..].split('\"').next()?;
+            (url.starts_with("https://open.spotifycdn.com/cdn/build/web-player/") && url.ends_with(".js")).then(|| url.to_owned())
+        }).take(8).collect::<Vec<_>>();
+        for script in scripts {
+            let js = http.get(script).timeout(Duration::from_secs(10)).send().await.ok()?.error_for_status().ok()?.text().await.ok()?;
+            if let Some(hash) = declared_canvas_hash(&js) { return Some(hash); }
+        }
+        None
+    }.await;
+    if let Ok(mut g) = CANVAS_HASH.lock() { *g = Some((Instant::now(), found.clone())); }
+    found.unwrap_or_else(|| KNOWN_CANVAS_HASH.to_owned())
+}
+
+async fn pathfinder_url(http: &reqwest::Client, token: &str, client_token: &str, uri: &str) -> Option<String> {
+    for refresh in [false, true] {
+        let hash = canvas_hash(http, refresh).await;
+        let body = serde_json::json!({
+            "operationName": "canvas",
+            "variables": { "trackUri": uri },
+            "extensions": { "persistedQuery": { "version": 1, "sha256Hash": hash } }
+        });
+        let response = http.post(PATHFINDER).bearer_auth(token).header("Client-Token", client_token)
+            .header("App-platform", "WebPlayer").header("Accept", "application/json")
+            .header("Accept-Language", "en").json(&body).timeout(Duration::from_secs(10)).send().await.ok()?;
+        let body: Value = response.error_for_status().ok()?.json().await.ok()?;
+        if body.pointer("/errors").and_then(Value::as_array).is_some_and(|errors|
+            errors.iter().any(|e| e.get("message").and_then(Value::as_str).is_some_and(|m| m.contains("PersistedQueryNotFound"))))
+        {
+            continue;
+        }
+        let url = body.pointer("/data/trackUnion/canvas/url")?.as_str()?;
+        let parsed = url::Url::parse(url).ok()?;
+        return (parsed.scheme() == "https" && parsed.path().to_ascii_lowercase().ends_with(".mp4")).then(|| url.to_owned());
+    }
+    None
+}
+
 /// `EntityCanvazRequest { entities: [ { entity_uri } ] }` as protobuf bytes.
 pub fn canvaz_request(track_uri: &str) -> Vec<u8> {
     fn field(tag: u8, bytes: &[u8]) -> Vec<u8> {
@@ -113,6 +187,12 @@ pub async fn spotify(http: &reqwest::Client, token: &str, title: &str, artist: &
     let search: Value = http.get(SEARCH).query(&[("q", q.as_str()), ("type", "track"), ("limit", "10")])
         .bearer_auth(token).timeout(Duration::from_secs(10)).send().await.ok()?.error_for_status().ok()?.json().await.ok()?;
     let uri = first_match(&search, title, artist)?;
+    if let Some(cookie) = crate::transfer::saved_cookie(&crate::data_dir())
+        && let Ok((web_token, client_token)) = crate::transfer::spotify::canvas_credentials(http, &cookie).await
+        && let Some(url) = pathfinder_url(http, &web_token, &client_token, &uri).await
+    {
+        return Some(url);
+    }
     let reply = http.post(CANVAZ).bearer_auth(token).header("Content-Type", "application/protobuf").header("Accept", "application/protobuf")
         .body(canvaz_request(&uri)).timeout(Duration::from_secs(10)).send().await.ok()?.error_for_status().ok()?.bytes().await.ok()?;
     canvaz_url(&reply)
