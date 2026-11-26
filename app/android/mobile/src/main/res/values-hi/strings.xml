@@ -1585,4 +1585,14 @@
     <string name="hide_trending_subtitle">होम से ट्रेंडिंग गाने और कम्युनिटी सेक्शन हटाएँ</string>
     <string name="preserve_album_transitions">एल्बम को बिना रुकावट चलाएँ</string>
     <string name="preserve_album_transitions_subtitle">एक ही एल्बम के लगातार ट्रैकों के बीच AutoMix फ़ेड से बचें।</string>
+
+    <string name="keep_screen_on_in_player">स्क्रीन चालू रखें</string>
+    <string name="keep_screen_on_in_player_subtitle">अभी चल रहा है खुला होने पर स्क्रीन चालू रखें</string>
+    <string name="karaoke_title">कराओके</string>
+    <string name="karaoke_unavailable_bitperfect">बिट-परफेक्ट ऑडियो आउटपुट के दौरान उपलब्ध नहीं</string>
+    <string name="karaoke_available_stereo">स्टीरियो PCM प्लेबैक के लिए उपलब्ध</string>
+    <string name="karaoke_active_description">केंद्रित स्वर कम करना · स्टीरियो PCM</string>
+    <string name="karaoke_description">स्टीरियो ट्रैक में केंद्रित स्वरों को कम करें</string>
+    <string name="karaoke_vocal_level">स्वर स्तर</string>
+    <string name="nuvx_files_canceled">रद्द किया गया</string>
 </resources>

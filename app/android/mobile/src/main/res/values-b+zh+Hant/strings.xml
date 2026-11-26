@@ -1545,4 +1545,31 @@
     <string name="hide_trending_subtitle">從首頁移除熱門歌曲和社群內容</string>
     <string name="preserve_album_transitions">專輯不間斷播放</string>
     <string name="preserve_album_transitions_subtitle">避免同一專輯連續曲目之間出現 AutoMix 淡入淡出。</string>
+
+    <string name="automix_overview">Automix 概覽</string>
+    <string name="diwali_title">nuvx 祝你排燈節快樂</string>
+    <string name="diwali_subtitle">願這個光明節讓你的家充滿歡樂，讓你的每一天充滿音樂。</string>
+    <string name="diwali_cta">一起慶祝</string>
+    <string name="discord_account_checking">Checking Discord account…</string>
+    <string name="discord_account_lookup_failed">Couldn\'t verify this Discord account. Check your connection or reconnect.</string>
+    <string name="delete_download_failed">Couldn’t delete the download. Try again.</string>
+    <string name="spotify_import_partial">Imported \'%1$s\', but %2$d songs could not be added.</string>
+    <string name="discord_invite_title">Join Discord Server</string>
+    <string name="community_invite_title">Join the nuvx community</string>
+    <string name="community_invite_discord">Join Discord</string>
+    <string name="telegram_invite_join">Join Telegram</string>
+    <string name="discord_invite_body">Meet other Nuvx listeners, share feedback, and get app updates.</string>
+    <string name="discord_invite_join">Join Server</string>
+    <string name="discord_invite_not_now">Not Now</string>
+    <string name="remember_shuffle_across_queues">在不同佇列間記住隨機播放</string>
+    <string name="remember_shuffle_across_queues_subtitle">開始播放其他專輯或播放清單時保持隨機播放</string>
+    <string name="keep_screen_on_in_player">保持螢幕開啟</string>
+    <string name="keep_screen_on_in_player_subtitle">開啟正在播放畫面時保持螢幕喚醒</string>
+    <string name="karaoke_title">卡拉 OK</string>
+    <string name="karaoke_unavailable_bitperfect">位元完美音訊輸出期間無法使用</string>
+    <string name="karaoke_available_stereo">適用於立體聲 PCM 播放</string>
+    <string name="karaoke_active_description">降低中央人聲 · 立體聲 PCM</string>
+    <string name="karaoke_description">降低立體聲曲目中的中央人聲</string>
+    <string name="karaoke_vocal_level">人聲音量</string>
+    <string name="nuvx_files_canceled">已取消</string>
 </resources>

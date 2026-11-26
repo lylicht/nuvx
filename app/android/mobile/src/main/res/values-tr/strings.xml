@@ -1542,4 +1542,14 @@
     <string name="hide_trending_subtitle">Trend şarkıları ve topluluk bölümlerini Ana Sayfa’dan kaldırır</string>
     <string name="preserve_album_transitions">Albümleri kesintisiz çal</string>
     <string name="preserve_album_transitions_subtitle">Aynı albümdeki ardışık parçalar arasında AutoMix geçişlerini önler.</string>
+
+    <string name="keep_screen_on_in_player">Ekranı açık tut</string>
+    <string name="keep_screen_on_in_player_subtitle">Şimdi Çalınıyor açıkken ekranı açık tut</string>
+    <string name="karaoke_title">Karaoke</string>
+    <string name="karaoke_unavailable_bitperfect">Bit-perfect ses çıkışı sırasında kullanılamaz</string>
+    <string name="karaoke_available_stereo">Stereo PCM oynatımında kullanılabilir</string>
+    <string name="karaoke_active_description">Merkez vokal azaltma · stereo PCM</string>
+    <string name="karaoke_description">Stereo parçalardaki merkez vokali azalt</string>
+    <string name="karaoke_vocal_level">Vokal seviyesi</string>
+    <string name="nuvx_files_canceled">İptal edildi</string>
 </resources>

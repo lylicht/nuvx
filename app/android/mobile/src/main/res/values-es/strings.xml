@@ -1557,4 +1557,14 @@
     <string name="hide_trending_subtitle">Quita de Inicio las canciones y secciones comunitarias de tendencias</string>
     <string name="preserve_album_transitions">Mantener los álbumes sin pausas</string>
     <string name="preserve_album_transitions_subtitle">Evita fundidos de AutoMix entre pistas consecutivas del mismo álbum.</string>
+
+    <string name="keep_screen_on_in_player">Mantener la pantalla encendida</string>
+    <string name="keep_screen_on_in_player_subtitle">Mantener activa la pantalla mientras se muestra Reproduciendo</string>
+    <string name="karaoke_title">Karaoke</string>
+    <string name="karaoke_unavailable_bitperfect">No disponible durante la salida de audio bit-perfect</string>
+    <string name="karaoke_available_stereo">Disponible para reproducción PCM estéreo</string>
+    <string name="karaoke_active_description">Reducción de voces centradas · PCM estéreo</string>
+    <string name="karaoke_description">Reduce las voces centradas en canciones estéreo</string>
+    <string name="karaoke_vocal_level">Nivel de voz</string>
+    <string name="nuvx_files_canceled">Cancelado</string>
 </resources>

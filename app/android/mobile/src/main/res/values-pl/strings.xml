@@ -1623,4 +1623,14 @@
     <string name="hide_trending_subtitle">Usuwa z ekranu głównego popularne utwory i sekcje społeczności</string>
     <string name="preserve_album_transitions">Odtwarzaj albumy bez przerw</string>
     <string name="preserve_album_transitions_subtitle">Pomija przenikanie AutoMix między kolejnymi utworami z tego samego albumu.</string>
+
+    <string name="keep_screen_on_in_player">Nie wyłączaj ekranu</string>
+    <string name="keep_screen_on_in_player_subtitle">Ekran pozostaje aktywny, gdy otwarty jest widok Teraz odtwarzane</string>
+    <string name="karaoke_title">Karaoke</string>
+    <string name="karaoke_unavailable_bitperfect">Niedostępne przy wyjściu bit-perfect</string>
+    <string name="karaoke_available_stereo">Dostępne dla odtwarzania stereo PCM</string>
+    <string name="karaoke_active_description">Redukcja wokalu centralnego · stereo PCM</string>
+    <string name="karaoke_description">Redukuj wokal centralny w utworach stereo</string>
+    <string name="karaoke_vocal_level">Poziom wokalu</string>
+    <string name="nuvx_files_canceled">Anulowano</string>
 </resources>

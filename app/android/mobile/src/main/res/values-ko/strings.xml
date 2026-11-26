@@ -1423,4 +1423,14 @@
     <string name="hide_trending_subtitle">홈에서 인기 급상승 노래와 커뮤니티 섹션을 숨깁니다</string>
     <string name="preserve_album_transitions">앨범을 끊김 없이 재생</string>
     <string name="preserve_album_transitions_subtitle">같은 앨범의 연속된 트랙 사이에서 AutoMix 페이드를 방지합니다.</string>
+
+    <string name="keep_screen_on_in_player">화면 켜짐 유지</string>
+    <string name="keep_screen_on_in_player_subtitle">지금 재생 중 화면이 열려 있는 동안 화면을 켜 둡니다</string>
+    <string name="karaoke_title">노래방</string>
+    <string name="karaoke_unavailable_bitperfect">비트 퍼펙트 오디오 출력 중에는 사용할 수 없습니다</string>
+    <string name="karaoke_available_stereo">스테레오 PCM 재생에서 사용할 수 있습니다</string>
+    <string name="karaoke_active_description">중앙 보컬 감소 · 스테레오 PCM</string>
+    <string name="karaoke_description">스테레오 트랙의 중앙 보컬을 줄입니다</string>
+    <string name="karaoke_vocal_level">보컬 레벨</string>
+    <string name="nuvx_files_canceled">취소됨</string>
 </resources>

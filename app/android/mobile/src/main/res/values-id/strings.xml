@@ -1562,4 +1562,14 @@
     <string name="hide_trending_subtitle">Hapus lagu dan bagian komunitas yang sedang tren dari Beranda</string>
     <string name="preserve_album_transitions">Putar album tanpa jeda</string>
     <string name="preserve_album_transitions_subtitle">Hindari transisi AutoMix di antara lagu berurutan dari album yang sama.</string>
+
+    <string name="keep_screen_on_in_player">Layar tetap menyala</string>
+    <string name="keep_screen_on_in_player_subtitle">Jaga layar tetap aktif saat Sedang Diputar terbuka</string>
+    <string name="karaoke_title">Karaoke</string>
+    <string name="karaoke_unavailable_bitperfect">Tidak tersedia saat keluaran audio bit-perfect aktif</string>
+    <string name="karaoke_available_stereo">Tersedia untuk pemutaran PCM stereo</string>
+    <string name="karaoke_active_description">Pengurangan vokal tengah · PCM stereo</string>
+    <string name="karaoke_description">Kurangi vokal tengah pada trek stereo</string>
+    <string name="karaoke_vocal_level">Level vokal</string>
+    <string name="nuvx_files_canceled">Dibatalkan</string>
 </resources>

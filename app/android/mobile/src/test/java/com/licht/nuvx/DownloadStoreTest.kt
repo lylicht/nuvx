@@ -4,6 +4,7 @@ import com.licht.nuvx.data.model.Song
 import com.licht.nuvx.data.settings.AppSettings
 import com.licht.nuvx.data.settings.AudioQuality
 import com.licht.nuvx.data.settings.DownloadQuality
+import com.licht.nuvx.data.settings.NetworkTransport
 import com.licht.nuvx.data.sources.SourceResolver
 import com.licht.nuvx.data.sources.StreamRequest
 import com.licht.nuvx.download.DownloadStore
@@ -143,26 +144,26 @@ class DownloadStoreTest {
     }
 
     @Test
-    fun `wifi-only refuses metered connections and nothing else`() {
+    fun `wifi-only permits wifi and offline connections`() {
         val wifiOnly = AppSettings.wifiOnlyDownloads.value
-        val metered = AppSettings.meteredConnection.value
+        val networkTransport = AppSettings.networkTransport.value
         try {
             AppSettings.wifiOnlyDownloads.value = true
-            AppSettings.meteredConnection.value = true
+            AppSettings.networkTransport.value = NetworkTransport.CELLULAR
             assertFalse(AppSettings.downloadsAllowedNow)
 
-            AppSettings.meteredConnection.value = false
+            AppSettings.networkTransport.value = NetworkTransport.WIFI
             assertTrue(AppSettings.downloadsAllowedNow)
 
-            AppSettings.meteredConnection.value = null
+            AppSettings.networkTransport.value = NetworkTransport.OFFLINE
             assertTrue(AppSettings.downloadsAllowedNow)
 
+            AppSettings.networkTransport.value = NetworkTransport.CELLULAR
             AppSettings.wifiOnlyDownloads.value = false
-            AppSettings.meteredConnection.value = true
             assertTrue(AppSettings.downloadsAllowedNow)
         } finally {
             AppSettings.wifiOnlyDownloads.value = wifiOnly
-            AppSettings.meteredConnection.value = metered
+            AppSettings.networkTransport.value = networkTransport
         }
     }
 
