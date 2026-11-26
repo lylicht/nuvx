@@ -50,7 +50,7 @@ jobs:
             while IFS= read -r tag; do
               [[ "$tag" == v1.1.0 ]] || gh release delete "$tag" --yes
             done
-          git ls-remote --tags origin | awk '{sub("refs/tags/", "", $2); sub("\\^\\{\\}", "", $2); print $2}' | sort -u |
+          git ls-remote --refs --tags origin | awk '{sub("refs/tags/", "", $2); print $2}' | sort -u |
             while IFS= read -r tag; do
               [[ "$tag" == v1.1.0 ]] || gh api --method DELETE "repos/$GH_REPO/git/refs/tags/$tag"
             done
