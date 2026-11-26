@@ -176,12 +176,7 @@ jobs:
             draft=$(gh release view "$RELEASE_TAG" --json isDraft --jq .isDraft)
             [[ "$draft" == true ]]
           else
-            notes=$(cat <<'NOTES'
-Final nuvx release. This update includes fixes and improvements across Android phone, Android TV, Android Auto, Wear OS, iOS/iPadOS, Windows, macOS, Linux, and browser extensions.
-
-Nuvx is discontinued after this release. VYRAL is maintained by the new project owner and is where to get future updates: https://github.com/syrrnight/VYRAL
-NOTES
-            )
+            notes="Final nuvx release with updates across Android phone, Android TV, Android Auto, Wear OS, iOS/iPadOS, Windows, macOS, Linux, and browser extensions. Nuvx is discontinued after this release. Future updates are available from VYRAL: https://github.com/syrrnight/VYRAL"
             gh release create "$RELEASE_TAG" \
               --target "$SOURCE_REF" --draft --title "nuvx $STABLE_VERSION" --notes "$notes"
           fi

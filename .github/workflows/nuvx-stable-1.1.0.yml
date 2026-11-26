@@ -53,6 +53,7 @@ jobs:
           [[ -z "$releases" ]] || { echo "Release $tag already exists; refusing to replace it" >&2; exit 1; }
           current=$(gh api "repos/$GH_REPO/git/ref/tags/$tag" --jq '.object.sha' 2>/dev/null || true)
           [[ -z "$current" ]] || { echo "Tag $tag already exists; refusing to move it" >&2; exit 1; }
+          gh api --method POST "repos/$GH_REPO/git/refs" -f "ref=refs/tags/$tag" -f "sha=$GITHUB_SHA" >/dev/null
           gh release create "$tag" --target "$GITHUB_SHA" --draft --title "nuvx 1.1.0" --notes "Final nuvx release. VYRAL is maintained by the new project owner and is where to get future updates: https://github.com/syrrnight/VYRAL"
           gh workflow run android-nightly.yml --ref "$tag"
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
