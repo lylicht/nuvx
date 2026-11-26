@@ -176,8 +176,6 @@ Found a bug or have an idea? [Open an issue](https://github.com/lylicht/nuvx/iss
 
 nuvx is free. If it has earned a spot in your rotation, you can support its development here:
 
-<a href="https://ko-fi.com/lylicht" target="_blank" rel="noopener noreferrer"><img src="https://cdn.jsdelivr.net/gh/JMcrafter26/badges@main/src/assets/donate/kofi-singular-alt/cozy.svg" alt="Support nuvx on Ko-fi" height="55"/></a>
-<a href="https://www.patreon.com/lylicht" target="_blank" rel="noopener noreferrer"><img src="https://img.shields.io/badge/Patreon-support-f96854?style=for-the-badge&logo=patreon&logoColor=white&labelColor=0d1117" alt="Support nuvx on Patreon" height="40"/></a>
 
 </div>
 
