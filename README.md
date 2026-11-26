@@ -162,6 +162,8 @@ Found a bug or have an idea? [Open an issue](https://github.com/lylicht/nuvx/iss
 
 ### Thanks to all contributors ❤
 
+Project owner and maintainer: [@syrrnight](https://github.com/syrrnight).
+
 <a href="https://github.com/lylicht/nuvx/graphs/contributors">
   <img src="https://contrib.rocks/image?repo=lylicht/nuvx" alt="nuvx contributors" />
 </a>
