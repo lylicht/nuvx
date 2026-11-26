@@ -21,7 +21,7 @@ egui = { version = "0.37.0", features = ["monochrome_emoji_fonts"] }
 futures-util = { version = "0.3.34", default-features = false, features = ["std"] }
 egui_extras = { version = "0.37.0", default-features = false, features = ["image"] }
 env_logger = { version = "0.11.11", default-features = false, features = ["humantime"] }
-tiny-skia = "0.11"
+tiny-skia = "0.12"
 image = { version = "0.25.10", default-features = false, features = ["jpeg", "png", "webp"] }
 localzone = "0.3.1"
 log = "0.4.34"
