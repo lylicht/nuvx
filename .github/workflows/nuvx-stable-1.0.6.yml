@@ -51,13 +51,32 @@ jobs:
             echo "main advanced; refusing to tag an outdated commit" >&2
             exit 1
           fi
-          # Fail safely rather than moving an existing release tag.
-          gh api --method POST "repos/$GITHUB_REPOSITORY/git/refs" \
-            -f ref=refs/tags/v1.0.6 -f "sha=$GITHUB_SHA" > /dev/null
-          if gh release view v1.0.6 >/dev/null 2>&1; then
-            echo "Release v1.0.6 already exists; not dispatching a duplicate"
-            exit 0
+          # Only repair the known failed, unpublished 1.0.6 tag. Never move a
+          # published release, overwrite a draft, or force a non-fast-forward.
+          tag=v1.0.6
+          releases=$(gh api --paginate "repos/$GITHUB_REPOSITORY/releases?per_page=100" \
+            --jq '.[] | select(.tag_name == "v1.0.6") | .id')
+          if [[ -n "$releases" ]]; then
+            echo "A release or draft already exists for $tag; refusing to change its tag" >&2
+            exit 1
           fi
+          active=$(gh api --paginate "repos/$GITHUB_REPOSITORY/actions/runs?branch=$tag&per_page=100" \
+            --jq '.workflow_runs[] | select(.status != "completed") | .id')
+          if [[ -n "$active" ]]; then
+            echo "Release workflows are already active for $tag; refusing duplicate dispatch" >&2
+            exit 1
+          fi
+          current=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$tag" --jq '.object.sha')
+          if [[ "$current" != "$GITHUB_SHA" ]]; then
+            [[ "$current" == be7b40d015acdd6eadf294fae777e014d4e484ab ]] || {
+              echo "Unexpected existing $tag commit: $current" >&2
+              exit 1
+            }
+            gh api --method PATCH "repos/$GITHUB_REPOSITORY/git/refs/tags/$tag" \
+              -f "sha=$GITHUB_SHA" -F force=false > /dev/null
+          fi
+          actual=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$tag" --jq '.object.sha')
+          [[ "$actual" == "$GITHUB_SHA" ]]
           # Tag creation using GITHUB_TOKEN does not trigger on: push workflows.
           # Explicit workflow_dispatch on the tag invokes the stable path instead.
           gh workflow run android-nightly.yml --ref v1.0.6
