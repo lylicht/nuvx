@@ -8,6 +8,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.Text
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -41,20 +43,30 @@ internal fun ConnectSettingsGroup(search: SettingsSearch) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var copying by remember { mutableStateOf(false) }
+    var copyTransfer by remember { mutableStateOf<com.licht.nuvx.data.sync.NuvxFiles.Transfer?>(null) }
     var copyStatus by remember { mutableStateOf<String?>(null) }
     val copyingText = stringResource(R.string.nuvx_files_copying)
     val doneText = { n: Int -> context.resources.getQuantityString(R.plurals.nuvx_files_done, n, n) }
     val nothingText = stringResource(R.string.nuvx_files_nothing)
     val unreachableText = stringResource(R.string.nuvx_sync_lan_unreachable)
+    val canceledText = stringResource(R.string.nuvx_files_canceled)
+    val cancelText = stringResource(R.string.cancel)
     var sending by remember { mutableStateOf(false) }
+    var sendTransfer by remember { mutableStateOf<com.licht.nuvx.data.sync.NuvxFiles.Transfer?>(null) }
     var sendStatus by remember { mutableStateOf<String?>(null) }
     val sendingText = stringResource(R.string.nuvx_files_sending)
     val sentText = { n: Int -> context.resources.getQuantityString(R.plurals.nuvx_files_sent, n, n) }
     fun sendAll() = scope.launch {
         sending = true
         sendStatus = null
+        val transfer = com.licht.nuvx.data.sync.NuvxFiles.Transfer().also { sendTransfer = it }
         try {
-            val there = withContext(Dispatchers.IO) { com.licht.nuvx.data.sync.NuvxFiles.list() }.getOrElse {
+            val listed = withContext(Dispatchers.IO) { com.licht.nuvx.data.sync.NuvxFiles.list(transfer = transfer) }
+            if (transfer.isCancelled) {
+                sendStatus = canceledText
+                return@launch
+            }
+            val there = listed.getOrElse {
                 sendStatus = unreachableText
                 return@launch
             }.map { it.id }.toSet()
@@ -67,7 +79,11 @@ internal fun ConnectSettingsGroup(search: SettingsSearch) {
             for ((i, id) in ids.withIndex()) {
                 sendStatus = sendingText.format(i + 1, ids.size)
                 val result = withContext(Dispatchers.IO) {
-                    runCatching { com.licht.nuvx.download.Downloads.sendToComputer(context, id) }
+                    runCatching { com.licht.nuvx.download.Downloads.sendToComputer(context, id, transfer) }
+                }
+                if (transfer.isCancelled) {
+                    sendStatus = if (sent > 0) sentText(sent) + " · " + canceledText else canceledText
+                    return@launch
                 }
                 if (result.isFailure) {
                     val why = result.exceptionOrNull()?.message ?: unreachableText
@@ -78,14 +94,21 @@ internal fun ConnectSettingsGroup(search: SettingsSearch) {
             }
             sendStatus = sentText(sent)
         } finally {
+            sendTransfer = null
             sending = false
         }
     }
     fun copyAll() = scope.launch {
         copying = true
         copyStatus = null
+        val transfer = com.licht.nuvx.data.sync.NuvxFiles.Transfer().also { copyTransfer = it }
         try {
-            val files = withContext(Dispatchers.IO) { com.licht.nuvx.data.sync.NuvxFiles.list() }.getOrElse {
+            val listed = withContext(Dispatchers.IO) { com.licht.nuvx.data.sync.NuvxFiles.list(transfer = transfer) }
+            if (transfer.isCancelled) {
+                copyStatus = canceledText
+                return@launch
+            }
+            val files = listed.getOrElse {
                 copyStatus = unreachableText
                 return@launch
             }.filterNot { com.licht.nuvx.download.Downloads.saved.value.containsKey(it.id) }
@@ -97,7 +120,11 @@ internal fun ConnectSettingsGroup(search: SettingsSearch) {
             for ((i, file) in files.withIndex()) {
                 copyStatus = copyingText.format(i + 1, files.size)
                 val result = withContext(Dispatchers.IO) {
-                    runCatching { com.licht.nuvx.download.Downloads.copyFromComputer(context, file) }
+                    runCatching { com.licht.nuvx.download.Downloads.copyFromComputer(context, file, transfer = transfer) }
+                }
+                if (transfer.isCancelled) {
+                    copyStatus = if (copied > 0) doneText(copied) + " · " + canceledText else canceledText
+                    return@launch
                 }
                 if (result.isFailure) {
                     // Storage full or over the limit: stop instead of failing every remaining song the same way.
@@ -109,6 +136,7 @@ internal fun ConnectSettingsGroup(search: SettingsSearch) {
             }
             copyStatus = doneText(copied)
         } finally {
+            copyTransfer = null
             copying = false
         }
     }
@@ -146,6 +174,7 @@ internal fun ConnectSettingsGroup(search: SettingsSearch) {
                     subtitle = copyStatus ?: stringResource(R.string.nuvx_files_copy_subtitle),
                     enabled = !copying,
                     onClick = { copyAll() },
+                    trailing = if (copying) ({ TextButton(onClick = { copyTransfer?.cancel() }) { Text(cancelText) } }) else null,
                 )
             }
             val sendTitle = stringResource(R.string.nuvx_files_send_title, name)
@@ -156,6 +185,7 @@ internal fun ConnectSettingsGroup(search: SettingsSearch) {
                     subtitle = sendStatus ?: stringResource(R.string.nuvx_files_send_subtitle),
                     enabled = !sending,
                     onClick = { sendAll() },
+                    trailing = if (sending) ({ TextButton(onClick = { sendTransfer?.cancel() }) { Text(cancelText) } }) else null,
                 )
             }
         }

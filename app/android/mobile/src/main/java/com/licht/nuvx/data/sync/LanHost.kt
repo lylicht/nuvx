@@ -487,6 +487,16 @@ object LanHost {
                 else err(404, "no_such_device", "That device is not paired.")
             }
             method == "GET" && path == "/v1/files" -> 200 to buildJsonObject { put("files", files?.list() ?: JsonArray(emptyList())) }
+            method == "DELETE" && path.startsWith("/v1/files/") -> {
+                val id = path.removePrefix("/v1/files/")
+                if (!VIDEO_ID.matches(id)) err(404, "not_found", "That upload could not be canceled.")
+                else {
+                    val partial = uploads.remove("$device/$id")?.file
+                        ?: File(app.cacheDir, "lan-in-${hex(device.toByteArray()).take(16)}-$id.part")
+                    partial.delete()
+                    200 to buildJsonObject { put("ok", true) }
+                }
+            }
             method == "GET" && path.startsWith("/v1/files/") -> {
                 val id = path.removePrefix("/v1/files/")
                 val offset = query.split('&').firstNotNullOfOrNull { it.removePrefix("offset=").takeIf { v -> v != it }?.toLongOrNull() } ?: 0L

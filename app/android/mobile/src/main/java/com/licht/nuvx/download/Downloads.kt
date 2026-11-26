@@ -364,7 +364,7 @@ object Downloads {
      * Sends one of this phone's downloads to the paired computer, which adds it to its own downloads. Only single-file
      * downloads (offline stream folders stay on the phone). Blocking: run on Dispatchers.IO.
      */
-    fun sendToComputer(context: Context, songId: String) {
+    fun sendToComputer(context: Context, songId: String, transfer: com.licht.nuvx.data.sync.NuvxFiles.Transfer? = null) {
         val meta = library.savedSongs().firstOrNull { it.videoId == songId } ?: error("Not downloaded")
         val uri = Uri.parse(meta.uri)
         val size = when (uri.scheme) {
@@ -376,7 +376,11 @@ object Downloads {
             ?.fold(0L) { acc, part -> acc * 60 + part }?.times(1_000)
         val input = context.contentResolver.openInputStream(uri) ?: error("The file is missing")
         input.use {
-            com.licht.nuvx.data.sync.NuvxFiles.send(meta.videoId, meta.title, meta.artist, meta.thumbnailUrl, durationMs, size, it)
+            try {
+                com.licht.nuvx.data.sync.NuvxFiles.send(meta.videoId, meta.title, meta.artist, meta.thumbnailUrl, durationMs, size, it, transfer = transfer)
+            } finally {
+                if (transfer?.isCancelled == true) com.licht.nuvx.data.sync.NuvxFiles.cancelUpload(meta.videoId)
+            }
         }
     }
 
@@ -458,7 +462,7 @@ object Downloads {
      * Copies a song the paired computer downloaded into this phone's downloads, as if it had been downloaded here.
      * Same storage rules as a normal download. Blocking: run on Dispatchers.IO.
      */
-    fun copyFromComputer(context: Context, file: com.licht.nuvx.data.sync.NuvxFiles.Remote, onProgress: (Long) -> Unit = {}) {
+    fun copyFromComputer(context: Context, file: com.licht.nuvx.data.sync.NuvxFiles.Remote, onProgress: (Long) -> Unit = {}, transfer: com.licht.nuvx.data.sync.NuvxFiles.Transfer? = null) {
         if (saved.value.containsKey(file.id)) return
         if (DownloadStore.freeBytes(context) < MIN_FREE_BYTES + file.size) error(LOW_STORAGE_REFUSAL)
         val limitGb = AppSettings.downloadLimitGb.value
@@ -479,7 +483,7 @@ object Downloads {
         }
         val pending = DownloadStore.begin(context, DownloadStore.fileNameFor(song, file.ext), mime)
         try {
-            pending.openStream().use { out -> com.licht.nuvx.data.sync.NuvxFiles.fetch(file, out, onProgress) }
+            pending.openStream().use { out -> com.licht.nuvx.data.sync.NuvxFiles.fetch(file, out, onProgress, transfer = transfer) }
             val uri = pending.commit()
             library.remember(song, song, uri, file.ext, file.art)
         } catch (e: Throwable) {

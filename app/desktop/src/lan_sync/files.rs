@@ -88,6 +88,27 @@ pub fn receive(
     Ok(json!({ "done": true }))
 }
 
+/// Discard an incomplete upload from one paired device. Completed downloads are never removed.
+pub fn cancel_upload(
+    incoming: &Path,
+    uploads: &mut std::collections::HashMap<String, Upload>,
+    device: &str,
+    id: &str,
+) -> Result<(), (u16, &'static str)> {
+    if !is_video_id(id) {
+        return Err((404, "not_found"));
+    }
+    let key = format!("{device}/{id}");
+    if let Some(upload) = uploads.remove(&key) {
+        let _ = std::fs::remove_file(upload.file);
+    } else {
+        // A canceled first chunk may still be arriving when DELETE is handled; remove its possible temp file too.
+        let file = incoming.join(format!("{}-{id}.part", super::crypto::b64(device.as_bytes()).replace(['/', '+', '='], "_")));
+        let _ = std::fs::remove_file(file);
+    }
+    Ok(())
+}
+
 pub fn is_video_id(id: &str) -> bool {
     id.len() == 11 && id.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_')
 }
