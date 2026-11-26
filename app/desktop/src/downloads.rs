@@ -67,6 +67,7 @@ pub fn pick_folder(ctx: &egui::Context) {
     std::thread::spawn(move || {
         if let Some(dir) = rfd::FileDialog::new().set_title("Download folder").set_directory(folder()).pick_folder() {
             set_folder(dir);
+            refresh_local(Some(ctx.clone()));
             ctx.request_repaint();
         }
     });
@@ -141,6 +142,7 @@ pub fn refresh_local(ctx: Option<egui::Context>) {
         let known: std::collections::HashSet<_> = STATE.read().unwrap().index.values()
             .filter_map(|e| e.path.canonicalize().ok()).collect();
         let mut found = HashMap::new();
+        let mut canonical_seen = std::collections::HashSet::new();
         let mut dirs = vec![(root.clone(), 0u8)];
         let mut visited = 0usize;
         'scan: while let Some((dir, depth)) = dirs.pop() {
@@ -148,13 +150,13 @@ pub fn refresh_local(ctx: Option<egui::Context>) {
             let Ok(entries) = std::fs::read_dir(dir) else { continue; };
             for item in entries.flatten() {
                 visited += 1;
-                if visited > 50_000 { break 'scan; }
+                if visited > 50_000 || found.len() >= 5_000 { break 'scan; }
                 let Ok(kind) = item.file_type() else { continue; };
                 let path = item.path();
                 if kind.is_dir() && depth < 24 { dirs.push((path, depth + 1)); continue; }
                 if !kind.is_file() || local_format(&path).is_none() { continue; }
                 let Ok(canonical) = path.canonicalize() else { continue; };
-                if known.contains(&canonical) { continue; }
+                if known.contains(&canonical) || !canonical_seen.insert(canonical.clone()) { continue; }
                 use sha2::Digest;
                 let digest = sha2::Sha256::digest(canonical.to_string_lossy().as_bytes());
                 let id = format!("{LOCAL_PREFIX}{}", digest.iter().map(|b| format!("{b:02x}")).collect::<String>());
@@ -181,9 +183,10 @@ fn local_format(path: &Path) -> Option<crate::stream::Format> {
 pub fn local_groups() -> std::collections::BTreeMap<String, Vec<Track>> {
     let st = STATE.read().unwrap();
     let mut groups: std::collections::BTreeMap<String, Vec<Track>> = Default::default();
-    let items = st.index.values().filter_map(|e| e.song.as_ref().map(|t| (&e.path, t)))
-        .chain(st.local.values().map(|(p, t)| (p, t)));
-    for (path, track) in items.filter(|(p, _)| p.is_file()) {
+    let indexed: std::collections::HashSet<&Path> = st.index.values().map(|e| e.path.as_path()).collect();
+    let items = st.index.values().filter(|e| e.path.is_file()).filter_map(|e| e.song.as_ref().map(|t| (&e.path, t)))
+        .chain(st.local.values().filter(|(p, _)| !indexed.contains(p.as_path())).map(|(p, t)| (p, t)));
+    for (path, track) in items {
         let label = path.parent().and_then(|p| p.strip_prefix(&st.folder).ok())
             .map(|p| if p.as_os_str().is_empty() { "Music folder".to_owned() } else { p.display().to_string() })
             .unwrap_or_else(|| "Other downloads".to_owned());
@@ -198,8 +201,18 @@ pub fn open_local(id: &str) -> anyhow::Result<Arc<Shared>> {
     let format = local_format(&path).ok_or_else(|| anyhow::anyhow!("Unsupported local audio format"))?;
     let meta = std::fs::symlink_metadata(&path)?;
     anyhow::ensure!(meta.is_file() && meta.len() <= 256 * 1024 * 1024, "Local file is unavailable or too large");
-    let data = std::fs::read(path)?;
-    Ok(Shared::from_bytes_with_format(data, 0, None, format, None))
+    use std::io::Read;
+    let hint = match &format { crate::stream::Format::File { hint, .. } => *hint, _ => "m4a" };
+    let file = std::fs::File::open(&path)?;
+    let duration_ms = rodio::Decoder::builder()
+        .with_data(std::io::BufReader::new(file))
+        .with_byte_len(meta.len()).with_seekable(true).with_hint(hint).build()
+        .ok().and_then(|decoder| rodio::Source::total_duration(&decoder))
+        .map_or(0, |duration| duration.as_millis().min(u64::MAX as u128) as u64);
+    let mut data = Vec::new();
+    std::fs::File::open(path)?.take(256 * 1024 * 1024 + 1).read_to_end(&mut data)?;
+    anyhow::ensure!(!data.is_empty() && data.len() <= 256 * 1024 * 1024, "Local file is empty or too large");
+    Ok(Shared::from_bytes_with_format(data, duration_ms, None, format, None))
 }
 
 pub fn duration_ms(video_id: &str) -> Option<u64> {
@@ -284,7 +297,10 @@ fn free_bytes(dir: &Path) -> Option<u64> {
 
 pub fn save(t: &Track, audio: &[u8], duration_ms: u64, loudness_db: Option<f32>, cover: Option<Vec<u8>>, stands_for: Option<String>) -> anyhow::Result<PathBuf> {
     let root = folder();
-    let folder = t.artists.first().map(|a| root.join(artist_folder(&a.name))).unwrap_or_else(|| root.join("Unknown artist"));
+    let mine = STATE.read().unwrap().index.get(&t.id).map(|e| e.path.clone());
+    // Preserve existing download paths, even after the user changes the default folder.
+    let folder = mine.as_ref().and_then(|p| p.parent()).filter(|p| p.is_dir()).map(Path::to_path_buf)
+        .unwrap_or_else(|| root.join(t.artists.first().map(|a| artist_folder(&a.name)).unwrap_or_else(|| "Unknown artist".into())));
     std::fs::create_dir_all(&folder)?;
     if !room_for(free_bytes(&folder), audio.len()) {
         anyhow::bail!("Less than 500 MB free on the download drive");
@@ -293,9 +309,6 @@ pub fn save(t: &Track, audio: &[u8], duration_ms: u64, loudness_db: Option<f32>,
         anyhow::bail!("Downloads reached the storage limit in Settings → Downloads");
     }
     let ext = if audio.get(4..8) == Some(b"ftyp") { "m4a" } else { "webm" };
-    let mine = STATE.read().unwrap().index.get(&t.id).map(|e| e.path.clone());
-    // Preserve the location of an existing download; new downloads use artist folders.
-    let folder = mine.as_ref().and_then(|p| p.parent()).filter(|p| p.is_dir()).map(Path::to_path_buf).unwrap_or(folder);
     let stem = file_stem(t);
     let (path, part, mut part_file) = {
         let mut n = 1;

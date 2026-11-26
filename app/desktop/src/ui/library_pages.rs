@@ -113,7 +113,7 @@ fn local_music(app: &mut App, ui: &mut Ui) {
     });
     let groups = crate::downloads::local_groups();
     if groups.is_empty() {
-        ui.label(RichText::new("No local songs found. Choose a music folder containing MP3 or M4A files.").color(theme::text_dim()));
+        ui.label(RichText::new("No local songs found. Choose a download/music folder containing MP3 or M4A files, or refresh after adding songs.").color(theme::text_dim()));
     }
     for (folder, songs) in groups {
         egui::CollapsingHeader::new(format!("{folder} · {} songs", songs.len())).id_salt(("local-folder", &folder)).show(ui, |ui| {
