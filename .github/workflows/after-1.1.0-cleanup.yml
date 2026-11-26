@@ -21,6 +21,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          release=$(gh release view v1.1.0 --json isDraft,isPrerelease,tagName)
+          [[ $(jq -r '.isDraft' <<<"$release") == false ]]
+          [[ $(jq -r '.isPrerelease' <<<"$release") == false ]]
+          [[ $(gh api repos/$GH_REPO/git/ref/tags/v1.1.0 --jq '.object.sha') == "${GITHUB_SHA}" ]]
           gh release view v1.1.0 --json assets --jq '.assets[].name' > assets.txt
           require_asset() { grep -Fxq "$1" assets.txt || { echo "Missing release asset: $1" >&2; exit 1; }; }
           require_asset nuvx-setup-1.1.0.exe
