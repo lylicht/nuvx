@@ -417,9 +417,18 @@ fn run_detached(script: &str) {
 
 // GitHub lists each asset's SHA-256 as "digest"; older assets have none, and then only the size is checked.
 fn sha256_matches(path: &Path, want_hex: &str) -> anyhow::Result<bool> {
+    use std::io::Read;
     use sha2::Digest;
+    let mut file = std::fs::File::open(path)?;
     let mut hasher = sha2::Sha256::new();
-    std::io::copy(&mut std::fs::File::open(path)?, &mut hasher)?;
+    let mut buffer = [0; 64 * 1024];
+    loop {
+        let read = file.read(&mut buffer)?;
+        if read == 0 {
+            break;
+        }
+        hasher.update(&buffer[..read]);
+    }
     Ok(hasher.finalize().iter().map(|b| format!("{b:02x}")).collect::<String>().eq_ignore_ascii_case(want_hex))
 }
 
