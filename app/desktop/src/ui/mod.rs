@@ -91,6 +91,7 @@ pub enum Page {
     Setting(SettingsPane),
     Transfer,
     Jam,
+    Replay(crate::listening::ReplayPage),
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]

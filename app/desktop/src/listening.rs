@@ -78,10 +78,31 @@ pub struct Recap {
     pub label: &'static str,
     pub ms: u64,
     pub plays: u32,
-    /// Most played first.
+    /// Most listened first, matching Android Replay's song ranking.
     pub top: Vec<(String, Entry)>,
     pub top_artist: Option<String>,
     pub top_artists: Vec<(String, u64)>,
+    pub top_artist_plays: u32,
+    pub top_album: Option<String>,
+    pub top_albums: Vec<(String, u64)>,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum ReplayPage {
+    Minutes,
+    Songs,
+    Artists,
+    Albums,
+    Summary,
+}
+
+#[derive(Clone, Debug)]
+pub struct ReplayCard {
+    pub label: String,
+    pub value: String,
+    pub detail: String,
+    pub art: Option<String>,
+    pub page: ReplayPage,
 }
 
 impl Recap {
@@ -103,6 +124,69 @@ pub fn recaps(now_secs: u64) -> Vec<Recap> {
     let r = recaps_for(&s.months, &month);
     s.cache = Some((s.version, month, r.clone()));
     r
+}
+
+/// Hero cards use the same current-year highlights as Android Replay.
+pub fn replay_cards(now_secs: u64) -> Vec<ReplayCard> {
+    let month = month_of(now_secs);
+    let year = &month[..4];
+    let s = STATE.lock().unwrap();
+    let keys: Vec<_> = s.months.keys().filter(|k| k.starts_with(year)).collect();
+    if keys.is_empty() {
+        return Vec::new();
+    }
+    let recap = summarize("This year", keys.iter().map(|k| &s.months[*k]));
+    if recap.plays == 0 {
+        return Vec::new();
+    }
+    let song = recap.top.first().map(|(_, entry)| entry);
+    let mut cards = vec![ReplayCard {
+        label: "Minutes listened".into(),
+        value: format!("{}", recap.ms / 60_000),
+        detail: format!("{} plays · {}", recap.plays, year),
+        art: song.and_then(|e| e.art.clone()),
+        page: ReplayPage::Minutes,
+    }];
+    if let Some((_, entry)) = recap.top.first() {
+        cards.push(ReplayCard {
+            label: "Top song".into(),
+            value: entry.title.clone(),
+            detail: format!("{} · {} plays", entry.artist, entry.plays),
+            art: entry.art.clone(),
+            page: ReplayPage::Songs,
+        });
+    }
+    if let Some((artist, ms)) = recap.top_artists.first() {
+        cards.push(ReplayCard {
+            label: "Top artist".into(),
+            value: artist.clone(),
+            detail: format!("{} min · {} plays", ms / 60_000, recap.top_artist_plays),
+            art: song.and_then(|e| e.art.clone()),
+            page: ReplayPage::Artists,
+        });
+    }
+    if let Some((album, ms)) = recap.top_albums.first() {
+        cards.push(ReplayCard {
+            label: "Top album".into(),
+            value: album.clone(),
+            detail: format!("{} min listened", ms / 60_000),
+            art: song.and_then(|e| e.art.clone()),
+            page: ReplayPage::Albums,
+        });
+    }
+    cards
+}
+
+pub fn replay_summary(now_secs: u64) -> Option<Recap> {
+    let month = month_of(now_secs);
+    let year = &month[..4];
+    let s = STATE.lock().unwrap();
+    let keys: Vec<_> = s.months.keys().filter(|k| k.starts_with(year)).collect();
+    (!keys.is_empty()).then(|| summarize("This year", keys.iter().map(|k| &s.months[*k])))
+}
+
+pub fn year_label(now_secs: u64) -> String {
+    month_of(now_secs)[..4].to_owned()
 }
 
 fn recaps_for(months: &Months, month: &str) -> Vec<Recap> {
@@ -144,16 +228,29 @@ fn summarize<'a>(label: &'static str, months: impl Iterator<Item = &'a BTreeMap<
             t.plays += e.plays;
         }
     }
-    let mut artists: HashMap<&str, u64> = HashMap::new();
+    let mut artists: HashMap<&str, (u64, u32)> = HashMap::new();
     for e in tracks.values() {
-        *artists.entry(e.artist.as_str()).or_default() += e.ms;
+        let artist = artists.entry(e.artist.as_str()).or_default();
+        artist.0 += e.ms;
+        artist.1 += e.plays;
     }
-    let mut top_artists: Vec<(String, u64)> = artists.into_iter().filter(|(a, _)| !a.is_empty()).map(|(a, ms)| (a.to_owned(), ms)).collect();
-    top_artists.sort_by(|a, b| b.1.cmp(&a.1).then(a.0.cmp(&b.0)));
-    let top_artist = top_artists.first().map(|(name, _)| name.clone());
+    let mut ranked_artists: Vec<(String, u64, u32)> = artists.into_iter().filter(|(a, _)| !a.is_empty()).map(|(a, (ms, plays))| (a.to_owned(), ms, plays)).collect();
+    ranked_artists.sort_by(|a, b| b.1.cmp(&a.1).then(a.0.cmp(&b.0)));
+    let top_artist = ranked_artists.first().map(|(name, _, _)| name.clone());
+    let top_artist_plays = ranked_artists.first().map_or(0, |(_, _, plays)| *plays);
+    let top_artists: Vec<(String, u64)> = ranked_artists.into_iter().map(|(name, ms, _)| (name, ms)).collect();
+    let mut albums: HashMap<&str, u64> = HashMap::new();
+    for e in tracks.values() {
+        if let Some(album) = e.album.as_deref().filter(|album| !album.is_empty()) {
+            *albums.entry(album).or_default() += e.ms;
+        }
+    }
+    let mut top_albums: Vec<(String, u64)> = albums.into_iter().map(|(name, ms)| (name.to_owned(), ms)).collect();
+    top_albums.sort_by(|a, b| b.1.cmp(&a.1).then(a.0.cmp(&b.0)));
+    let top_album = top_albums.first().map(|(name, _)| name.clone());
     let mut top: Vec<(String, Entry)> = tracks.into_iter().map(|(id, e)| (id.to_owned(), e)).collect();
-    top.sort_by(|a, b| b.1.plays.cmp(&a.1.plays).then(b.1.ms.cmp(&a.1.ms)).then(a.0.cmp(&b.0)));
-    Recap { label, ms: top.iter().map(|t| t.1.ms).sum(), plays: top.iter().map(|t| t.1.plays).sum(), top, top_artist, top_artists }
+    top.sort_by(|a, b| b.1.ms.cmp(&a.1.ms).then(b.1.plays.cmp(&a.1.plays)).then(a.0.cmp(&b.0)));
+    Recap { label, ms: top.iter().map(|t| t.1.ms).sum(), plays: top.iter().map(|t| t.1.plays).sum(), top, top_artist, top_artists, top_artist_plays, top_album, top_albums }
 }
 
 fn track_of(id: &str, e: &Entry) -> Track {
@@ -196,7 +293,7 @@ mod tests {
     }
 
     #[test]
-    fn periods_add_up_and_rank_the_most_played_first() {
+    fn periods_add_up_and_rank_the_most_listened_first() {
         let r = recaps_for(&months(), "2026-11");
         assert_eq!(r.iter().map(|r| r.label).collect::<Vec<_>>(), ["This month", "Last month", "This year", "Last year", "All time"]);
         assert_eq!((r[0].plays, r[0].ms, r[0].top[0].1.title.as_str()), (4, 800_000, "A"));

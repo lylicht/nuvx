@@ -1,9 +1,9 @@
 use egui::{RichText, Ui, vec2};
 
-use super::pages::{ListCtx, Rows, list, page_title, placeholder, CARD};
+use super::pages::{ListCtx, Rows, list, page_title, placeholder, thousands, CARD};
 use super::widgets::{self, card, chip, pill};
 use super::{Action, App, LibTab, Page, Selection};
-use crate::model::{Card, Track};
+use crate::model::{Card, Thumb, Track};
 use crate::theme::{self, icon};
 fn select_pill(ui: &mut Ui, sel: &mut Selection, page: &Page) {
     let on = sel.on(page);
@@ -37,28 +37,27 @@ fn card_row(ui: &mut Ui, c: &Card, acts: &mut Vec<Action>) {
     }
 }
 
-/// Recap cards (like Android's Replay cards in Library): what was played this month, last month, this year and so on.
-/// Clicking one plays that period's most played songs.
+/// Replay highlight cards, matching Android's current-year Library cards.
 fn recap_row(app: &mut App, ui: &mut Ui) {
     use egui::{Align2, Sense, pos2};
     let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map_or(0, |d| d.as_secs());
     let recaps = crate::listening::recaps(now);
-    if recaps.is_empty() {
+    let cards = crate::listening::replay_cards(now);
+    if cards.is_empty() {
         return;
     }
     ui.add_space(14.0);
     egui::ScrollArea::horizontal().id_salt("recaps").scroll_bar_visibility(egui::scroll_area::ScrollBarVisibility::AlwaysHidden).show(ui, |ui| {
         ui.horizontal(|ui| {
             ui.spacing_mut().item_spacing.x = 12.0;
-            for r in &recaps {
+            for card in &cards {
                 let (rect, resp) = ui.allocate_exact_size(vec2(300.0, 180.0), Sense::click());
-                let resp = widgets::named(resp, &format!("{} recap", r.label)).on_hover_cursor(egui::CursorIcon::PointingHand);
+                let resp = widgets::named(resp, &format!("{} recap", card.label)).on_hover_cursor(egui::CursorIcon::PointingHand);
                 if !ui.is_rect_visible(rect) {
                     continue;
                 }
                 let h = theme::anim_bool(ui.ctx(), resp.id.with("h"), resp.hovered(), 0.18);
-                let top = &r.top[0];
-                let thumbs = r.tracks(1).pop().map(|t| t.thumbs).unwrap_or_default();
+                let thumbs = card.art.as_ref().map(|url| vec![Thumb { url: url.clone(), width: 544, height: 544 }]).unwrap_or_default();
                 widgets::paint_cover(ui, rect, &thumbs, 18.0, 1.15 + 0.05 * h);
                 ui.painter().rect_filled(rect, 18.0, theme::shade(0.58 - 0.08 * h));
                 ui.painter().rect_stroke(rect, 18.0, egui::Stroke::new(1.0, theme::glass(0.16)), egui::StrokeKind::Inside);
@@ -66,23 +65,19 @@ fn recap_row(app: &mut App, ui: &mut Ui) {
                 let w = rect.width() - 2.0 * pad;
                 let white = egui::Color32::WHITE;
                 let dim = theme::with_alpha(white, 0.72);
-                ui.painter().text(pos2(rect.left() + pad, rect.top() + pad), Align2::LEFT_TOP, r.label.to_uppercase(), theme::semibold(11.5), dim);
+                ui.painter().text(pos2(rect.left() + pad, rect.top() + pad), Align2::LEFT_TOP, card.label.to_uppercase(), theme::semibold(11.5), dim);
                 ui.painter().text(pos2(rect.right() - pad, rect.top() + pad), Align2::RIGHT_TOP, "nuvx", theme::semibold(12.0), dim);
-                let minutes = r.ms / 60_000;
-                let big = if minutes >= 1_000 { format!("{},{:03} min", minutes / 1_000, minutes % 1_000) } else { format!("{minutes} min") };
-                ui.painter().text(pos2(rect.left() + pad, rect.top() + 44.0), Align2::LEFT_TOP, big, theme::semibold(30.0), white);
-                let plays = if r.plays == 1 { "1 play".to_owned() } else { format!("{} plays", r.plays) };
-                widgets::text_at(ui, pos2(rect.left() + pad, rect.top() + 84.0), &plays, theme::regular(13.0), dim, w);
-                widgets::text_at(ui, pos2(rect.left() + pad, rect.bottom() - 58.0), &format!("Top song  {}", top.1.title), theme::semibold(13.5), white, w);
-                if let Some(a) = &r.top_artist {
-                    widgets::text_at(ui, pos2(rect.left() + pad, rect.bottom() - 36.0), &format!("Top artist  {a}"), theme::regular(13.0), dim, w);
-                }
+                widgets::text_at(ui, pos2(rect.left() + pad, rect.top() + 48.0), &card.value, theme::semibold(27.0), white, w);
+                widgets::text_at(ui, pos2(rect.left() + pad, rect.bottom() - 32.0), &card.detail, theme::regular(13.0), dim, w);
                 if resp.clicked() {
-                    app.actions.push(Action::Play(r.tracks(50), 0));
+                    app.go(Page::Replay(card.page));
                 }
             }
         });
     });
+    if recaps.is_empty() {
+        return;
+    }
     egui::CollapsingHeader::new("Listening statistics").show(ui, |ui| {
         for recap in &recaps {
             egui::CollapsingHeader::new(recap.label).id_salt(("listening-stats", recap.label)).show(ui, |ui| {
@@ -265,6 +260,143 @@ pub(super) fn library(app: &mut App, ui: &mut Ui, tab: LibTab, now: f64) {
             }
         }
     }
+}
+
+pub(super) fn replay(app: &mut App, ui: &mut Ui, page: crate::listening::ReplayPage) {
+    use crate::listening::ReplayPage as Story;
+    let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map_or(0, |d| d.as_secs());
+    let Some(recap) = crate::listening::replay_summary(now) else {
+        page_title(ui, "Your Replay");
+        ui.label("There is no listening history for this year yet.");
+        if pill(ui, "Back to Library", None, false).clicked() { app.nav_back(); }
+        return;
+    };
+    let mut pages = vec![Story::Minutes, Story::Songs];
+    if !recap.top_artists.is_empty() { pages.push(Story::Artists); }
+    if !recap.top_albums.is_empty() { pages.push(Story::Albums); }
+    pages.push(Story::Summary);
+    let index = pages.iter().position(|p| *p == page).unwrap_or(0);
+    let year = crate::listening::year_label(now);
+
+    ui.horizontal(|ui| {
+        if pill(ui, "‹ Library", None, false).clicked() { app.nav_back(); }
+        ui.label(RichText::new(format!("Replay · {year}")).font(theme::semibold(22.0)));
+        if pill(ui, "Close", None, false).clicked() { app.nav_back(); }
+    });
+    ui.add_space(12.0);
+    ui.horizontal_wrapped(|ui| {
+        for p in &pages {
+            let label = match p {
+                Story::Minutes => "Minutes",
+                Story::Songs => "Top songs",
+                Story::Artists => "Top artists",
+                Story::Albums => "Top albums",
+                Story::Summary => "Summary",
+            };
+            if chip(ui, label, *p == page).clicked() { set_replay_page(app, *p); }
+        }
+    });
+    ui.add_space(14.0);
+
+    let (headline, detail, art) = match page {
+        Story::Minutes => (
+            format!("{} min", thousands(recap.ms / 60_000)),
+            format!("{} plays · your listening in {year}", recap.plays),
+            recap.top.first().and_then(|(_, e)| e.art.clone()),
+        ),
+        Story::Songs => (
+            "Your most-listened songs".to_owned(),
+            recap.top.first().map(|(_, e)| e.title.clone()).unwrap_or_default(),
+            recap.top.first().and_then(|(_, e)| e.art.clone()),
+        ),
+        Story::Artists => (
+            "Your top artists".to_owned(),
+            recap.top_artist.clone().unwrap_or_default(),
+            recap.top.first().and_then(|(_, e)| e.art.clone()),
+        ),
+        Story::Albums => (
+            "Your top albums".to_owned(),
+            recap.top_album.clone().unwrap_or_default(),
+            recap.top.first().and_then(|(_, e)| e.art.clone()),
+        ),
+        Story::Summary => (
+            format!("Your {year} in music"),
+            format!("{} minutes · {} plays", thousands(recap.ms / 60_000), recap.plays),
+            recap.top.first().and_then(|(_, e)| e.art.clone()),
+        ),
+    };
+    egui::Frame::new()
+        .fill(theme::surface_fill())
+        .corner_radius(18)
+        .inner_margin(egui::Margin::same(24))
+        .show(ui, |ui| {
+            ui.set_min_height(220.0);
+            ui.horizontal(|ui| {
+                let thumbs = art.map(|url| vec![Thumb { url, width: 544, height: 544 }]).unwrap_or_default();
+                let (rect, _) = ui.allocate_exact_size(vec2(190.0, 190.0), egui::Sense::hover());
+                widgets::paint_cover(ui, rect, &thumbs, 16.0, 1.0);
+                ui.add_space(20.0);
+                ui.vertical(|ui| {
+                    ui.label(RichText::new(match page {
+                        Story::Minutes => "MINUTES LISTENED",
+                        Story::Songs => "TOP SONG",
+                        Story::Artists => "TOP ARTIST",
+                        Story::Albums => "TOP ALBUM",
+                        Story::Summary => "NUVX REPLAY",
+                    }).font(theme::semibold(12.0)).color(theme::text_dim()));
+                    ui.add_space(10.0);
+                    ui.label(RichText::new(headline).font(theme::bold(30.0)));
+                    ui.add_space(8.0);
+                    ui.label(RichText::new(detail).font(theme::regular(15.0)).color(theme::text_dim()));
+                });
+            });
+        });
+    ui.add_space(18.0);
+
+    match page {
+        Story::Minutes | Story::Summary => {
+            ui.label(RichText::new("Your highlights").font(theme::semibold(18.0)));
+            if let Some((_, song)) = recap.top.first() { ui.label(format!("Top song · {}", song.title)); }
+            if let Some(artist) = &recap.top_artist { ui.label(format!("Top artist · {artist}")); }
+            if let Some(album) = &recap.top_album { ui.label(format!("Top album · {album}")); }
+        }
+        Story::Songs => {
+            ui.label(RichText::new("Most listened").font(theme::semibold(18.0)));
+            for (index, (_, entry)) in recap.top.iter().take(10).enumerate() {
+                let title = format!("{}. {} · {} plays", index + 1, entry.title, entry.plays);
+                if ui.button(title).clicked() {
+                    app.actions.push(Action::Play(recap.tracks(50), index));
+                }
+            }
+        }
+        Story::Artists => {
+            ui.label(RichText::new("Listening time by artist").font(theme::semibold(18.0)));
+            for (index, (artist, ms)) in recap.top_artists.iter().take(10).enumerate() {
+                ui.label(format!("{}. {} · {} min", index + 1, artist, ms / 60_000));
+            }
+        }
+        Story::Albums => {
+            ui.label(RichText::new("Listening time by album").font(theme::semibold(18.0)));
+            for (index, (album, ms)) in recap.top_albums.iter().take(10).enumerate() {
+                ui.label(format!("{}. {} · {} min", index + 1, album, ms / 60_000));
+            }
+        }
+    }
+    ui.add_space(18.0);
+    ui.horizontal(|ui| {
+        if ui.add_enabled(index > 0, egui::Button::new("‹ Previous")).clicked() {
+            set_replay_page(app, pages[index - 1]);
+        }
+        ui.label(format!("{} / {}", index + 1, pages.len()));
+        if ui.add_enabled(index < pages.len() - 1, egui::Button::new("Next ›")).clicked() {
+            set_replay_page(app, pages[index + 1]);
+        }
+    });
+}
+
+fn set_replay_page(app: &mut App, page: crate::listening::ReplayPage) {
+    app.page = Page::Replay(page);
+    app.page_loaded();
 }
 
 pub(super) fn downloads(app: &mut App, ui: &mut Ui, now: f64) {

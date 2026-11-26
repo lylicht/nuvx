@@ -62,6 +62,7 @@ pub fn page(app: &mut App, ui: &mut Ui, now: f64) {
             Page::Setting(pane) => super::settings_pages::settings(app, ui, Some(*pane)),
             Page::Transfer => super::transfer::page(app, ui, now),
             Page::Jam => super::jam::page(app, ui),
+            Page::Replay(page) => super::library_pages::replay(app, ui, *page),
         }
         ui.add_space(96.0);
     });
