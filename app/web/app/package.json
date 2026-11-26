@@ -11,7 +11,7 @@
   },
   "dependencies": {
     "@nuvx/shared": "workspace:*",
-    "@tanstack/react-query": "^5.108.2",
+    "@tanstack/react-query": "^5.108.3",
     "@tanstack/react-virtual": "^3.14.28",
     "@uimaxbai/am-lyrics": "^1.9.2",
     "bgutils-js": "^4.0.3",
