@@ -55,14 +55,10 @@ jobs:
           [[ -z "$current" ]] || { echo "Tag $tag already exists; refusing to move it" >&2; exit 1; }
           gh api --method POST "repos/$GH_REPO/git/refs" -f "ref=refs/tags/$tag" -f "sha=$GITHUB_SHA" >/dev/null
           gh release create "$tag" --target "$GITHUB_SHA" --draft --title "nuvx 1.1.0" --notes "Final nuvx release. VYRAL is maintained by the new project owner and is where to get future updates: https://github.com/syrrnight/VYRAL"
-          gh workflow run android-nightly.yml --ref "$tag"
+          run_url=$(gh workflow run android-nightly.yml --ref "$tag")
+          run=${run_url##*/}
+          [[ "$run" =~ ^[0-9]+$ ]] || { echo "Android release run was not created: $run_url" >&2; exit 1; }
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
-          for _ in $(seq 1 60); do
-            run=$(gh api "repos/$GH_REPO/actions/workflows/android-nightly.yml/runs?branch=$tag&per_page=10" --jq '[.workflow_runs[] | select(.event == "workflow_dispatch")][0] | .id // empty')
-            [[ -n "$run" ]] && break
-            sleep 10
-          done
-          [[ -n "${run:-}" ]] || { echo "Android release run was not created" >&2; exit 1; }
           while true; do
             status=$(gh api "repos/$GH_REPO/actions/runs/$run" --jq '.status')
             conclusion=$(gh api "repos/$GH_REPO/actions/runs/$run" --jq '.conclusion // empty')
@@ -76,13 +72,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          gh workflow run apple-builds.yml --ref "$RELEASE_TAG" -f release_tag="$RELEASE_TAG"
-          for _ in $(seq 1 60); do
-            run=$(gh api "repos/$GH_REPO/actions/workflows/apple-builds.yml/runs?branch=$RELEASE_TAG&per_page=10" --jq '[.workflow_runs[] | select(.event == "workflow_dispatch")][0] | .id // empty')
-            [[ -n "$run" ]] && break
-            sleep 10
-          done
-          [[ -n "${run:-}" ]] || { echo "Apple release run was not created" >&2; exit 1; }
+          run_url=$(gh workflow run apple-builds.yml --ref "$RELEASE_TAG" -f release_tag="$RELEASE_TAG")
+          run=${run_url##*/}
+          [[ "$run" =~ ^[0-9]+$ ]] || { echo "Apple release run was not created: $run_url" >&2; exit 1; }
           while true; do
             status=$(gh api "repos/$GH_REPO/actions/runs/$run" --jq '.status')
             conclusion=$(gh api "repos/$GH_REPO/actions/runs/$run" --jq '.conclusion // empty')
