@@ -495,7 +495,7 @@ struct ResolvedStream {
 
 fn needs_account(e: &anyhow::Error) -> bool {
     let msg = e.to_string();
-    msg.contains("Premium") || (msg.contains("LOGIN_REQUIRED") && !msg.to_ascii_lowercase().contains("not a bot"))
+    msg.contains("Premium") || msg.contains("LOGIN_REQUIRED")
 }
 
 fn popular_new_albums(albums: &[Card], ranked_artists: &[String], preferred_artists: &[String]) -> Vec<Card> {

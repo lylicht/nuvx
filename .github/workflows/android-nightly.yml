@@ -14,6 +14,11 @@ on:
 permissions:
   contents: write
 
+env:
+  # The project was transferred; GitHub API calls through the old alias can
+  # redirect without forwarding GITHUB_TOKEN and fail with HTTP 403.
+  GH_REPO: syrrnight/VYRAL
+
 concurrency:
   # Serialize nightlies across pushes, manual runs and the schedule. Queue up to
   # 100 pending builds rather than canceling a merged PR's pending run.
@@ -33,15 +38,16 @@ jobs:
       build: ${{ steps.check.outputs.build }}
     env:
       GH_TOKEN: ${{ github.token }}
+      GH_REPO: syrrnight/VYRAL
     steps:
       - name: Skip a night with nothing new
         id: check
         run: |
           build=true
           if [[ "${{ github.event_name }}" == schedule ]]; then
-            last=$(gh api "repos/$GITHUB_REPOSITORY/releases?per_page=30" \
+            last=$(gh api "repos/syrrnight/VYRAL/releases?per_page=30" \
               --jq '[.[] | select(.draft == false and .prerelease == true and (.tag_name | startswith("nightly.")))][0].tag_name // empty')
-            if [[ -n "$last" ]] && [[ $(gh api "repos/$GITHUB_REPOSITORY/commits/$last" --jq .sha) == "$GITHUB_SHA" ]]; then
+            if [[ -n "$last" ]] && [[ $(gh api "repos/syrrnight/VYRAL/commits/$last" --jq .sha) == "$GITHUB_SHA" ]]; then
               echo "Nightly $last already has $GITHUB_SHA; nothing new tonight"
               build=false
             fi
@@ -65,6 +71,7 @@ jobs:
       build_time: ${{ steps.metadata.outputs.build_time }}
     env:
       GH_TOKEN: ${{ github.token }}
+      GH_REPO: syrrnight/VYRAL
     steps:
       - uses: actions/checkout@v7
         with:
@@ -93,7 +100,7 @@ jobs:
             release_tag="nightly.$GITHUB_RUN_NUMBER.$GITHUB_RUN_ATTEMPT"
             suffix="$release_tag"
             is_stable=false
-            stable_v1=$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/v1.0.0" \
+            stable_v1=$(gh api "repos/syrrnight/VYRAL/releases/tags/v1.0.0" \
               --jq 'select(.draft == false and .prerelease == false) | .tag_name' 2>/dev/null || true)
             if [[ $stable_v1 == v1.0.0 ]]; then
               android_version="$version"
@@ -139,19 +146,19 @@ jobs:
           ANDROID_CODE: ${{ steps.metadata.outputs.android_code }}
           SOURCE_REF: ${{ steps.metadata.outputs.source_ref }}
         run: |
-          gh api --paginate "repos/$GITHUB_REPOSITORY/releases?per_page=100" \
+          gh api --paginate "repos/syrrnight/VYRAL/releases?per_page=100" \
             --jq '.[] | select(.draft == true and (.tag_name | startswith("nightly."))) | .tag_name' |
             while IFS= read -r tag; do
               [[ -z "$tag" ]] && continue
               gh release delete "$tag" --yes
-              if gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$tag" >/dev/null 2>&1; then
-                gh api --method DELETE "repos/$GITHUB_REPOSITORY/git/refs/tags/$tag"
+              if gh api "repos/syrrnight/VYRAL/git/ref/tags/$tag" >/dev/null 2>&1; then
+                gh api --method DELETE "repos/syrrnight/VYRAL/git/refs/tags/$tag"
               fi
             done
           # Stable -> nightly 1 -> nightly 2 -> next stable: count the nightlies since the latest stable.
-          since=$(gh api "repos/$GITHUB_REPOSITORY/releases/latest" --jq .published_at 2>/dev/null || echo "")
+          since=$(gh api "repos/syrrnight/VYRAL/releases/latest" --jq .published_at 2>/dev/null || echo "")
           # Only the newest nightly is kept, so count on from its number ("... nightly N"); 1 after a new stable.
-          number=$(( $(gh api --paginate "repos/$GITHUB_REPOSITORY/releases?per_page=100" \
+          number=$(( $(gh api --paginate "repos/syrrnight/VYRAL/releases?per_page=100" \
             --jq ".[] | select(.draft == false and .prerelease == true and (.tag_name | startswith(\"nightly.\")) and .published_at > \"$since\") | .name" |
             sed -nE 's/.* nightly ([0-9]+)$/\1/p' | sort -n | tail -1) + 1 ))
           gh release create "$RELEASE_TAG" \
@@ -380,7 +387,7 @@ jobs:
     timeout-minutes: 90
     env:
       GH_TOKEN: ${{ github.token }}
-      GH_REPO: ${{ github.repository }}
+      GH_REPO: syrrnight/VYRAL
       RELEASE_TAG: ${{ needs.prepare.outputs.release_tag }}
       IS_STABLE: ${{ needs.prepare.outputs.is_stable }}
       DESKTOP_VERSION: ${{ needs.prepare.outputs.desktop_version }}
@@ -485,7 +492,7 @@ jobs:
     runs-on: ubuntu-22.04
     env:
       GH_TOKEN: ${{ github.token }}
-      GH_REPO: ${{ github.repository }}
+      GH_REPO: syrrnight/VYRAL
       RELEASE_TAG: ${{ needs.prepare.outputs.release_tag }}
       IS_STABLE: ${{ needs.prepare.outputs.is_stable }}
       DESKTOP_VERSION: ${{ needs.prepare.outputs.desktop_version }}
@@ -584,7 +591,7 @@ jobs:
     runs-on: macos-15
     env:
       GH_TOKEN: ${{ github.token }}
-      GH_REPO: ${{ github.repository }}
+      GH_REPO: syrrnight/VYRAL
       RELEASE_TAG: ${{ needs.prepare.outputs.release_tag }}
       IS_STABLE: ${{ needs.prepare.outputs.is_stable }}
       DESKTOP_VERSION: ${{ needs.prepare.outputs.desktop_version }}
@@ -681,7 +688,7 @@ jobs:
     runs-on: ubuntu-24.04
     env:
       GH_TOKEN: ${{ github.token }}
-      GH_REPO: ${{ github.repository }}
+      GH_REPO: syrrnight/VYRAL
       RELEASE_TAG: ${{ needs.prepare.outputs.release_tag }}
       IS_STABLE: ${{ needs.prepare.outputs.is_stable }}
       ANDROID_VERSION: ${{ needs.prepare.outputs.android_version }}
@@ -720,7 +727,7 @@ jobs:
           fi
           gh release edit "$RELEASE_TAG" --draft=false --prerelease --latest=false
           # Only the newest nightly stays: every older one is deleted, with its tag.
-          gh api --paginate "repos/$GITHUB_REPOSITORY/releases?per_page=100" \
+          gh api --paginate "repos/syrrnight/VYRAL/releases?per_page=100" \
             --jq '.[] | select(.prerelease == true and .draft == false and (.tag_name | startswith("nightly."))) | .tag_name' |
             while IFS= read -r tag; do
               [[ -z "$tag" || "$tag" == "$RELEASE_TAG" ]] || gh release delete "$tag" --yes --cleanup-tag

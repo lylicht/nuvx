@@ -41,7 +41,7 @@ souvlaki = "0.9.3"
 tao = "0.37.1"
 tokio = { version = "1.53.3", features = ["rt-multi-thread", "macros", "sync", "time"] }
 wry = "0.57.0"
-rfd = "0.17.2"
+rfd = "0.18.0"
 tray-icon = "0.26.1"
 url = "2.5.8"
 # The opt-in renderer: Vulkan, Metal on macOS (renderer.rs).
@@ -57,7 +57,8 @@ rusty-opus = "1.0.2"
 unicode-bidi = "0.3"
 # LAN Sync: pairing key agreement and encrypted traffic (lan_sync).
 p256 = { version = "0.14", default-features = false, features = ["ecdh", "std"] }
-aes-gcm = "0.10"
+aes-gcm = "0.11"
+rand = { version = "0.10", default-features = false, features = ["sys_rng"] }
 [patch.crates-io]
 # Backport the upstream GLib iterator UB fix while GTK3 still pins glib 0.18.
 glib = { path = "vendor/glib" }

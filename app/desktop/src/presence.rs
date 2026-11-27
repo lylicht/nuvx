@@ -7,7 +7,7 @@
 use std::path::Path;
 use std::time::Duration;
 
-use aes_gcm::aead::{OsRng, rand_core::RngCore};
+use rand::{TryRng, rngs::SysRng};
 use serde_json::json;
 use tokio::sync::oneshot;
 
@@ -155,7 +155,7 @@ fn is_uuid(id: &str) -> bool {
 
 fn new_id() -> String {
     let mut bytes = [0_u8; 16];
-    OsRng.fill_bytes(&mut bytes);
+    SysRng.try_fill_bytes(&mut bytes).expect("system RNG unavailable");
     bytes[6] = (bytes[6] & 0x0f) | 0x40; // RFC 4122 version 4
     bytes[8] = (bytes[8] & 0x3f) | 0x80; // RFC 4122 variant
     let hex = bytes.iter().map(|byte| format!("{byte:02x}")).collect::<Vec<_>>().concat();

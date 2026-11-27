@@ -544,6 +544,22 @@ pub(crate) async fn web_token(http: &reqwest::Client, sp_dc: Option<&str>) -> Re
     Ok(access_token(http, sp_dc, &device_id).await?.0)
 }
 
+/// Web-player credentials needed by Spotify's Pathfinder canvas query.
+pub(crate) async fn canvas_credentials(http: &reqwest::Client, sp_dc: &str) -> Result<(String, String)> {
+    let resp = http.get("https://open.spotify.com").header("User-Agent", UA).send().await?.error_for_status()?;
+    let device_id = resp.headers().get_all("set-cookie").iter()
+        .filter_map(|v| v.to_str().ok()?.strip_prefix("sp_t=")?.split(';').next().map(str::to_owned))
+        .next().unwrap_or_default();
+    let html = resp.text().await?;
+    let config = between(&html, r#"<script id="appServerConfig" type="text/plain">"#, "</script>")
+        .context("open.spotify.com is missing appServerConfig")?;
+    let config: Value = serde_json::from_slice(&base64::engine::general_purpose::STANDARD.decode(config.trim())?)?;
+    let client_version = config["clientVersion"].as_str().context("appServerConfig has no clientVersion")?;
+    let (token, client_id) = access_token(http, Some(sp_dc), &device_id).await?;
+    let client_token = client_token(http, client_version, &client_id, &device_id).await?;
+    Ok((token, client_token))
+}
+
 async fn access_token(http: &reqwest::Client, sp_dc: Option<&str>, device_id: &str) -> Result<(String, String)> {
     let (version, secret) = totp_secret(http).await;
     let totp = totp(&secret, SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs());
