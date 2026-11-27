@@ -1,6 +1,0 @@
-export const detailFooter = 'mx-(--body-gutter) mt-[34px] px-3 pb-10 type-body-tall text-secondary';
-
-export const seeAllGrid =
-  'mx-(--body-gutter) mt-5 mb-10 grid grid-cols-[repeat(auto-fill,minmax(170px,1fr))] gap-x-5 gap-y-6 data-wide:grid-cols-[repeat(auto-fill,minmax(240px,1fr))] min-[1260px]:grid-cols-5 min-[1260px]:data-wide:grid-cols-4 min-[1580px]:grid-cols-6';
-
-export const seeAllTracks = 'pt-7';

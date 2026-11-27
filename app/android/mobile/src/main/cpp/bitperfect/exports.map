@@ -1,5 +1,0 @@
-{
-    global:
-        Java_com_licht_nuvx_playback_audio_bitperfect_*;
-    local: *;
-};
