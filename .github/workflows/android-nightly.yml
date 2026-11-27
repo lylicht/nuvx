@@ -518,6 +518,7 @@ jobs:
         run: |
           test -s assets/licenses/cargo-notices.txt
           mkdir -p dist/nuvx
+          cp LICENSE dist/nuvx/LICENSE
           cp universal/x86_64/nuvx dist/nuvx/nuvx-x86_64
           cp universal/aarch64/nuvx dist/nuvx/nuvx-aarch64
           cp linux/install.sh linux/nuvx.desktop dist/nuvx/
