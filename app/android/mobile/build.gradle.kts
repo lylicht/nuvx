@@ -290,7 +290,7 @@ dependencies {
     implementation("com.github.MuntashirAkon:libadb-android:3.1.1") {
         exclude(group = "org.bouncycastle")
     }
-    implementation("org.conscrypt:conscrypt-android:2.10.0")
+    implementation("org.conscrypt:conscrypt-android:2.9.0")
     implementation("org.bouncycastle:bcpkix-jdk18on:1.87")
 
     // nuvx-core's bindings (from :shared) load Rust through JNA; the jar carries host natives for unit tests.
