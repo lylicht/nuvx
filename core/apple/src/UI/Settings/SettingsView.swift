@@ -23,6 +23,7 @@ struct SettingsView: View {
     @AppStorage("hide_home_moods") var hideHomeMoods = false
     @AppStorage("hide_explicit") var hideExplicit = false
     @AppStorage("focused_feed") var focusedFeed = false
+    @AppStorage("show_discontinuation_notice") var showDiscontinuationNotice = true
 
     @State var crossfade = Int(PlatformSettings.shared.getInt(key: "crossfade_seconds", default: 0))
     @AppStorage("dolby_atmos") var dolbyAtmos = true

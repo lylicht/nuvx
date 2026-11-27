@@ -16,6 +16,13 @@
     </header>
     <ul class="group" id="integrations"></ul>
     <a class="site" id="site" target="_blank" rel="noreferrer">Open nuvx web player</a>
+    <label class="notice-toggle"><input id="notice-toggle" type="checkbox" checked /> Show discontinuation notice on startup</label>
+    <dialog id="discontinuation-notice" aria-labelledby="notice-title">
+      <h1 id="notice-title">nuvx is being discontinued</h1>
+      <p>nuvx is no longer supported. No further updates will be released by nuvx or licht. VYRAL is maintained by the new project owner and is where to get future updates.</p>
+      <a href="https://github.com/syrrnight/VYRAL" target="_blank" rel="noreferrer">Open VYRAL</a>
+      <button id="notice-continue" type="button">Continue</button>
+    </dialog>
     <script type="module" src="./main.ts"></script>
   </body>
 </html>

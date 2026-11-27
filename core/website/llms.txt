@@ -23,7 +23,6 @@ The v1.0.2 stable release ships one shared universal phone APK, one shared unive
 - Changelog: https://www.nuvx.lol/changelog
 - Privacy: https://www.nuvx.lol/privacy
 - Source code and issue tracking: https://github.com/lylicht/nuvx
-- Community: https://discord.gg/h4Wsu824Uf
 
 ## Licence and contact
 

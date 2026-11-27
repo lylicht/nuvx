@@ -51,6 +51,9 @@ function youtubeText(auth: ReturnType<typeof useYtAuth>): string {
 }
 
 export default function SettingsPage() {
+  const [showDiscontinuationNotice, setShowDiscontinuationNotice] = useState(
+    () => localStorage.getItem('show_discontinuation_notice') !== 'false',
+  );
   const extension = useExtension();
   const yt = useYtAuth();
   const discord = useDiscord();
@@ -176,17 +179,6 @@ export default function SettingsPage() {
           />
         </section>
 
-        <h2 className={settingsUi.sectionHeader}>Community</h2>
-        <section className={settingsUi.group}>
-          <a className={`${settingsUi.integrationPlain} ${settingsUi.linkRow}`} href="https://t.me/nuvxserver" target="_blank" rel="noreferrer">
-            <span className={settingsUi.integrationName}>Telegram</span>
-            <span className={settingsUi.value}>
-              @nuvxserver
-              <ChevronRight size={16} />
-            </span>
-          </a>
-        </section>
-
         <h2 className={settingsUi.sectionHeader}>Playback</h2>
         <section className={settingsUi.group}>
           <Toggle
@@ -282,6 +274,18 @@ export default function SettingsPage() {
             <span className={settingsUi.integrationName}>Lyric Sources Access</span>
             {present ? <LyricSourcesAccess /> : <span className={settingsUi.value}>Needs the extension</span>}
           </div>
+        </section>
+        <h2 className={settingsUi.sectionHeader}>About</h2>
+        <section className={settingsUi.group}>
+          <Toggle
+            label="Show discontinuation notice on startup"
+            detail="Tell people nuvx is no longer supported and point them to VYRAL."
+            checked={showDiscontinuationNotice}
+            onChange={(checked) => {
+              localStorage.setItem('show_discontinuation_notice', String(checked));
+              setShowDiscontinuationNotice(checked);
+            }}
+          />
         </section>
       </div>
       {lyrics && (

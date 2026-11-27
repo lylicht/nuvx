@@ -86,8 +86,6 @@ enum class SongSort {
 }
 
 object AppSettings {
-    const val DISCORD_INVITE_URL = "https://discord.gg/h4Wsu824Uf"
-    const val TELEGRAM_URL = "https://t.me/nuvxserver"
 
     private lateinit var prefs: SharedPreferences
     private lateinit var authStore: AuthStore
@@ -131,6 +129,7 @@ object AppSettings {
 
     val meteredConnection = MutableStateFlow<Boolean?>(null)
     val networkTransport = MutableStateFlow(NetworkTransport.UNKNOWN)
+    val showDiscontinuationNotice = MutableStateFlow(true)
 
     val crossfadeSeconds = transitionSettings.crossfadeSeconds
 
@@ -218,7 +217,6 @@ object AppSettings {
 
     val supportPromptsOff = MutableStateFlow(false)
 
-    val discordInviteJoined = MutableStateFlow(false)
 
     val diwaliGreetingShown = MutableStateFlow(false)
 
@@ -487,7 +485,7 @@ object AppSettings {
         hidePodcastsTab.value = prefs.getBoolean(KEY_HIDE_PODCASTS_TAB, false)
         podcastsIntroShown.value = prefs.getBoolean(KEY_PODCASTS_INTRO_SHOWN, false)
         supportPromptsOff.value = prefs.getBoolean(KEY_SUPPORT_PROMPTS_OFF, false)
-        discordInviteJoined.value = prefs.getBoolean(KEY_DISCORD_INVITE_JOINED, false)
+        showDiscontinuationNotice.value = prefs.getBoolean(KEY_DISCONTINUATION_NOTICE, true)
         appearanceSettings.readPerformanceMode()
         stopOnTaskRemoved.value = prefs.getBoolean(KEY_STOP_ON_TASK_REMOVED, false)
         hideVolumeBar.value = prefs.getBoolean(KEY_HIDE_VOLUME_BAR, false)
@@ -666,10 +664,11 @@ object AppSettings {
         prefs.edit().putBoolean(KEY_SUPPORT_PROMPTS_OFF, true).apply()
     }
 
-    fun setDiscordInviteJoined() {
-        discordInviteJoined.value = true
-        prefs.edit().putBoolean(KEY_DISCORD_INVITE_JOINED, true).apply()
+    fun setShowDiscontinuationNotice(value: Boolean) {
+        showDiscontinuationNotice.value = value
+        prefs.edit().putBoolean(KEY_DISCONTINUATION_NOTICE, value).apply()
     }
+
 
     fun nextSupportPrompt(): Int {
         val n = prefs.getInt(KEY_LAUNCHES, 0) + 1
@@ -1027,7 +1026,7 @@ object AppSettings {
     private const val KEY_HIDE_PODCASTS_TAB = "hide_podcasts_tab"
     private const val KEY_PODCASTS_INTRO_SHOWN = "podcasts_intro_shown"
     private const val KEY_SUPPORT_PROMPTS_OFF = "support_prompts_off"
-    private const val KEY_DISCORD_INVITE_JOINED = "discord_invite_joined"
+    private const val KEY_DISCONTINUATION_NOTICE = "show_discontinuation_notice"
     private const val KEY_LAUNCHES = "launch_count"
     private const val KEY_STOP_ON_TASK_REMOVED = "stop_on_task_removed"
     private const val KEY_HIDE_VOLUME_BAR = "hide_volume_bar"

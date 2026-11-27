@@ -14,7 +14,7 @@ export function invitePage(info: InviteInfo, origin: string): string {
 <div class="box"><p class="label">Party code</p><p class="code">${code}</p>${info.title ? `<p class="now">${esc(info.title)} · ${esc(info.artist ?? "")}</p>` : ""}</div>
 <a class="btn" id="join" href="${esc(intent)}">Join in nuvx</a>
 <a class="btn alt" href="${esc(web)}">Open in the web player</a>
-<p class="note">Didn't open? Tap the button. No nuvx yet? <a href="https://github.com/lylicht/nuvx/releases" rel="noopener">Download it</a>.</p>
+<p class="note">Didn't open? Tap the button. No nuvx yet? <a href="https://github.com/syrrnight/VYRAL/releases" rel="noopener">Download it</a>.</p>
 <script>setTimeout(function () { location.href = /Android/i.test(navigator.userAgent) ? ${JSON.stringify(intent)} : ${JSON.stringify(deepLink)}; }, 100);</script>`
     : `<p class="badge"><span class="dot off"></span>Party inactive</p>
 <h1>Party not found</h1>

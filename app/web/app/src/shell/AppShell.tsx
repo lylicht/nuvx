@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useRef, type MouseEvent } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState, type MouseEvent } from 'react';
 import chromeWebStoreBadge from '@/assets/chrome-web-store-badge.png';
 import { resumeSession } from '@/party/listenTogether';
 import { startPartySync } from '@/party/partySync';
@@ -56,6 +56,9 @@ function bounceGlyph({ target }: MouseEvent<HTMLDivElement>) {
 }
 
 export function AppShell() {
+  const [showDiscontinuationNotice, setShowDiscontinuationNotice] = useState(
+    () => localStorage.getItem('show_discontinuation_notice') !== 'false',
+  );
   const location = useLocation();
   const ambientVideo = useRef<HTMLVideoElement>(null);
   useKeyboardShortcuts();
@@ -209,6 +212,18 @@ export function AppShell() {
         <SidePanel />
       </div>
       {banner}
+      {showDiscontinuationNotice && (
+        <div className="fixed inset-0 z-[100] grid place-items-center bg-black/70 p-5" role="alertdialog" aria-modal="true" aria-labelledby="discontinuation-title">
+          <div className="w-full max-w-md rounded-2xl border border-white/10 bg-neutral-950 p-6 text-white shadow-2xl">
+            <h2 id="discontinuation-title" className="text-xl font-semibold">nuvx is being discontinued</h2>
+            <p className="mt-3 text-sm text-white/75">nuvx is no longer supported. No further updates will be released by nuvx or licht. VYRAL is maintained by the new project owner and is where to get future updates.</p>
+            <div className="mt-5 flex justify-end gap-3">
+              <button className="rounded-full px-4 py-2 text-sm text-white/75 hover:bg-white/10" onClick={() => setShowDiscontinuationNotice(false)}>Continue</button>
+              <a className="rounded-full bg-white px-4 py-2 text-sm font-medium text-black" href="https://github.com/syrrnight/VYRAL" target="_blank" rel="noreferrer">Open VYRAL</a>
+            </div>
+          </div>
+        </div>
+      )}
       {fullScreen && (
         <Suspense fallback={null}>
           <FullScreenPlayer />

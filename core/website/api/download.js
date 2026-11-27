@@ -1,4 +1,4 @@
-const releases = 'https://github.com/lylicht/nuvx/releases';
+const releases = 'https://github.com/syrrnight/VYRAL/releases';
 const downloadsPage = 'https://www.nuvx.lol/#ecosystem';
 // shortcut: iOS has no newer IPA asset yet; update this fallback when one ships.
 const fallbackAssets = {
@@ -58,7 +58,7 @@ module.exports = async (req, res) => {
           : requestedPlatform === 'mac-arm' || requestedPlatform === 'mac-intel' ? 'mac' : requestedPlatform;
     const match = nightlyNames[platform];
     try {
-      const response = await fetch('https://api.github.com/repos/lylicht/nuvx/releases?per_page=30', {
+      const response = await fetch('https://api.github.com/repos/syrrnight/VYRAL/releases?per_page=30', {
         signal: AbortSignal.timeout(4000),
       });
       if (response.ok) {

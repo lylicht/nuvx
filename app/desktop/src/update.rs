@@ -2,9 +2,9 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 
-const RELEASE_LIST: &str = "https://api.github.com/repos/lylicht/nuvx/releases?per_page=100";
-const BY_TAG: &str = "https://api.github.com/repos/lylicht/nuvx/releases/tags/";
-pub const RELEASES: &str = "https://github.com/lylicht/nuvx/releases";
+const RELEASE_LIST: &str = "https://api.github.com/repos/syrrnight/VYRAL/releases?per_page=100";
+const BY_TAG: &str = "https://api.github.com/repos/syrrnight/VYRAL/releases/tags/";
+pub const RELEASES: &str = "https://github.com/syrrnight/VYRAL/releases";
 
 type Notes = Arc<Mutex<std::collections::HashMap<String, Option<String>>>>;
 

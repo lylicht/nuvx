@@ -1,6 +1,6 @@
 #define AppName "nuvx"
 #ifndef AppVersion
-#define AppVersion "1.0.6"
+#define AppVersion "1.1.0"
 #endif
 #define AppExe "nuvx.exe"
 
@@ -9,8 +9,8 @@ AppId={{469DB82D-3113-47EA-812C-36393395493F}
 AppName={#AppName}
 AppVersion={#AppVersion}
 AppPublisher=licht
-AppPublisherURL=https://github.com/lylicht/nuvx
-AppSupportURL=https://github.com/lylicht/nuvx/issues
+AppPublisherURL=https://github.com/syrrnight/VYRAL
+AppSupportURL=https://github.com/syrrnight/VYRAL/issues
 DefaultDirName={autopf}\{#AppName}
 DefaultGroupName={#AppName}
 DisableProgramGroupPage=yes
@@ -33,8 +33,6 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 [Files]
 Source: "..\target\x86_64-pc-windows-msvc\release\{#AppExe}"; DestDir: "{app}"; Flags: ignoreversion; Check: not IsArm64
 Source: "..\target\aarch64-pc-windows-msvc\release\{#AppExe}"; DestDir: "{app}"; Flags: ignoreversion; Check: IsArm64
-Source: "..\README.md"; DestDir: "{app}"; Flags: ignoreversion
-Source: "..\LICENSE"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\assets\fonts\LICENSE-*.txt"; DestDir: "{app}\licenses"; Flags: ignoreversion
 Source: "..\assets\licenses\*.txt"; DestDir: "{app}\licenses"; Flags: ignoreversion
 

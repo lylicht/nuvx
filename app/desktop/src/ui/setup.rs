@@ -201,7 +201,7 @@ fn hero(app: &App, ui: &mut Ui, step: Step, scale: f32) {
 }
 
 /// The official nuvx mark (core/brand/mark/nuvx_mark_white.svg): one path of cubic curves in a 1024 box.
-const MARK_SVG: &str = include_str!("../../../../core/brand/mark/nuvx_mark_white.svg");
+const MARK_SVG: &str = include_str!("../../../../rebuild/crates/nuvx-ui/assets/brand/nuvx_mark.svg");
 
 /// The mark rendered from its vector path at exactly `px` pixels, so it is sharp at any size. Cached per size.
 fn mark_texture(ctx: &egui::Context, px: usize) -> egui::TextureHandle {

@@ -162,6 +162,7 @@ fun SettingsScreen(
     val cellularQuality by AppSettings.audioQualityCellular.collectAsStateWithLifecycle()
     val metered by AppSettings.meteredConnection.collectAsStateWithLifecycle()
     val networkTransport by AppSettings.networkTransport.collectAsStateWithLifecycle()
+    val showDiscontinuationNotice by AppSettings.showDiscontinuationNotice.collectAsStateWithLifecycle()
     val crossfade by AppSettings.crossfadeSeconds.collectAsStateWithLifecycle()
     val sleepTimerFadeOut by AppSettings.sleepTimerFadeOutSeconds.collectAsStateWithLifecycle()
     val smartFade by AppSettings.smartFadeEnabled.collectAsStateWithLifecycle()
@@ -660,6 +661,12 @@ fun SettingsScreen(
         }
 
         if (section == null && searchQuery.isBlank()) {
+        SettingsSubRow(
+            title = "Show discontinuation notice on startup",
+            subtitle = "Tell people nuvx is no longer supported and point them to VYRAL.",
+            checked = showDiscontinuationNotice,
+            onCheckedChange = AppSettings::setShowDiscontinuationNotice,
+        )
         Text(
             text = buildAnnotatedString {
                 append("nuvx $version  ")
@@ -669,20 +676,12 @@ fun SettingsScreen(
                         textDecoration = TextDecoration.Underline,
                     ),
                 )
-                withLink(LinkAnnotation.Url("https://github.com/lylicht/nuvx", linkStyles)) {
+                withLink(LinkAnnotation.Url("https://github.com/syrrnight/VYRAL", linkStyles)) {
                     append("GitHub")
                 }
                 append("  ")
                 withLink(LinkAnnotation.Url("https://github.com/lylicht", linkStyles)) {
                     append("Developer")
-                }
-                append("  ")
-                withLink(LinkAnnotation.Url(AppSettings.DISCORD_INVITE_URL, linkStyles)) {
-                    append("Discord")
-                }
-                append("  ")
-                withLink(LinkAnnotation.Url(AppSettings.TELEGRAM_URL, linkStyles)) {
-                    append("Telegram")
                 }
                 append("  ")
                 withLink(LinkAnnotation.Url("https://nuvx.lol/", linkStyles)) {

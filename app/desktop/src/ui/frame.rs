@@ -121,6 +121,23 @@ impl eframe::App for App {
         }
         let now = ctx.input(|i| i.time);
         let screen = ctx.content_rect();
+        if self.discontinuation_notice_open {
+            egui::Modal::new(egui::Id::new("discontinuation-notice"))
+                .frame(crate::ui::notes::surface())
+                .backdrop_color(theme::shade(0.55))
+                .show(&ctx, |ui| {
+                    ui.set_width(420.0);
+                    ui.heading("nuvx is being discontinued");
+                    ui.add_space(10.0);
+                    ui.label("nuvx is no longer supported. No further updates will be released by nuvx or licht. VYRAL is maintained by the new project owner and is where to get future updates.");
+                    ui.add_space(14.0);
+                    ui.hyperlink_to("Open VYRAL", "https://github.com/syrrnight/VYRAL");
+                    ui.add_space(14.0);
+                    if ui.button("Continue").clicked() {
+                        self.discontinuation_notice_open = false;
+                    }
+                });
+        }
 
         self.sync_look();
         let look = self.look();
@@ -375,6 +392,7 @@ impl eframe::App for App {
         storage.set_string("player_bar_bottom", b(self.player_bar_bottom));
         storage.set_string("anim_bg", b(self.anim_bg));
         storage.set_string("anim_canvas", b(self.anim_canvas));
+        storage.set_string("show_discontinuation_notice", b(self.show_discontinuation_notice));
         storage.set_string("lastfm_now_playing", b(self.lastfm_now_playing));
         storage.set_string("lastfm_primary_only", b(self.lastfm_primary_only));
         storage.set_string("reduce_motion", b(self.reduce_motion));

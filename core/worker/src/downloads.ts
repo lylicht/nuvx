@@ -1,4 +1,4 @@
-const RELEASES_URL = "https://api.github.com/repos/lylicht/nuvx/releases";
+const RELEASES_URL = "https://api.github.com/repos/syrrnight/VYRAL/releases";
 const APP_PACKAGE = /^nuvx(?:tv|wear|auto)?-(?:(?:setup|portable|extension-(?:chrome|firefox))-)?v?\d.*\.(?:apk|exe|dmg|zip|tar\.gz)$/i;
 const PAGE_SIZE = 100;
 

@@ -161,14 +161,6 @@ fun OnboardingScreen(
                     PAGE_NAME -> NamePage(
                         name = name,
                         onNameChange = { name = it.take(NAME_LIMIT) },
-                        onJoinDiscord = {
-                            AppSettings.setDiscordInviteJoined()
-                            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(AppSettings.DISCORD_INVITE_URL)))
-                        },
-                        onJoinTelegram = {
-                            AppSettings.setDiscordInviteJoined()
-                            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(AppSettings.TELEGRAM_URL)))
-                        },
                         onNext = next@{
                             val chosen = name.trim()
                             if (chosen.isEmpty()) return@next
@@ -208,8 +200,6 @@ private fun OnboardingPage(content: @Composable ColumnScope.() -> Unit) {
 private fun ColumnScope.NamePage(
     name: String,
     onNameChange: (String) -> Unit,
-    onJoinDiscord: () -> Unit,
-    onJoinTelegram: () -> Unit,
     onNext: () -> Unit,
 ) {
     val keyboardUp = WindowInsets.isImeVisible
@@ -248,30 +238,6 @@ private fun ColumnScope.NamePage(
         color = Color.White.copy(alpha = 0.55f),
         modifier = Modifier.padding(horizontal = 4.dp),
     )
-    AnimatedVisibility(visible = !keyboardUp) {
-        Column {
-            Spacer(Modifier.height(16.dp))
-            PillButton(
-                label = stringResource(R.string.community_invite_discord),
-                onClick = onJoinDiscord,
-                primary = false,
-                leading = {
-                    Icon(
-                        imageVector = ImageVector.vectorResource(R.drawable.ic_discord),
-                        contentDescription = null,
-                        tint = Color.White,
-                        modifier = Modifier.size(20.dp),
-                    )
-                },
-            )
-            Spacer(Modifier.height(8.dp))
-            PillButton(
-                label = stringResource(R.string.telegram_invite_join),
-                onClick = onJoinTelegram,
-                primary = false,
-            )
-        }
-    }
     Spacer(Modifier.height(12.dp))
     PillButton(
         label = stringResource(R.string.onboarding_next),

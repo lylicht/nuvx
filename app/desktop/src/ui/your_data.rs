@@ -3,7 +3,7 @@
 
 use egui::Ui;
 
-use super::pages::{section_label, setting_row, settings_card};
+use super::pages::{section_label, setting_row, settings_card, toggle};
 use super::widgets::pill;
 use super::{Action, App, Page, SettingsPane};
 
@@ -87,6 +87,18 @@ pub(super) fn pane(app: &mut App, ui: &mut Ui) {
             ];
             ui.ctx().copy_text(crate::logging::diagnostics(app.backend.data_dir(), &facts));
             app.toast("Diagnostics copied");
+        }
+    });
+    ui.add_space(18.0);
+    section_label(ui, "Project updates", None);
+    settings_card(ui, |ui| {
+        let mut enabled = app.show_discontinuation_notice;
+        setting_row(ui, "Show discontinuation notice on startup", Some("nuvx is no longer supported. Future updates are published by VYRAL."), |ui| {
+            toggle(ui, &mut enabled, "Show notice");
+        });
+        if enabled != app.show_discontinuation_notice {
+            app.show_discontinuation_notice = enabled;
+            if !enabled { app.discontinuation_notice_open = false; }
         }
     });
 }

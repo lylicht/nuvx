@@ -1,5 +1,5 @@
 (() => {
-  const API = 'https://api.github.com/repos/lylicht/nuvx';
+  const API = 'https://api.github.com/repos/syrrnight/VYRAL';
   // Only titles that lead with it: "Bug: … the drag-to-play feature" is still a bug report.
   const FEATURE = /^\W*(feature|feat|enhancement|proposal|idea)\b/i;
 

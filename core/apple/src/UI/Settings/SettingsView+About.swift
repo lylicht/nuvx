@@ -293,16 +293,13 @@ extension SettingsView {
         }
         buildUpdateRows(&rows)
         rows.row("GitHub", "github", "source", "code", "repository") {
-            Link("GitHub", destination: URL(string: "https://github.com/lylicht/nuvx")!)
+            Link("GitHub", destination: URL(string: "https://github.com/syrrnight/VYRAL")!)
         }
         rows.row("Developer", "developer", "author", "github") {
             Link("Developer", destination: URL(string: "https://github.com/lylicht")!)
         }
-        rows.row("Discord", "discord", "community", "chat") {
-            Link("Discord", destination: URL(string: "https://discord.gg/h4Wsu824Uf")!)
-        }
-        rows.row("Telegram", "telegram", "community", "chat") {
-            Link("Telegram", destination: URL(string: "https://t.me/nuvxserver")!)
+        rows.row("Show discontinuation notice on startup", "support", "updates", "vyral", "handover") {
+            Toggle("Show discontinuation notice on startup", isOn: $showDiscontinuationNotice)
         }
     }
 
