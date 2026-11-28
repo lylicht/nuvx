@@ -25,6 +25,7 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
@@ -33,6 +34,75 @@ import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
 class AndroidLanSyncTransportInstrumentedTest {
+    @Test
+    fun selectedAudioTransfersCompleteInBothDirectionsAtOnce() = runBlocking {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        AndroidLanSyncHost.stop()
+        val guestFile = MediaAudio(context, "vyral-lan-guest-${System.nanoTime()}.wav", 512L * 1024)
+        val hostFile = MediaAudio(context, "vyral-lan-host-${System.nanoTime()}.wav", 512L * 1024)
+        val cleanup = mutableListOf<Uri>()
+        var session: LanSyncSession? = null
+
+        try {
+            val paired = startAndPair(context)
+            session = paired
+            AndroidLanSyncHost.setAllowSendFiles(context, true)
+            AndroidLanSyncHost.setAllowReceiveFiles(context, true)
+
+            val hostOfferId = requireNotNull(AndroidLanSyncHost.offerLocalFile(context, paired.deviceId, hostFile.uri))
+            val hostOffer = withTimeout(10_000) {
+                while (true) {
+                    AndroidLanSyncClient.transfers(paired).firstOrNull { it.id == hostOfferId }
+                        ?.let { return@withTimeout it }
+                    delay(50)
+                }
+                error("unreachable")
+            }
+
+            val receiveFromHost = async(Dispatchers.IO) {
+                AndroidLanSyncClient.receiveSelectedOffer(context, paired, hostOffer)
+            }
+            val guestOfferId = CompletableDeferred<String>()
+            val sendToHost = async(Dispatchers.IO) {
+                AndroidLanSyncClient.sendSelectedFile(
+                    context,
+                    paired,
+                    guestFile.uri,
+                    onTransferCreated = { guestOfferId.complete(it) },
+                )
+            }
+
+            val incomingGuestOffer = awaitHostTransfer {
+                it.direction == "upload" && it.name == guestFile.name && it.status == "pending"
+            }
+            AndroidLanSyncHost.acceptTransfer(incomingGuestOffer.id)
+
+            val receivedHostFile = withTimeout(30_000) { receiveFromHost.await() }
+            cleanup += receivedHostFile
+            assertEquals("complete", withTimeout(30_000) { sendToHost.await() })
+
+            val guestId = withTimeout(10_000) { guestOfferId.await() }
+            assertEquals("complete", AndroidLanSyncHost.state.value.transfers.first { it.id == guestId }.status)
+            assertEquals("complete", AndroidLanSyncClient.transfers(paired).first { it.id == hostOfferId }.status)
+
+            val importedOnHost = DownloadStore.existing(context, guestFile.name)
+            assertNotNull("The selected peer file must be imported on the host", importedOnHost)
+            val importedOnJoiner = DownloadStore.existing(context, hostFile.name)
+            assertNotNull("The selected host file must be imported on the joining device", importedOnJoiner)
+            importedOnHost?.let(cleanup::add)
+            importedOnJoiner?.let(cleanup::add)
+
+            assertArrayEquals(hostFile.uri.readBytes(context), requireNotNull(importedOnJoiner).readBytes(context))
+            assertArrayEquals(guestFile.uri.readBytes(context), requireNotNull(importedOnHost).readBytes(context))
+        } finally {
+            session?.let { AndroidLanSyncClient.forget(context, it.hostId) }
+            AndroidLanSyncHost.stop()
+            cleanup.distinct().forEach { DownloadStore.delete(context, it) }
+            guestFile.delete()
+            hostFile.delete()
+        }
+    }
+
     @Test
     fun securePairingUsesKeystoreAndRemoteControlGatesTheRealPlaybackService() = runBlocking {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
@@ -346,4 +416,7 @@ class AndroidLanSyncTransportInstrumentedTest {
             remaining -= write
         }
     }
+
+    private fun Uri.readBytes(context: Context): ByteArray =
+        requireNotNull(context.contentResolver.openInputStream(this)).use { it.readBytes() }
 }

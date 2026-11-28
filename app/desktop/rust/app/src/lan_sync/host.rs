@@ -284,6 +284,17 @@ impl Inner {
         self.files.take_received_changed()
     }
 
+    fn received_folder(&self) -> PathBuf {
+        #[cfg(test)]
+        {
+            self.data_dir.join("Received")
+        }
+        #[cfg(not(test))]
+        {
+            crate::downloads::folder().join("Received")
+        }
+    }
+
     pub fn offer_local_file(
         &mut self,
         device_id: &str,
@@ -891,7 +902,7 @@ impl Inner {
                 let id =
                     p["/v1/files/transfers/".len()..p.len() - "/chunk".len()].trim_end_matches('/');
                 let incoming = self.data_dir.join("incoming").join("transfers");
-                let received = crate::downloads::folder().join("Received");
+                let received = self.received_folder();
                 match self
                     .files
                     .receive_chunk(&incoming, &received, device, id, &body, now)

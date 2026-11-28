@@ -1565,6 +1565,7 @@ mod tests {
         {
             let mut host = inner.lock().unwrap();
             host.file_send_allowed = true;
+            host.file_receive_allowed = true;
             host.offer_local_file(&peer.device_id, &transfer_id, &source)
                 .unwrap();
         }
@@ -1575,7 +1576,7 @@ mod tests {
         let first_bytes = crypto::unb64(first["data"].as_str().unwrap()).unwrap();
         assert_eq!(first["offset"], 0);
         assert_eq!(first_bytes.len(), super::super::files::CHUNK);
-        let received_dir = data_dir.join("Received");
+        let received_dir = data_dir.join("peer-received");
         std::fs::create_dir_all(&received_dir).unwrap();
         std::fs::write(
             received_dir.join(format!(".vyral-{transfer_id}.part")),
@@ -1583,11 +1584,101 @@ mod tests {
         )
         .unwrap();
         drop(client); // Simulate the peer process exiting after its first durable chunk.
-        let resumed_client = Client::new(peer.clone()).unwrap();
-        let received = resumed_client
-            .download_file(&transfer_id, &received_dir, &AtomicBool::new(false))
-            .unwrap();
+        let peer_data_dir = data_dir.join("peer");
+        std::fs::create_dir_all(&peer_data_dir).unwrap();
+        let peer_source = peer_data_dir.join("selected-by-peer.flac");
+        let mut peer_audio = vec![0x6b; super::super::files::CHUNK * 48 + 83];
+        peer_audio[..4].copy_from_slice(b"fLaC");
+        std::fs::write(&peer_source, &peer_audio).unwrap();
+        let start = Arc::new(std::sync::Barrier::new(3));
+        let upload = {
+            let start = start.clone();
+            let peer = peer.clone();
+            let peer_source = peer_source.clone();
+            let peer_data_dir = peer_data_dir.clone();
+            std::thread::spawn(move || {
+                start.wait();
+                Client::new(peer)
+                    .unwrap()
+                    .send_file(&peer_source, &peer_data_dir, &AtomicBool::new(false))
+                    .unwrap()
+            })
+        };
+        let download = {
+            let start = start.clone();
+            let peer = peer.clone();
+            let received_dir = received_dir.clone();
+            let transfer_id = transfer_id.clone();
+            std::thread::spawn(move || {
+                start.wait();
+                Client::new(peer)
+                    .unwrap()
+                    .download_file(&transfer_id, &received_dir, &AtomicBool::new(false))
+                    .unwrap()
+            })
+        };
+        start.wait();
+        let deadline = std::time::Instant::now() + Duration::from_secs(15);
+        let upload_id = loop {
+            let offer = inner
+                .lock()
+                .unwrap()
+                .pending_file_transfers()
+                .into_iter()
+                .find(|transfer| transfer["direction"] == "upload");
+            if let Some(offer) = offer {
+                let id = offer["id"].as_str().unwrap().to_owned();
+                inner
+                    .lock()
+                    .unwrap()
+                    .accept_file_transfer(&peer.device_id, &id)
+                    .unwrap();
+                break id;
+            }
+            assert!(
+                std::time::Instant::now() < deadline,
+                "peer upload offer timed out"
+            );
+            std::thread::sleep(Duration::from_millis(5));
+        };
+        let mut overlapped = false;
+        loop {
+            let transfers = inner.lock().unwrap().file_transfers();
+            let host_to_peer = transfers
+                .iter()
+                .find(|transfer| transfer["id"] == transfer_id)
+                .unwrap();
+            let peer_to_host = transfers
+                .iter()
+                .find(|transfer| transfer["id"] == upload_id)
+                .unwrap();
+            overlapped |= host_to_peer["received"].as_u64().unwrap_or(0) > 0
+                && peer_to_host["received"].as_u64().unwrap_or(0) > 0;
+            if host_to_peer["status"] == "complete" && peer_to_host["status"] == "complete" {
+                break;
+            }
+            assert!(
+                std::time::Instant::now() < deadline,
+                "full-duplex transfer timed out"
+            );
+            std::thread::sleep(Duration::from_millis(5));
+        }
+        assert!(
+            overlapped,
+            "both transfer directions should make progress concurrently"
+        );
+        let uploaded_id = upload.join().unwrap();
+        assert_eq!(uploaded_id, upload_id);
+        let received = download.join().unwrap();
         assert_eq!(std::fs::read(received).unwrap(), audio);
+        let host_received = data_dir.join("Received");
+        let host_file = std::fs::read_dir(host_received)
+            .unwrap()
+            .next()
+            .unwrap()
+            .unwrap()
+            .path();
+        assert_eq!(std::fs::read(host_file).unwrap(), peer_audio);
         stop.store(true, Ordering::Relaxed);
         server_thread.join().unwrap();
         let _ = std::fs::remove_dir_all(data_dir);
