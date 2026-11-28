@@ -290,6 +290,10 @@ impl Backend {
                         Ok(s) => return Ok((Source::YtDlp, s)),
                         Err(e) => e,
                     }
+                } else if is_bot_challenge(&e) {
+                    anyhow::anyhow!(
+                        "YouTube requested a bot check; try another enabled source or retry later"
+                    )
                 } else {
                     anyhow::anyhow!("sign in to play this song")
                 }

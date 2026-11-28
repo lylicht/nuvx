@@ -86,7 +86,7 @@ import app.vyral.night.ui.components.trackColumnWidth
 import app.vyral.night.ui.player.MeshGradientBackground
 import app.vyral.night.ui.player.MeshPalette
 
-/** How far the Listen now heading and feed sit above the shared top inset. */
+/** How far the home wordmark and feed sit above the shared top inset. */
 private val HOME_TITLE_LIFT = 28.dp
 
 private const val RECENTS_TITLE = "Recents"
@@ -183,7 +183,7 @@ fun HomeScreen(
             },
         ) {
             if (title != null) {
-                item { HomeTitle(title, replayYear) }
+                item { HomeTitle(replayYear) }
             }
             if (!signedIn && onSignIn != null) {
                 item {
@@ -447,16 +447,12 @@ fun CompactTrackRow(
 }
 
 /**
- * Listen now's large heading, with the wordmark stacked above it.
+ * The home wordmark, with the Replay year marker beside it when available.
  *
- * Only the home tab carries it — the top bar no longer shows the logo, so this
- * is where the app's mark lives. Its height is taken from the heading's own
- * font size rather than a fixed dp, so the two keep their proportion under the
- * system font scale.
+ * Only the home tab carries it. Its height follows the system font scale.
  */
 @Composable
 private fun HomeTitle(
-    title: String,
     replayYear: ReplayYearBadge? = null,
     modifier: Modifier = Modifier,
 ) {
@@ -483,12 +479,6 @@ private fun HomeTitle(
                 ReplayYearButton(replayYear, height = logoHeight * 0.68f)
             }
         }
-        // "Listen now" is hidden for now; the wordmark above stays.
-        // Text(
-        //     text = title,
-        //     style = style,
-        //     color = MaterialTheme.colorScheme.onBackground,
-        // )
     }
 }
 

@@ -632,6 +632,14 @@ fn needs_account(e: &anyhow::Error) -> bool {
     msg.contains("Premium") || msg.contains("LOGIN_REQUIRED")
 }
 
+fn is_bot_challenge(e: &anyhow::Error) -> bool {
+    let message = e.to_string().to_lowercase();
+    message.contains("login_required")
+        && (message.contains("not a bot")
+            || message.contains("not a robot")
+            || message.contains("bot check"))
+}
+
 fn saved_playlist_visible(card: &Card) -> bool {
     card.target != Target::Playlist("SE".into())
         || card
@@ -700,5 +708,28 @@ mod explore_tests {
             "Auto playlist • 2 episodes"
         )));
         assert!(saved_playlist_visible(&item("PLcustom", "Playlist")));
+    }
+}
+
+#[cfg(test)]
+mod playback_error_tests {
+    use super::*;
+
+    #[test]
+    fn youtube_bot_check_is_not_confused_with_age_or_account_gate() {
+        let bot = anyhow::anyhow!("LOGIN_REQUIRED: Sign in to confirm you're not a bot");
+        let age = anyhow::anyhow!("LOGIN_REQUIRED: Sign in to confirm your age");
+
+        assert!(needs_account(&bot));
+        assert!(is_bot_challenge(&bot));
+        assert!(needs_account(&age));
+        assert!(!is_bot_challenge(&age));
+    }
+
+    #[test]
+    fn other_player_errors_are_not_classified_as_bot_checks() {
+        assert!(!is_bot_challenge(&anyhow::anyhow!(
+            "no audio stream in response"
+        )));
     }
 }
