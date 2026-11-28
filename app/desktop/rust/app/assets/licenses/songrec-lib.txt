@@ -1,0 +1,13 @@
+songrec-lib 0.5.4
+
+Copyright (c) marin-m.
+Source: https://github.com/marin-m/SongRec
+License: GNU General Public License v3.0 or later (GPL-3.0-or-later)
+
+VYRAL uses songrec-lib's Shazam-compatible signature generator. VYRAL performs
+microphone capture and network requests itself; raw microphone samples are not
+sent to the recognition service.
+
+The complete license text is included in the crate source distributed through
+crates.io and is available at:
+https://www.gnu.org/licenses/gpl-3.0.txt

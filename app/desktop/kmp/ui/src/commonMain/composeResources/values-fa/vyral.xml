@@ -1,0 +1,20 @@
+<resources>
+    <string name="vyral_tagline">موسیقی تو، به سبک تو</string>
+    <string name="vyral_stable">پایدار</string>
+    <string name="vyral_version_code">کد نسخه</string>
+    <string name="vyral_license">مجوز</string>
+    <string name="vyral_open_source_licenses">مجوزهای متن‌باز</string>
+    <string name="vyral_lead_dev">توسعه‌دهندهٔ اصلی</string>
+    <string name="vyral_quality_assurance_tester">آزمایشگر تضمین کیفیت</string>
+    <string name="vyral_app_info">اطلاعات برنامه</string>
+    <string name="vyral_website">وب‌سایت</string>
+    <string name="vyral_source">کد منبع</string>
+    <string name="vyral_github_stars">ستاره‌های GitHub</string>
+    <string name="vyral_community">انجمن</string>
+    <string name="vyral_support">حمایت از vyral</string>
+    <string name="vyral_reserved">به‌زودی</string>
+    <string name="vyral_reserved_detail">فضایی مشترک برای موسیقی شما. گوش دادن گروهی پس از آماده شدن سرویس vyral در دسترس خواهد بود.</string>
+    <string name="vyral_speed_dial">دسترسی سریع</string>
+    <string name="vyral_daily_discover">کشف روزانهٔ شما</string>
+    <string name="vyral_daily_discover_subtitle">بر اساس موسیقی‌هایی که گوش می‌دهید انتخاب شده است.</string>
+</resources>

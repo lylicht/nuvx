@@ -58,4 +58,3 @@ Platform-specific packaging notes are in the relevant desktop directories. Relea
 VYRAL is distributed under GNU GPL version 3; see [LICENSE](LICENSE). Third-party code, assets, and upstream attribution are listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) and alongside their components.
 
 VYRAL is forked from [BitChord](https://github.com/kushagrasinghx/BitChord); see the notices above for attribution and licensing details.
-

@@ -1,0 +1,1696 @@
+use std::path::Path;
+use std::time::{SystemTime, UNIX_EPOCH};
+
+use anyhow::{Context, Result, anyhow, bail, ensure};
+use base64::Engine;
+use futures_util::{StreamExt, TryStreamExt, stream};
+use hmac::{Hmac, KeyInit, Mac};
+use serde_json::{Value, json};
+use sha1::Sha1;
+use url::Url;
+
+use crate::ytmapi::between;
+
+const UA: &str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36";
+const SECRETS_URL: &str =
+    "https://code.thetadev.de/ThetaDev/spotify-secrets/raw/branch/main/secrets/secretDict.json";
+const FALLBACK_SECRET: (u32, &[u8]) = (
+    61,
+    &[
+        44, 55, 47, 42, 70, 40, 34, 114, 76, 74, 50, 111, 120, 97, 75, 76, 94, 102, 43, 69, 49,
+        120, 118, 80, 64, 78,
+    ],
+);
+const PAGE: usize = 343;
+const LIBRARY_PAGE: usize = 50;
+const CDN: &str = "https://open.spotifycdn.com/cdn/build/web-player/";
+const OPERATIONS: [&str; 6] = [
+    "fetchPlaylist",
+    "fetchLibraryTracks",
+    "libraryV3",
+    "profileAttributes",
+    "addToPlaylist",
+    "addToLibrary",
+];
+const HASH_CACHE: &str = "spotify_queries.json";
+
+#[derive(Clone, serde::Serialize, serde::Deserialize)]
+pub struct Track {
+    pub name: String,
+    pub artists: Vec<String>,
+    #[serde(default)]
+    pub local: bool,
+    #[serde(default)]
+    pub art: Option<String>,
+    #[serde(default)]
+    pub duration: Option<u32>,
+}
+
+impl Track {
+    pub fn artist_line(&self) -> String {
+        self.artists.join(", ")
+    }
+}
+
+pub struct Playlist {
+    pub name: String,
+    pub tracks: Vec<Track>,
+    pub skipped: usize,
+}
+
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub enum Source {
+    Playlist(String),
+    Liked,
+}
+
+impl Source {
+    pub fn parse(link: &str) -> Result<Self> {
+        let link = link.trim();
+        let id: String = if let Some(rest) = link.strip_prefix("spotify:playlist:") {
+            rest.to_owned()
+        } else if link.contains("://") {
+            let url = Url::parse(link).context("That isn't a valid Spotify link")?;
+            ensure!(
+                matches!(url.scheme(), "http" | "https"),
+                "That isn't an open.spotify.com link"
+            );
+            ensure!(
+                matches!(
+                    url.host_str(),
+                    Some("open.spotify.com" | "www.open.spotify.com")
+                ),
+                "That isn't an open.spotify.com link"
+            );
+            let parts: Vec<String> = url
+                .path_segments()
+                .into_iter()
+                .flatten()
+                .filter(|p| !p.is_empty() && !p.starts_with("intl-"))
+                .map(str::to_owned)
+                .collect();
+            match parts
+                .iter()
+                .map(String::as_str)
+                .collect::<Vec<_>>()
+                .as_slice()
+            {
+                ["collection", "tracks"] => return Ok(Self::Liked),
+                ["playlist", id] => (*id).to_owned(),
+                _ => bail!("That isn't a playlist link"),
+            }
+        } else {
+            link.to_owned()
+        };
+        ensure!(
+            id.len() == 22 && id.bytes().all(|b| b.is_ascii_alphanumeric()),
+            "That isn't a Spotify playlist link"
+        );
+        Ok(Self::Playlist(id))
+    }
+
+    pub fn key(&self) -> &str {
+        match self {
+            Self::Playlist(id) => id,
+            Self::Liked => "liked",
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct Entry {
+    pub source: Source,
+    pub name: String,
+    pub owner: String,
+    pub count: Option<usize>,
+    pub art: Option<String>,
+}
+
+pub struct Account {
+    pub name: String,
+    pub library: Vec<Entry>,
+}
+
+/// A track found through the Spotify Web API, used to resolve a vyral song before saving it.
+#[derive(Clone, Debug)]
+pub struct SpotifySearchTrack {
+    pub id: String,
+    pub name: String,
+    pub artists: Vec<String>,
+}
+
+#[derive(Clone, Debug)]
+pub struct ExportSource {
+    pub name: String,
+    pub tracks: Vec<crate::model::Track>,
+}
+
+#[derive(Clone, Debug)]
+pub struct ExportPlaylist {
+    pub name: String,
+    pub track_ids: Vec<String>,
+}
+
+#[derive(Clone, Debug, Default)]
+pub struct ExportPreview {
+    pub playlists: Vec<ExportPlaylist>,
+    pub liked_track_ids: Vec<String>,
+    pub unmatched_tracks: usize,
+    pub warnings: Vec<String>,
+}
+
+impl ExportPreview {
+    pub fn matched_tracks(&self) -> usize {
+        self.playlists
+            .iter()
+            .map(|p| p.track_ids.len())
+            .sum::<usize>()
+            + self.liked_track_ids.len()
+    }
+}
+
+#[derive(Clone, Debug, Default)]
+pub struct ExportResult {
+    pub playlists_created: usize,
+    pub playlist_tracks_added: usize,
+    pub liked_tracks_saved: usize,
+    pub warnings: Vec<String>,
+}
+
+#[derive(serde::Deserialize)]
+struct SearchResponse {
+    tracks: SearchPage,
+}
+
+#[derive(serde::Deserialize)]
+struct SearchPage {
+    #[serde(default)]
+    items: Vec<SearchItem>,
+}
+
+#[derive(serde::Deserialize)]
+struct SearchItem {
+    #[serde(default)]
+    id: Option<String>,
+    name: String,
+    #[serde(default)]
+    artists: Vec<SearchArtist>,
+}
+
+#[derive(serde::Deserialize)]
+struct SearchArtist {
+    name: String,
+}
+
+pub struct Client {
+    http: reqwest::Client,
+    access_token: String,
+    client_token: String,
+    client_version: String,
+    hashes: Hashes,
+}
+
+#[derive(Default, serde::Serialize, serde::Deserialize)]
+struct Hashes {
+    bundle: String,
+    ops: std::collections::BTreeMap<String, String>,
+}
+
+impl Client {
+    pub async fn connect(sp_dc: Option<&str>, data_dir: &Path) -> Result<Self> {
+        let http = crate::proxy::apply(reqwest::Client::builder())
+            .user_agent(UA)
+            .connect_timeout(std::time::Duration::from_secs(5))
+            .timeout(std::time::Duration::from_secs(20))
+            .build()?;
+
+        let resp = http
+            .get("https://open.spotify.com")
+            .send()
+            .await?
+            .error_for_status()?;
+        let device_id = resp
+            .headers()
+            .get_all("set-cookie")
+            .iter()
+            .filter_map(|v| {
+                v.to_str()
+                    .ok()?
+                    .strip_prefix("sp_t=")?
+                    .split(';')
+                    .next()
+                    .map(str::to_owned)
+            })
+            .next()
+            .unwrap_or_default();
+        let html = resp.text().await?;
+
+        let config = between(
+            &html,
+            r#"<script id="appServerConfig" type="text/plain">"#,
+            "</script>",
+        )
+        .context("open.spotify.com is missing appServerConfig")?;
+        let config: Value = serde_json::from_slice(
+            &base64::engine::general_purpose::STANDARD.decode(config.trim())?,
+        )?;
+        let client_version = config["clientVersion"]
+            .as_str()
+            .context("appServerConfig has no clientVersion")?
+            .to_owned();
+        let bundle = script_srcs(&html)
+            .find(|s| s.contains("web-player/web-player") && s.ends_with(".js"))
+            .context("open.spotify.com has no web-player bundle")?
+            .to_owned();
+
+        let (token, hashes) = tokio::try_join!(
+            access_token(&http, sp_dc, &device_id),
+            query_hashes(&http, &bundle, data_dir)
+        )?;
+        let (access_token, client_id) = token;
+        let client_token = client_token(&http, &client_version, &client_id, &device_id).await?;
+        Ok(Self {
+            http,
+            access_token,
+            client_token,
+            client_version,
+            hashes,
+        })
+    }
+
+    /// Confirm a saved sp_dc cookie is actually accepted before the login
+    /// window exits. No playlist fetch or JavaScript bundle scan is needed.
+    pub(crate) async fn verify_sign_in(sp_dc: &str) -> Result<()> {
+        let http = crate::proxy::apply(reqwest::Client::builder())
+            .user_agent(UA)
+            .connect_timeout(std::time::Duration::from_secs(5))
+            .timeout(std::time::Duration::from_secs(20))
+            .build()?;
+        let resp = http
+            .get("https://open.spotify.com")
+            .send()
+            .await?
+            .error_for_status()?;
+        let device_id = resp
+            .headers()
+            .get_all("set-cookie")
+            .iter()
+            .filter_map(|v| {
+                v.to_str()
+                    .ok()?
+                    .strip_prefix("sp_t=")?
+                    .split(';')
+                    .next()
+                    .map(str::to_owned)
+            })
+            .next()
+            .unwrap_or_default();
+        access_token(&http, Some(sp_dc), &device_id).await?;
+        Ok(())
+    }
+
+    fn hash(&self, operation: &str) -> Result<&str> {
+        self.hashes
+            .ops
+            .get(operation)
+            .map(String::as_str)
+            .ok_or_else(|| anyhow!("couldn't find Spotify's {operation} query"))
+    }
+
+    async fn query(&self, operation: &str, variables: Value) -> Result<Value> {
+        let extensions =
+            json!({"persistedQuery": {"version": 1, "sha256Hash": self.hash(operation)?}});
+        let mut tries = 0;
+        loop {
+            let resp = self
+                .http
+                .post("https://api-partner.spotify.com/pathfinder/v1/query")
+                .query(&[
+                    ("operationName", operation),
+                    ("variables", &variables.to_string()),
+                    ("extensions", &extensions.to_string()),
+                ])
+                .bearer_auth(&self.access_token)
+                .header("Client-Token", &self.client_token)
+                .header("Spotify-App-Version", &self.client_version)
+                .header("Accept-Language", "en")
+                .header("Content-Length", "0")
+                .send()
+                .await;
+            tries += 1;
+            match resp.and_then(|r| r.error_for_status()) {
+                Ok(r) => return Ok(r.json().await?),
+                Err(e)
+                    if tries < 3
+                        && e.status()
+                            .is_none_or(|s| s.is_server_error() || s.as_u16() == 429) =>
+                {
+                    tokio::time::sleep(std::time::Duration::from_millis(500 * tries)).await;
+                }
+                Err(e) => {
+                    return Err(e).with_context(|| format!("Spotify's {operation} query failed"));
+                }
+            }
+        }
+    }
+
+    pub async fn account(&self) -> Result<Account> {
+        let (profile, library) =
+            tokio::join!(self.query("profileAttributes", json!({})), self.library());
+        let name = profile
+            .ok()
+            .and_then(|p| {
+                p["data"]["me"]["profile"]["name"]
+                    .as_str()
+                    .map(str::to_owned)
+            })
+            .unwrap_or_default();
+        let mut library = match library {
+            Ok(l) if !l.is_empty() => l,
+            other => {
+                if let Err(e) = &other {
+                    log::warn!("spotify libraryV3: {e:#}; trying the Web API");
+                }
+                match self.web_api_playlists().await {
+                    Ok(l) => l,
+                    Err(e) => {
+                        log::warn!("spotify /me/playlists: {e:#}");
+                        other?
+                    }
+                }
+            }
+        };
+        if !library.iter().any(|e| e.source == Source::Liked) {
+            let count = self
+                .query("fetchLibraryTracks", json!({"offset": 0, "limit": 1}))
+                .await
+                .ok()
+                .and_then(|b| b["data"]["me"]["library"]["tracks"]["totalCount"].as_u64())
+                .map(|c| c as usize);
+            library.insert(
+                0,
+                Entry {
+                    source: Source::Liked,
+                    name: "Liked Songs".to_owned(),
+                    owner: String::new(),
+                    count,
+                    art: None,
+                },
+            );
+        }
+        Ok(Account { name, library })
+    }
+
+    async fn web_api_playlists(&self) -> Result<Vec<Entry>> {
+        let mut out = Vec::new();
+        let mut url = Some("https://api.spotify.com/v1/me/playlists?limit=50".to_owned());
+        while let Some(u) = url.take() {
+            let page: Value = self
+                .http
+                .get(&u)
+                .bearer_auth(&self.access_token)
+                .send()
+                .await?
+                .error_for_status()?
+                .json()
+                .await?;
+            for p in page["items"].as_array().into_iter().flatten() {
+                let (Some(id), Some(name)) = (p["id"].as_str(), p["name"].as_str()) else {
+                    continue;
+                };
+                out.push(Entry {
+                    source: Source::Playlist(id.to_owned()),
+                    name: name.trim().to_owned(),
+                    owner: p["owner"]["display_name"]
+                        .as_str()
+                        .unwrap_or_default()
+                        .to_owned(),
+                    count: p["tracks"]["total"]
+                        .as_u64()
+                        .or(p["items"]["total"].as_u64())
+                        .map(|c| c as usize),
+                    art: p["images"]
+                        .as_array()
+                        .and_then(|i| i.last())
+                        .and_then(|i| i["url"].as_str())
+                        .map(str::to_owned),
+                });
+            }
+            url = page["next"].as_str().map(str::to_owned);
+        }
+        Ok(out)
+    }
+
+    /// Finds Spotify track IDs for a title (and optionally artist) through the Web API.
+    pub async fn search_tracks(&self, query: &str) -> Result<Vec<SpotifySearchTrack>> {
+        let resp = self
+            .http
+            .get("https://api.spotify.com/v1/search")
+            .query(&[("q", query), ("type", "track"), ("limit", "10")])
+            .bearer_auth(&self.access_token)
+            .header("Accept", "application/json")
+            .header("User-Agent", UA)
+            .send()
+            .await
+            .context("Spotify track search failed")?;
+        check_rest(&resp, "search for tracks")?;
+        let page: SearchResponse = resp.json().await?;
+        Ok(page
+            .tracks
+            .items
+            .into_iter()
+            .filter_map(|item| {
+                let id = item.id?;
+                if !valid_id(&id) || item.name.trim().is_empty() {
+                    return None;
+                }
+                let artists = item
+                    .artists
+                    .into_iter()
+                    .map(|a| a.name)
+                    .filter(|n| !n.trim().is_empty())
+                    .collect();
+                Some(SpotifySearchTrack {
+                    id,
+                    name: item.name.trim().to_owned(),
+                    artists,
+                })
+            })
+            .collect())
+    }
+
+    /// Creates a private playlist in the connected Spotify web-player account.
+    /// The two mutations are deliberately single-attempt: retrying an ambiguous
+    /// create could leave duplicate playlists in the user's library.
+    pub async fn create_playlist(&self, name: &str) -> Result<String> {
+        let name = name.trim();
+        ensure!(!name.is_empty(), "A Spotify playlist needs a name");
+        let me: Value = self
+            .http
+            .get("https://api.spotify.com/v1/me")
+            .bearer_auth(&self.access_token)
+            .header("Accept", "application/json")
+            .send()
+            .await
+            .context("Reading the connected Spotify account failed")?
+            .error_for_status()
+            .context("Reading the connected Spotify account failed")?
+            .json()
+            .await?;
+        let username = me["id"]
+            .as_str()
+            .filter(|id| !id.trim().is_empty())
+            .context("Spotify did not return the connected account ID")?;
+
+        let headers = self.web_player_headers()?;
+        let created: Value = self
+            .http
+            .post("https://spclient.wg.spotify.com/playlist/v2/playlist")
+            .headers(headers.clone())
+            .json(&playlist_create_payload(name))
+            .send()
+            .await
+            .context("Creating the Spotify playlist failed")?
+            .error_for_status()
+            .context("Creating the Spotify playlist failed")?
+            .json()
+            .await?;
+        let uri = created["uri"]
+            .as_str()
+            .context("Spotify did not return the new playlist ID")?;
+        let id = uri
+            .strip_prefix("spotify:playlist:")
+            .unwrap_or_else(|| uri.rsplit('/').next().unwrap_or_default());
+        ensure!(valid_id(id), "Spotify returned an invalid playlist ID");
+
+        let mut rootlist = Url::parse("https://spclient.wg.spotify.com/playlist/v2/user/")?;
+        rootlist
+            .path_segments_mut()
+            .map_err(|_| anyhow!("Spotify returned an invalid account ID"))?
+            .push(username)
+            .push("rootlist")
+            .push("changes");
+        let response: Value = self
+            .http
+            .post(rootlist)
+            .headers(headers)
+            .json(&rootlist_add_payload(id, now_millis()))
+            .send()
+            .await
+            .context("Adding the Spotify playlist to your library failed")?
+            .error_for_status()
+            .context("Adding the Spotify playlist to your library failed")?
+            .json()
+            .await?;
+        ensure!(
+            response["revision"].as_str().is_some_and(|r| !r.is_empty()),
+            "Spotify did not confirm adding the playlist to your library"
+        );
+        Ok(id.to_owned())
+    }
+
+    fn web_player_headers(&self) -> Result<reqwest::header::HeaderMap> {
+        use reqwest::header::{ACCEPT, AUTHORIZATION, HeaderMap, HeaderValue, REFERER, USER_AGENT};
+        let mut headers = HeaderMap::new();
+        headers.insert(
+            AUTHORIZATION,
+            HeaderValue::from_str(&format!("Bearer {}", self.access_token))?,
+        );
+        headers.insert(ACCEPT, HeaderValue::from_static("application/json"));
+        headers.insert(USER_AGENT, HeaderValue::from_static(UA));
+        headers.insert("app-platform", HeaderValue::from_static("WebPlayer"));
+        headers.insert(
+            "origin",
+            HeaderValue::from_static("https://open.spotify.com"),
+        );
+        headers.insert(
+            REFERER,
+            HeaderValue::from_static("https://open.spotify.com/"),
+        );
+        headers.insert("Client-Token", HeaderValue::from_str(&self.client_token)?);
+        headers.insert(
+            "Spotify-App-Version",
+            HeaderValue::from_str(&self.client_version)?,
+        );
+        Ok(headers)
+    }
+
+    /// Resolves VYRAL playlists and liked songs against Spotify before showing
+    /// any write action to the user. Searches are bounded to three concurrent requests.
+    pub async fn prepare_export(
+        &self,
+        sources: Vec<ExportSource>,
+        liked: Vec<crate::model::Track>,
+        mut warnings: Vec<String>,
+    ) -> ExportPreview {
+        use std::collections::{HashMap, HashSet};
+
+        let all_tracks = sources
+            .iter()
+            .flat_map(|s| &s.tracks)
+            .chain(&liked)
+            .filter(|t| !t.music_video && !t.title.trim().is_empty())
+            .cloned();
+        let mut unique = HashMap::<String, crate::model::Track>::new();
+        for track in all_tracks {
+            unique.entry(export_track_key(&track)).or_insert(track);
+        }
+
+        let matches: Vec<(String, Option<String>, Option<String>)> = stream::iter(unique)
+            .map(|(key, track)| async move {
+                let artist = track.artist_line();
+                let album = track.album.as_ref().map(|album| album.name.as_str());
+                let query = [Some(track.title.as_str()), Some(artist.as_str()), album]
+                    .into_iter()
+                    .flatten()
+                    .filter(|part| !part.trim().is_empty())
+                    .collect::<Vec<_>>()
+                    .join(" ");
+                match self.search_tracks(&query).await {
+                    Ok(found) => {
+                        let id = found
+                            .iter()
+                            .find(|candidate| export_candidate_matches(candidate, &track))
+                            .map(|candidate| candidate.id.clone());
+                        (key, id, None)
+                    }
+                    Err(error) => (key, None, Some(error.to_string())),
+                }
+            })
+            .buffer_unordered(3)
+            .collect()
+            .await;
+        let mut ids = HashMap::new();
+        let mut failed_searches = 0usize;
+        for (key, id, error) in matches {
+            if let Some(id) = id {
+                ids.insert(key, id);
+            } else if let Some(error) = error {
+                failed_searches += 1;
+                if failed_searches == 1 {
+                    warnings.push(format!("Some Spotify searches failed: {error}"));
+                }
+            }
+        }
+
+        let mut unmatched = HashSet::new();
+        for track in sources.iter().flat_map(|s| &s.tracks).chain(&liked) {
+            if track.music_video {
+                continue;
+            }
+            let key = export_track_key(track);
+            if !ids.contains_key(&key) {
+                unmatched.insert(key);
+            }
+        }
+        let playlists = sources
+            .into_iter()
+            .map(|source| ExportPlaylist {
+                name: source.name,
+                track_ids: unique_ids(source.tracks, &ids),
+            })
+            .collect();
+        let liked_track_ids = unique_ids(liked, &ids);
+        ExportPreview {
+            playlists,
+            liked_track_ids,
+            unmatched_tracks: unmatched.len(),
+            warnings,
+        }
+    }
+
+    /// Runs only after the user confirms the preview. A failed playlist does not
+    /// prevent the remaining sources or Liked Songs from being exported.
+    pub async fn export(&self, preview: &ExportPreview) -> ExportResult {
+        let mut result = ExportResult::default();
+        for playlist in &preview.playlists {
+            if playlist.track_ids.is_empty() {
+                continue;
+            }
+            match self.create_playlist(&playlist.name).await {
+                Ok(id) => {
+                    result.playlists_created += 1;
+                    match self.add_to_playlist(&id, &playlist.track_ids).await {
+                        Ok(()) => result.playlist_tracks_added += playlist.track_ids.len(),
+                        Err(error) => result.warnings.push(format!(
+                            "Created '{}' but could not add its tracks: {error:#}",
+                            playlist.name
+                        )),
+                    }
+                }
+                Err(error) => result
+                    .warnings
+                    .push(format!("Could not export '{}': {error:#}", playlist.name)),
+            }
+        }
+        if !preview.liked_track_ids.is_empty() {
+            match self.save_tracks(&preview.liked_track_ids).await {
+                Ok(()) => result.liked_tracks_saved = preview.liked_track_ids.len(),
+                Err(error) => result.warnings.push(format!(
+                    "Could not save tracks to Spotify Liked Songs: {error:#}"
+                )),
+            }
+        }
+        result
+    }
+
+    /// Adds tracks to an existing Spotify playlist, at most 100 URIs per request.
+    pub async fn add_to_playlist(&self, playlist_id: &str, track_ids: &[String]) -> Result<()> {
+        ensure!(valid_id(playlist_id), "That isn't a Spotify playlist");
+        ensure!(
+            track_ids.iter().all(|id| valid_id(id)),
+            "Spotify returned an invalid track ID"
+        );
+        let headers = self.web_player_headers()?;
+        for batch in track_ids.chunks(100) {
+            let response = self
+                .gql_mutation(
+                    "addToPlaylist",
+                    add_playlist_variables(playlist_id, batch),
+                    &headers,
+                )
+                .await?;
+            ensure!(
+                response["data"]["addItemsToPlaylist"]["__typename"] == "AddItemsToPlaylistPayload",
+                "Spotify did not confirm adding tracks to the playlist"
+            );
+        }
+        Ok(())
+    }
+
+    /// Saves tracks to the signed-in account's Liked Songs, at most 50 IDs per request.
+    pub async fn save_tracks(&self, track_ids: &[String]) -> Result<()> {
+        ensure!(
+            track_ids.iter().all(|id| valid_id(id)),
+            "Spotify returned an invalid track ID"
+        );
+        let headers = self.web_player_headers()?;
+        for batch in track_ids.chunks(50) {
+            let response = self
+                .gql_mutation("addToLibrary", add_library_variables(batch), &headers)
+                .await?;
+            ensure!(
+                response["data"]["addLibraryItems"]["__typename"] == "AddLibraryItemsResponse",
+                "Spotify did not confirm saving tracks to Liked Songs"
+            );
+        }
+        Ok(())
+    }
+
+    async fn gql_mutation(
+        &self,
+        operation: &str,
+        variables: Value,
+        headers: &reqwest::header::HeaderMap,
+    ) -> Result<Value> {
+        let body = json!({
+            "variables": variables,
+            "operationName": operation,
+            "extensions": {
+                "persistedQuery": {
+                    "version": 1,
+                    "sha256Hash": self.hash(operation)?
+                }
+            }
+        });
+        let response = self
+            .http
+            .post("https://api-partner.spotify.com/pathfinder/v2/query")
+            .headers(headers.clone())
+            .json(&body)
+            .send()
+            .await
+            .with_context(|| format!("Spotify {operation} request failed"))?
+            .error_for_status()
+            .with_context(|| format!("Spotify {operation} request failed"))?;
+        let body: Value = response.json().await?;
+        if let Some(error) = body["errors"]
+            .as_array()
+            .and_then(|errors| errors.first())
+            .and_then(|error| error["message"].as_str())
+        {
+            anyhow::bail!("Spotify {operation} failed: {error}");
+        }
+        Ok(body)
+    }
+
+    async fn library(&self) -> Result<Vec<Entry>> {
+        let page = |offset: usize| async move {
+            let variables = json!({
+                "filters": ["Playlists"], "order": null, "textFilter": null, "features": ["LIKED_SONGS"],
+                "limit": LIBRARY_PAGE, "offset": offset, "flatten": true, "folderUri": null,
+                "includeFoldersWhenFlattening": true,
+            });
+            let body = self.query("libraryV3", variables).await?;
+            let lib = body["data"]["me"]["libraryV3"].clone();
+            ensure!(
+                lib.is_object(),
+                "Spotify didn't return your library; sign in to Spotify again"
+            );
+            Ok::<_, anyhow::Error>(lib)
+        };
+        let first = page(0).await?;
+        let total = first["totalCount"].as_u64().unwrap_or(0) as usize;
+        let mut items: Vec<Value> = first["items"].as_array().cloned().unwrap_or_default();
+        let rest: Vec<Value> = stream::iter((LIBRARY_PAGE..total).step_by(LIBRARY_PAGE))
+            .map(page)
+            .buffered(4)
+            .try_collect()
+            .await?;
+        for mut p in rest {
+            if let Value::Array(more) = p["items"].take() {
+                items.extend(more);
+            }
+        }
+        Ok(items
+            .iter()
+            .filter_map(|i| library_entry(&i["item"]))
+            .collect())
+    }
+
+    async fn page(&self, id: &str, offset: usize, limit: usize) -> Result<Value> {
+        let variables = json!({"uri": format!("spotify:playlist:{id}"), "offset": offset, "limit": limit, "enableWatchFeedEntrypoint": false});
+        let body = self.query("fetchPlaylist", variables).await?;
+        let playlist = &body["data"]["playlistV2"];
+        if playlist.is_null() || playlist["__typename"] == "NotFound" {
+            bail!("Spotify couldn't find that playlist. If it's private, sign in to Spotify first");
+        }
+        Ok(playlist.clone())
+    }
+
+    pub async fn playlist_info(&self, id: &str) -> Result<Entry> {
+        let p = self.page(id, 0, 1).await?;
+        let art = p["images"]["items"]
+            .as_array()
+            .and_then(|i| i.first())
+            .and_then(|i| art(&i["sources"]));
+        Ok(Entry {
+            source: Source::Playlist(id.to_owned()),
+            name: p["name"].as_str().unwrap_or_default().trim().to_owned(),
+            owner: p["ownerV2"]["data"]["name"]
+                .as_str()
+                .unwrap_or_default()
+                .to_owned(),
+            count: p["content"]["totalCount"].as_u64().map(|c| c as usize),
+            art,
+        })
+    }
+
+    pub async fn liked(&self, on_progress: impl Fn(usize, usize)) -> Result<Playlist> {
+        let page = |offset: usize| async move {
+            let body = self
+                .query(
+                    "fetchLibraryTracks",
+                    json!({"offset": offset, "limit": LIBRARY_PAGE}),
+                )
+                .await?;
+            let tracks = &body["data"]["me"]["library"]["tracks"];
+            ensure!(
+                tracks.is_object(),
+                "Spotify didn't return Liked Songs; sign in to Spotify again"
+            );
+            Ok::<_, anyhow::Error>((offset, tracks.clone()))
+        };
+        let (_, first) = page(0).await?;
+        let mut items: Vec<Value> = first["items"].as_array().cloned().unwrap_or_default();
+        let total = (first["totalCount"].as_u64().unwrap_or(0) as usize).max(items.len());
+        let done = std::sync::atomic::AtomicUsize::new(items.len());
+        on_progress(items.len(), total);
+
+        let mut pages: Vec<(usize, Value)> =
+            stream::iter((LIBRARY_PAGE..total).step_by(LIBRARY_PAGE))
+                .map(page)
+                .buffer_unordered(6)
+                .inspect_ok(|(_, p)| {
+                    let n = p["items"].as_array().map_or(0, Vec::len);
+                    on_progress(
+                        done.fetch_add(n, std::sync::atomic::Ordering::Relaxed) + n,
+                        total,
+                    )
+                })
+                .try_collect()
+                .await?;
+        pages.sort_by_key(|(offset, _)| *offset);
+        for (_, mut p) in pages {
+            if let Value::Array(page) = p["items"].take() {
+                items.extend(page);
+            }
+        }
+        to_playlist("Liked Songs".to_owned(), &items)
+    }
+
+    pub async fn playlist(&self, id: &str, on_progress: impl Fn(usize, usize)) -> Result<Playlist> {
+        let first = self.page(id, 0, PAGE).await?;
+        let name = first["name"]
+            .as_str()
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+            .context("Spotify returned no playlist name")?
+            .to_owned();
+        let total = first["content"]["totalCount"].as_u64().unwrap_or(0) as usize;
+        let mut items: Vec<Value> = first["content"]["items"]
+            .as_array()
+            .cloned()
+            .unwrap_or_default();
+        let total = total.max(items.len());
+        let done = std::sync::atomic::AtomicUsize::new(items.len());
+        on_progress(items.len(), total);
+
+        let offsets: Vec<usize> = (PAGE..total).step_by(PAGE).collect();
+        let mut pages: Vec<(usize, Vec<Value>)> = stream::iter(offsets)
+            .map(|offset| async move {
+                let page = self.page(id, offset, PAGE).await?;
+                Ok::<_, anyhow::Error>((
+                    offset,
+                    page["content"]["items"]
+                        .as_array()
+                        .cloned()
+                        .unwrap_or_default(),
+                ))
+            })
+            .buffer_unordered(6)
+            .inspect_ok(|(_, page)| {
+                on_progress(
+                    done.fetch_add(page.len(), std::sync::atomic::Ordering::Relaxed) + page.len(),
+                    total,
+                )
+            })
+            .try_collect()
+            .await?;
+        pages.sort_by_key(|(offset, _)| *offset);
+        items.extend(pages.into_iter().flat_map(|(_, page)| page));
+        to_playlist(name, &items)
+    }
+}
+
+fn add_playlist_variables(playlist_id: &str, ids: &[String]) -> Value {
+    json!({
+        "playlistItemUris": ids.iter().map(|id| format!("spotify:track:{id}")).collect::<Vec<_>>(),
+        "playlistUri": format!("spotify:playlist:{playlist_id}"),
+        "newPosition": {"moveType": "BOTTOM_OF_PLAYLIST", "fromUid": null}
+    })
+}
+
+fn add_library_variables(ids: &[String]) -> Value {
+    json!({
+        "libraryItemUris": ids.iter().map(|id| format!("spotify:track:{id}")).collect::<Vec<_>>(),
+        "interactionId": interaction_id()
+    })
+}
+
+fn interaction_id() -> String {
+    static NEXT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+    let low = now_millis() as u64;
+    let high = (std::process::id() as u64).rotate_left(17)
+        ^ NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    let raw = format!("{high:016x}{low:016x}");
+    format!(
+        "{}-{}-4{}-a{}-{}",
+        &raw[..8],
+        &raw[8..12],
+        &raw[13..16],
+        &raw[17..20],
+        &raw[20..32]
+    )
+}
+
+fn playlist_create_payload(name: &str) -> Value {
+    json!({
+        "ops": [{
+            "kind": "UPDATE_LIST_ATTRIBUTES",
+            "updateListAttributes": {
+                "newAttributes": {"values": {"name": name}}
+            }
+        }]
+    })
+}
+
+fn rootlist_add_payload(id: &str, timestamp_ms: u128) -> Value {
+    json!({
+        "deltas": [{
+            "ops": [{
+                "kind": "ADD",
+                "add": {
+                    "items": [{
+                        "uri": format!("spotify:playlist:{id}"),
+                        "attributes": {"timestamp": timestamp_ms.to_string()}
+                    }],
+                    "addFirst": true
+                }
+            }],
+            "info": {"source": {"client": "WEBPLAYER"}}
+        }]
+    })
+}
+
+fn now_millis() -> u128 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_or(0, |duration| duration.as_millis())
+}
+
+fn export_track_key(track: &crate::model::Track) -> String {
+    let normalize = |value: &str| {
+        value
+            .trim()
+            .to_lowercase()
+            .split_whitespace()
+            .collect::<Vec<_>>()
+            .join(" ")
+    };
+    [
+        normalize(&track.title),
+        normalize(&track.artist_line()),
+        normalize(track.album.as_ref().map_or("", |album| album.name.as_str())),
+    ]
+    .join("\0")
+}
+
+fn match_key(value: &str) -> String {
+    value
+        .chars()
+        .flat_map(char::to_lowercase)
+        .filter(|c| c.is_alphanumeric())
+        .collect()
+}
+
+fn export_candidate_matches(candidate: &SpotifySearchTrack, track: &crate::model::Track) -> bool {
+    let wanted_title = match_key(&track.title);
+    if wanted_title.is_empty() || match_key(&candidate.name) != wanted_title {
+        return false;
+    }
+    let wanted_artists: std::collections::HashSet<_> = track
+        .artists
+        .iter()
+        .map(|artist| match_key(&artist.name))
+        .filter(|artist| !artist.is_empty())
+        .collect();
+    !wanted_artists.is_empty()
+        && candidate
+            .artists
+            .iter()
+            .map(|artist| match_key(artist))
+            .any(|artist| wanted_artists.contains(&artist))
+}
+
+fn unique_ids(
+    tracks: Vec<crate::model::Track>,
+    matches: &std::collections::HashMap<String, String>,
+) -> Vec<String> {
+    let mut seen = std::collections::HashSet::new();
+    tracks
+        .into_iter()
+        .filter(|track| !track.music_video)
+        .filter_map(|track| matches.get(&export_track_key(&track)).cloned())
+        .filter(|id| seen.insert(id.clone()))
+        .collect()
+}
+
+fn valid_id(id: &str) -> bool {
+    !id.is_empty() && id.bytes().all(|b| b.is_ascii_alphanumeric())
+}
+
+fn check_rest(resp: &reqwest::Response, action: &str) -> Result<()> {
+    let status = resp.status();
+    if matches!(status.as_u16(), 401 | 403) {
+        return Err(SignedOut.into());
+    }
+    ensure!(
+        status.is_success(),
+        "Spotify couldn't {action} (HTTP {status})"
+    );
+    Ok(())
+}
+
+fn library_entry(item: &Value) -> Option<Entry> {
+    let data = if item["data"].is_object() {
+        &item["data"]
+    } else {
+        item
+    };
+    match data["__typename"].as_str()? {
+        "PseudoPlaylist"
+            if data["uri"]
+                .as_str()
+                .is_some_and(|u| u.ends_with(":collection"))
+                || data["name"] == "Liked Songs" =>
+        {
+            Some(Entry {
+                source: Source::Liked,
+                name: "Liked Songs".to_owned(),
+                owner: String::new(),
+                count: data["count"].as_u64().map(|c| c as usize),
+                art: None,
+            })
+        }
+        "Playlist" => {
+            let id = data["uri"]
+                .as_str()?
+                .strip_prefix("spotify:playlist:")?
+                .to_owned();
+            let name = data["name"].as_str()?.trim().to_owned();
+            let owner = data["ownerV2"]["data"]["name"]
+                .as_str()
+                .unwrap_or_default()
+                .to_owned();
+            let art = data["images"]["items"]
+                .as_array()
+                .and_then(|i| i.first())
+                .and_then(|i| art(&i["sources"]));
+            Some(Entry {
+                source: Source::Playlist(id),
+                name,
+                owner,
+                count: None,
+                art,
+            })
+        }
+        _ => None,
+    }
+}
+
+fn art(sources: &Value) -> Option<String> {
+    let list = sources.as_array()?;
+    let width = |s: &Value| s["width"].as_u64().unwrap_or(0);
+    list.iter()
+        .filter(|s| width(s) >= 60)
+        .min_by_key(|s| width(s))
+        .or_else(|| list.first())
+        .and_then(|s| s["url"].as_str())
+        .map(str::to_owned)
+}
+
+fn to_playlist(name: String, items: &[Value]) -> Result<Playlist> {
+    let mut tracks = Vec::with_capacity(items.len());
+    let mut skipped = 0;
+    for item in items {
+        match parse_track(item) {
+            Some(t) => tracks.push(t),
+            None => skipped += 1,
+        }
+    }
+    ensure!(!tracks.is_empty(), "That Spotify playlist has no songs");
+    Ok(Playlist {
+        name,
+        tracks,
+        skipped,
+    })
+}
+
+fn parse_track(item: &Value) -> Option<Track> {
+    let mut track = ["itemV2", "item", "track"]
+        .iter()
+        .map(|k| &item[k])
+        .find(|v| v.is_object())
+        .unwrap_or(item);
+    if track["data"].is_object() {
+        track = &track["data"];
+    }
+    let name = track["name"].as_str()?.trim();
+    if track["__typename"] == "LocalTrack" {
+        let artists = split_artists(track["artistName"].as_str().unwrap_or_default());
+        return (!name.is_empty()).then(|| Track {
+            name: name.to_owned(),
+            artists,
+            local: true,
+            art: None,
+            duration: None,
+        });
+    }
+    let artists = track["artists"]["items"]
+        .as_array()
+        .or(track["artists"].as_array())?;
+    let artists: Vec<String> = artists
+        .iter()
+        .filter_map(|a| a["profile"]["name"].as_str().or(a["name"].as_str()))
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .map(str::to_owned)
+        .collect();
+    let art = art(&track["albumOfTrack"]["coverArt"]["sources"]);
+    let duration = [
+        &track["trackDuration"]["totalMilliseconds"],
+        &track["duration"]["totalMilliseconds"],
+        &track["duration_ms"],
+    ]
+    .into_iter()
+    .find_map(Value::as_u64)
+    .map(|ms| ((ms + 500) / 1000) as u32);
+    (!name.is_empty() && !artists.is_empty()).then(|| Track {
+        name: name.to_owned(),
+        artists,
+        local: false,
+        art,
+        duration,
+    })
+}
+
+fn split_artists(s: &str) -> Vec<String> {
+    s.split([',', ';'])
+        .map(str::trim)
+        .filter(|a| !a.is_empty())
+        .map(str::to_owned)
+        .collect()
+}
+
+/// A web-player access token, signed in with the saved `sp_dc` when there is one, anonymous otherwise.
+pub(crate) async fn web_token(http: &reqwest::Client, sp_dc: Option<&str>) -> Result<String> {
+    let resp = http
+        .get("https://open.spotify.com")
+        .header("User-Agent", UA)
+        .send()
+        .await?
+        .error_for_status()?;
+    let device_id = resp
+        .headers()
+        .get_all("set-cookie")
+        .iter()
+        .filter_map(|v| {
+            v.to_str()
+                .ok()?
+                .strip_prefix("sp_t=")?
+                .split(';')
+                .next()
+                .map(str::to_owned)
+        })
+        .next()
+        .unwrap_or_default();
+    Ok(access_token(http, sp_dc, &device_id).await?.0)
+}
+
+/// Web-player credentials needed by Spotify's Pathfinder canvas query.
+pub(crate) async fn canvas_credentials(
+    http: &reqwest::Client,
+    sp_dc: &str,
+) -> Result<(String, String)> {
+    let resp = http
+        .get("https://open.spotify.com")
+        .header("User-Agent", UA)
+        .send()
+        .await?
+        .error_for_status()?;
+    let device_id = resp
+        .headers()
+        .get_all("set-cookie")
+        .iter()
+        .filter_map(|v| {
+            v.to_str()
+                .ok()?
+                .strip_prefix("sp_t=")?
+                .split(';')
+                .next()
+                .map(str::to_owned)
+        })
+        .next()
+        .unwrap_or_default();
+    let html = resp.text().await?;
+    let config = between(
+        &html,
+        r#"<script id="appServerConfig" type="text/plain">"#,
+        "</script>",
+    )
+    .context("open.spotify.com is missing appServerConfig")?;
+    let config: Value =
+        serde_json::from_slice(&base64::engine::general_purpose::STANDARD.decode(config.trim())?)?;
+    let client_version = config["clientVersion"]
+        .as_str()
+        .context("appServerConfig has no clientVersion")?;
+    let (token, client_id) = access_token(http, Some(sp_dc), &device_id).await?;
+    let client_token = client_token(http, client_version, &client_id, &device_id).await?;
+    Ok((token, client_token))
+}
+
+async fn access_token(
+    http: &reqwest::Client,
+    sp_dc: Option<&str>,
+    device_id: &str,
+) -> Result<(String, String)> {
+    let (version, secret) = totp_secret(http).await;
+    let totp = totp(
+        &secret,
+        SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs(),
+    );
+    let version = version.to_string();
+    let mut cookie = format!("sp_t={device_id}");
+    if let Some(sp_dc) = sp_dc {
+        cookie.push_str(&format!("; sp_dc={sp_dc}"));
+    }
+    let resp: Value = http
+        .get("https://open.spotify.com/api/token")
+        .query(&[
+            ("reason", "init"),
+            ("productType", "web-player"),
+            ("totp", &totp),
+            ("totpServer", &totp),
+            ("totpVer", &version),
+        ])
+        .header("Cookie", cookie)
+        .send()
+        .await?
+        .error_for_status()
+        .context("Spotify refused an access token")?
+        .json()
+        .await?;
+    if sp_dc.is_some() && resp["isAnonymous"] != false {
+        bail!(SignedOut);
+    }
+    let token = resp["accessToken"]
+        .as_str()
+        .context("Spotify returned no access token")?;
+    let client_id = resp["clientId"]
+        .as_str()
+        .context("Spotify returned no client id")?;
+    Ok((token.to_owned(), client_id.to_owned()))
+}
+
+#[derive(Debug)]
+pub struct SignedOut;
+
+impl std::fmt::Display for SignedOut {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "Your Spotify sign-in has expired. Sign in to Spotify again"
+        )
+    }
+}
+
+impl std::error::Error for SignedOut {}
+
+async fn totp_secret(http: &reqwest::Client) -> (u32, Vec<u8>) {
+    let fetched = async {
+        let secrets: serde_json::Map<String, Value> = http
+            .get(SECRETS_URL)
+            .timeout(std::time::Duration::from_secs(5))
+            .send()
+            .await?
+            .error_for_status()?
+            .json()
+            .await?;
+        let (version, list) = secrets
+            .iter()
+            .filter_map(|(k, v)| Some((k.parse::<u32>().ok()?, v.as_array()?)))
+            .max_by_key(|(k, _)| *k)
+            .ok_or_else(|| anyhow!("empty secrets list"))?;
+        let bytes = list
+            .iter()
+            .map(|n| n.as_u64().map(|n| n as u8))
+            .collect::<Option<Vec<u8>>>()
+            .context("bad secret")?;
+        Ok::<_, anyhow::Error>((version, bytes))
+    };
+    fetched
+        .await
+        .unwrap_or_else(|_: anyhow::Error| (FALLBACK_SECRET.0, FALLBACK_SECRET.1.to_vec()))
+}
+
+fn totp(secret: &[u8], unix: u64) -> String {
+    let key: String = secret
+        .iter()
+        .enumerate()
+        .map(|(i, b)| (b ^ ((i % 33) as u8 + 9)).to_string())
+        .collect();
+    let mut mac = Hmac::<Sha1>::new_from_slice(key.as_bytes()).expect("HMAC takes any key length");
+    mac.update(&(unix / 30).to_be_bytes());
+    let hash = mac.finalize().into_bytes();
+    let offset = (hash[19] & 0xf) as usize;
+    let code = u32::from_be_bytes(hash[offset..offset + 4].try_into().unwrap()) & 0x7fff_ffff;
+    format!("{:06}", code % 1_000_000)
+}
+
+async fn client_token(
+    http: &reqwest::Client,
+    client_version: &str,
+    client_id: &str,
+    device_id: &str,
+) -> Result<String> {
+    let body = json!({"client_data": {
+        "client_version": client_version,
+        "client_id": client_id,
+        "js_sdk_data": {"device_brand": "unknown", "device_model": "unknown", "os": "windows", "os_version": "NT 10.0", "device_id": device_id, "device_type": "computer"},
+    }});
+    let resp: Value = http
+        .post("https://clienttoken.spotify.com/v1/clienttoken")
+        .header("Accept", "application/json")
+        .json(&body)
+        .send()
+        .await?
+        .error_for_status()
+        .context("Spotify refused a client token")?
+        .json()
+        .await?;
+    ensure!(
+        resp["response_type"] == "RESPONSE_GRANTED_TOKEN_RESPONSE",
+        "Spotify refused a client token: {}",
+        resp["response_type"]
+    );
+    Ok(resp["granted_token"]["token"]
+        .as_str()
+        .context("no client token")?
+        .to_owned())
+}
+
+async fn query_hashes(http: &reqwest::Client, bundle: &str, data_dir: &Path) -> Result<Hashes> {
+    let cache = data_dir.join(HASH_CACHE);
+    if let Some(h) = std::fs::read(&cache)
+        .ok()
+        .and_then(|b| serde_json::from_slice::<Hashes>(&b).ok())
+        && h.bundle == bundle
+        && ["fetchPlaylist", "addToPlaylist", "addToLibrary"]
+            .iter()
+            .all(|operation| h.ops.contains_key(*operation))
+    {
+        return Ok(h);
+    }
+    let js = http
+        .get(bundle)
+        .send()
+        .await?
+        .error_for_status()?
+        .text()
+        .await?;
+    let mut ops = std::collections::BTreeMap::new();
+    let scan = |ops: &mut std::collections::BTreeMap<String, String>, text: &str| {
+        for op in OPERATIONS {
+            if !ops.contains_key(op)
+                && let Some(h) = find_hash(text, op)
+            {
+                ops.insert(op.to_owned(), h);
+            }
+        }
+    };
+    scan(&mut ops, &js);
+    if ops.len() < OPERATIONS.len() {
+        let mut chunks = stream::iter(chunk_urls(&js))
+            .map(|url| async move { http.get(url).send().await.ok()?.text().await.ok() })
+            .buffer_unordered(8);
+        while let Some(chunk) = chunks.next().await {
+            if let Some(chunk) = chunk {
+                scan(&mut ops, &chunk);
+            }
+            if ops.len() == OPERATIONS.len() {
+                break;
+            }
+        }
+    }
+    ensure!(
+        ops.contains_key("fetchPlaylist"),
+        "couldn't find Spotify's fetchPlaylist query"
+    );
+    let hashes = Hashes {
+        bundle: bundle.to_owned(),
+        ops,
+    };
+    let _ = std::fs::write(&cache, serde_json::to_vec(&hashes).unwrap_or_default());
+    Ok(hashes)
+}
+
+fn find_hash(js: &str, operation: &str) -> Option<String> {
+    for kind in ["query", "mutation"] {
+        for quote in ['"', '\''] {
+            let quote = quote.to_string();
+            let needle = format!("{quote}{operation}{quote},{quote}{kind}{quote},{quote}");
+            if let Some(hash) = between(js, &needle, &quote)
+                && hash.len() == 64
+                && hash.bytes().all(|b| b.is_ascii_hexdigit())
+            {
+                return Some(hash.to_owned());
+            }
+        }
+    }
+    None
+}
+
+fn chunk_urls(js: &str) -> Vec<String> {
+    let maps: Vec<Vec<(&str, &str)>> = js
+        .match_indices('{')
+        .filter_map(|(i, _)| parse_id_map(&js[i..]))
+        .collect();
+    let is_hash = |v: &str| v.len() == 8 && v.bytes().all(|b| b.is_ascii_hexdigit());
+    let mut urls = Vec::new();
+    for names in maps.iter().filter(|m| m.iter().any(|(_, v)| !is_hash(v))) {
+        for hashes in maps.iter().filter(|m| m.iter().all(|(_, v)| is_hash(v))) {
+            for (id, name) in names {
+                if let Some((_, hash)) = hashes.iter().find(|(k, _)| k == id) {
+                    urls.push(format!("{CDN}{name}.{hash}.js"));
+                }
+            }
+        }
+    }
+    urls.sort();
+    urls.dedup();
+    urls
+}
+
+fn parse_id_map(s: &str) -> Option<Vec<(&str, &str)>> {
+    let body = &s[1..s.find('}')?];
+    let mut out = Vec::new();
+    for entry in body.split(',') {
+        let (id, value) = entry.split_once(':')?;
+        let value = value.strip_prefix('"')?.strip_suffix('"')?;
+        if id.is_empty()
+            || !id.bytes().all(|b| b.is_ascii_digit())
+            || value.is_empty()
+            || value.contains('"')
+        {
+            return None;
+        }
+        out.push((id, value));
+    }
+    (out.len() > 1).then_some(out)
+}
+
+fn script_srcs(html: &str) -> impl Iterator<Item = &str> {
+    html.split("<script")
+        .skip(1)
+        .filter_map(|tag| between(tag.split('>').next()?, "src=\"", "\""))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn sources() {
+        let id = Source::Playlist("37i9dQZF1DXcBWIGoYBM5M".into());
+        for link in [
+            "https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M",
+            "https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M?si=abc",
+            "https://open.spotify.com/intl-de/playlist/37i9dQZF1DXcBWIGoYBM5M",
+            "spotify:playlist:37i9dQZF1DXcBWIGoYBM5M",
+            "37i9dQZF1DXcBWIGoYBM5M",
+        ] {
+            assert!(Source::parse(link).unwrap() == id, "{link}");
+        }
+        assert!(
+            Source::parse("https://open.spotify.com/collection/tracks").unwrap() == Source::Liked
+        );
+        assert!(Source::parse("https://evil.com/playlist/37i9dQZF1DXcBWIGoYBM5M").is_err());
+        assert!(Source::parse("https://open.spotify.com/album/37i9dQZF1DXcBWIGoYBM5M").is_err());
+    }
+
+    #[test]
+    fn totp_matches_reference() {
+        assert_eq!(totp(FALLBACK_SECRET.1, 1_699_999_980), "371599");
+        assert_eq!(totp(FALLBACK_SECRET.1, 1_700_000_009), "371599");
+    }
+
+    #[test]
+    fn id_maps() {
+        let js = r#"x={1:"a",2:"b"};y={1:"0123abcd",2:"deadbeef"};"#;
+        assert_eq!(
+            chunk_urls(js),
+            vec![format!("{CDN}a.0123abcd.js"), format!("{CDN}b.deadbeef.js")]
+        );
+    }
+
+    fn export_track(title: &str, artist: &str) -> crate::model::Track {
+        crate::model::Track {
+            id: "youtube-id".into(),
+            title: title.into(),
+            artists: vec![crate::model::Link {
+                name: artist.into(),
+                id: None,
+            }],
+            album: None,
+            duration: None,
+            thumbs: Vec::new(),
+            track_nr: None,
+            plays: None,
+            music_video: false,
+        }
+    }
+
+    #[test]
+    fn export_requires_exact_title_and_a_matching_artist() {
+        let source = export_track("Song Name", "Artist Name");
+        let candidate = |name: &str, artist: &str| SpotifySearchTrack {
+            id: "spotify-id".into(),
+            name: name.into(),
+            artists: vec![artist.into()],
+        };
+        assert!(export_candidate_matches(
+            &candidate("song-name", "artist name"),
+            &source
+        ));
+        assert!(!export_candidate_matches(
+            &candidate("Song Name (Live)", "Artist Name"),
+            &source
+        ));
+        assert!(!export_candidate_matches(
+            &candidate("Song Name", "Another Artist"),
+            &source
+        ));
+    }
+
+    #[test]
+    fn playlist_write_payloads_keep_the_export_private_and_add_it_to_library() {
+        let create = playlist_create_payload("VYRAL · Favorites");
+        assert_eq!(
+            create["ops"][0]["updateListAttributes"]["newAttributes"]["values"]["name"],
+            "VYRAL · Favorites"
+        );
+        let root = rootlist_add_payload("abc123", 1234);
+        assert_eq!(root["deltas"][0]["ops"][0]["add"]["addFirst"], true);
+        assert_eq!(
+            root["deltas"][0]["ops"][0]["add"]["items"][0]["uri"],
+            "spotify:playlist:abc123"
+        );
+        assert_eq!(
+            root["deltas"][0]["ops"][0]["add"]["items"][0]["attributes"]["timestamp"],
+            "1234"
+        );
+        let playlist = add_playlist_variables("abc123", &["track1".into(), "track2".into()]);
+        assert_eq!(playlist["playlistUri"], "spotify:playlist:abc123");
+        assert_eq!(playlist["playlistItemUris"][1], "spotify:track:track2");
+        let library = add_library_variables(&["track3".into()]);
+        assert_eq!(library["libraryItemUris"][0], "spotify:track:track3");
+        assert_eq!(library["interactionId"].as_str().unwrap().len(), 36);
+    }
+
+    #[test]
+    fn query_hash_discovery_recognizes_read_and_write_operations() {
+        let hash = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+        assert_eq!(
+            find_hash(
+                &format!(r#""addToPlaylist","mutation","{hash}""#),
+                "addToPlaylist"
+            ),
+            Some(hash.to_owned())
+        );
+        assert_eq!(
+            find_hash(
+                &format!("'fetchPlaylist','query','{hash}'"),
+                "fetchPlaylist"
+            ),
+            Some(hash.to_owned())
+        );
+    }
+
+    #[tokio::test]
+    #[ignore]
+    async fn spotify_live() {
+        let dir = std::env::temp_dir().join("vyral-spotify-test");
+        std::fs::create_dir_all(&dir).unwrap();
+        let c = Client::connect(None, &dir).await.unwrap();
+        let p = c
+            .playlist("37i9dQZF1DXcBWIGoYBM5M", |_, _| {})
+            .await
+            .unwrap();
+        println!(
+            "{}: {} songs, first {} by {:?} art {:?}",
+            p.name,
+            p.tracks.len(),
+            p.tracks[0].name,
+            p.tracks[0].artists,
+            p.tracks[0].art
+        );
+        assert!(p.tracks.len() > 20);
+        assert!(p.tracks[0].art.is_some());
+        assert!(
+            p.tracks.iter().all(|t| t.duration.is_some()),
+            "every song has a length"
+        );
+    }
+}
+
+#[cfg(test)]
+mod library_live {
+    #[tokio::test]
+    #[ignore]
+    async fn library_live() {
+        let dir = directories::ProjectDirs::from("", "", "vyral")
+            .unwrap()
+            .data_dir()
+            .to_path_buf();
+        let cookie =
+            String::from_utf8(crate::vault::get("spotify sp_dc", &dir).expect("signed in"))
+                .unwrap();
+        let c = super::Client::connect(Some(&cookie), &dir).await.unwrap();
+        let body = c
+            .query("libraryV3", serde_json::json!({"filters": ["Playlists"], "order": null, "textFilter": null, "features": ["LIKED_SONGS"], "limit": 50, "offset": 0, "flatten": true, "folderUri": null, "includeFoldersWhenFlattening": true}))
+            .await
+            .unwrap();
+        let lib = &body["data"]["me"]["libraryV3"];
+        println!(
+            "typename {} total {} keys {:?}",
+            lib["__typename"],
+            lib["totalCount"],
+            lib.as_object().map(|o| o.keys().collect::<Vec<_>>())
+        );
+        for it in lib["items"].as_array().into_iter().flatten().take(6) {
+            let s = it.to_string();
+            println!("ITEM {}", &s[..s.len().min(600)]);
+        }
+        let acc = c.account().await.unwrap();
+        println!(
+            "parsed {} entries: {:?}",
+            acc.library.len(),
+            acc.library
+                .iter()
+                .take(8)
+                .map(|e| &e.name)
+                .collect::<Vec<_>>()
+        );
+    }
+}

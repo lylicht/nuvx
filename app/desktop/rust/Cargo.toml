@@ -1,0 +1,13 @@
+[workspace]
+members = ["app", "core/vyral-core"]
+resolver = "3"
+
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+strip = true
+panic = "unwind"
+
+[profile.dev.package."*"]
+opt-level = 2

@@ -1,0 +1,8 @@
+<resources>
+    <string name="migration_title">Move playlists to Rust desktop</string>
+    <string name="migration_description">Export a copy, then import it in Rust: Settings → Your data → Import backup. Local files, network-source tracks, accounts and settings stay here.</string>
+    <string name="migration_export">Export for Rust desktop</string>
+    <string name="migration_saved">Exported %1$d playlists and %2$d songs. %3$d unsupported tracks stayed in KMP.</string>
+    <string name="migration_failed">Export failed; the original library is unchanged.</string>
+    <string name="migration_file_exists">Choose a new filename; existing files are not overwritten.</string>
+</resources>

@@ -1,0 +1,9 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="512dp"
+    android:height="512dp"
+    android:viewportWidth="512"
+    android:viewportHeight="512">
+    <path android:name="signature" android:fillColor="#00000000" android:strokeColor="#FFFFFFFF" android:strokeWidth="26"
+        android:strokeLineCap="round" android:strokeLineJoin="round"
+        android:pathData="M91,218 C123,170 156,160 173,185 C190,210 173,263 181,291 C188,317 210,316 234,285 L321,169 C340,143 363,147 363,169 C363,194 333,237 301,263 C269,289 245,301 227,328 C212,349 222,369 246,367 C279,365 312,337 346,308 C374,284 397,276 421,279" />
+</vector>

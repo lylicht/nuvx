@@ -1,0 +1,568 @@
+use std::sync::atomic::Ordering;
+
+use egui::{Align2, Color32, Rect, RichText, Sense, Ui, pos2, vec2};
+
+use super::pages::{page_title, section_label, setting_row, settings_card};
+use super::widgets::{self, icon_at, named, paint_cover, pill, text_at};
+use super::{Action, App, LibTab, Page};
+use crate::model::{Target, Thumb, Track as YtTrack};
+use crate::theme::{self, icon};
+use crate::transfer::spotify::{Entry, Source, Track};
+use crate::transfer::{Account, Decision, Dest, Job, Phase, Search, is_likes};
+
+mod review;
+use review::{list_header, review, song_row};
+mod setup;
+use setup::{setup, spotify_account_row};
+mod running;
+use running::{running, stat_row};
+mod pick;
+pub(super) use pick::{pick_banner, use_pick};
+mod result;
+use result::{done, failed};
+
+#[derive(Default)]
+pub struct Setup {
+    picked: Option<Source>,
+    link: String,
+    name: String,
+    name_for: Option<Source>,
+    to_liked: bool,
+    tab: Tab,
+    pick: Option<(usize, usize)>,
+    seen: Option<Phase>,
+    dev: bool,
+    done_at: Option<f64>,
+    focus: Option<usize>,
+    show_matched: bool,
+    card_h: f32,
+    scrolled_to: Option<usize>,
+    decided_at: f64,
+    pub picking: Option<usize>,
+    reviewing: bool,
+}
+
+#[derive(Default, Clone, Copy, PartialEq)]
+enum Tab {
+    #[default]
+    All,
+    Matched,
+    Look,
+    Missing,
+}
+
+fn spotify_thumbs(art: &Option<String>) -> Vec<Thumb> {
+    art.iter()
+        .map(|u| Thumb {
+            url: u.clone(),
+            width: 64,
+            height: 64,
+        })
+        .collect()
+}
+
+fn badge(ui: &Ui, rect: Rect) {
+    super::glyphs::draw_in(ui, rect, super::glyphs::SPOTIFY, theme::text());
+}
+
+fn radio(ui: &Ui, center: egui::Pos2, on: f32, accent: Color32) {
+    ui.painter().circle_stroke(
+        center,
+        9.0,
+        egui::Stroke::new(2.0, theme::lerp_color(theme::glass(0.35), accent, on)),
+    );
+    if on > 0.0 {
+        ui.painter().circle_filled(center, 5.0 * on, accent);
+    }
+}
+
+fn small_caps(ui: &mut Ui, text: &str) {
+    ui.label(
+        RichText::new(text)
+            .font(theme::bold(11.5))
+            .color(theme::text_faint()),
+    );
+    ui.add_space(8.0);
+}
+
+fn dim(ui: &mut Ui, text: &str) {
+    ui.label(
+        RichText::new(text)
+            .font(theme::regular(13.0))
+            .color(theme::text_dim()),
+    );
+}
+
+fn tag(ui: &Ui, right: egui::Pos2, text: &str, fill: Color32) -> f32 {
+    let g = widgets::galley(ui, text, theme::bold(10.5), theme::text(), 200.0);
+    let rect = Rect::from_min_size(
+        pos2(right.x - g.size().x - 14.0, right.y - 10.0),
+        vec2(g.size().x + 14.0, 20.0),
+    );
+    ui.painter().rect_filled(rect, 5.0, fill);
+    ui.painter()
+        .galley(rect.center() - g.size() / 2.0, g, theme::text());
+    rect.left()
+}
+
+fn big_button(ui: &mut Ui, label: &str, accent: Color32, enabled: bool, width: f32) -> bool {
+    let (rect, resp) = ui.allocate_exact_size(
+        vec2(width, 50.0),
+        if enabled {
+            Sense::click()
+        } else {
+            Sense::hover()
+        },
+    );
+    let resp = named(resp, label);
+    let resp = if enabled {
+        resp.on_hover_cursor(egui::CursorIcon::PointingHand)
+    } else {
+        resp
+    };
+    let h = theme::anim_bool(ui.ctx(), resp.id.with("h"), resp.hovered() && enabled, 0.15);
+    let fill = if enabled {
+        theme::lerp_color(accent, Color32::WHITE, 0.12 * h)
+    } else {
+        theme::glass(0.10)
+    };
+    ui.painter().rect_filled(rect, 25.0, fill);
+    let fg = if enabled {
+        contrast(accent)
+    } else {
+        theme::text_faint()
+    };
+    ui.painter().text(
+        rect.center(),
+        Align2::CENTER_CENTER,
+        label,
+        theme::bold(16.0),
+        fg,
+    );
+    enabled
+        && resp
+            .on_hover_cursor(egui::CursorIcon::PointingHand)
+            .clicked()
+}
+
+fn contrast(bg: Color32) -> Color32 {
+    let l = 0.299 * bg.r() as f32 + 0.587 * bg.g() as f32 + 0.114 * bg.b() as f32;
+    if l > 150.0 {
+        Color32::from_gray(20)
+    } else {
+        Color32::WHITE
+    }
+}
+
+fn breadcrumb(app: &mut App, ui: &mut Ui) {
+    let g = widgets::galley(
+        ui,
+        "Settings › Import",
+        theme::regular(13.0),
+        theme::text_dim(),
+        400.0,
+    );
+    let (rect, resp) = ui.allocate_exact_size(g.size(), Sense::click());
+    let resp = named(resp, "Back to Settings").on_hover_cursor(egui::CursorIcon::PointingHand);
+    let c = if resp.hovered() {
+        theme::text()
+    } else {
+        theme::text_dim()
+    };
+    ui.painter().galley(rect.min, g, c);
+    if resp.clicked() {
+        app.actions
+            .push(Action::Go(Page::Setting(super::SettingsPane::Import)));
+    }
+}
+
+fn fmt_n(n: usize) -> String {
+    let s = n.to_string();
+    let mut out = String::new();
+    for (i, ch) in s.chars().enumerate() {
+        if i > 0 && (s.len() - i).is_multiple_of(3) {
+            out.push(',');
+        }
+        out.push(ch);
+    }
+    out
+}
+
+fn fmt_secs(s: u64) -> String {
+    match s {
+        0..60 => format!("{s} s"),
+        _ if s.is_multiple_of(60) || s >= 600 => format!("{} min", (s + 30) / 60),
+        _ => format!("{} min {} s", s / 60, s % 60),
+    }
+}
+
+pub fn page(app: &mut App, ui: &mut Ui, now: f64) {
+    let xfer = app.transfer.clone();
+    xfer.ensure_account(&app.backend);
+    let avail = ui.available_width();
+    let w = avail.min(1080.0);
+    ui.horizontal(|ui| {
+        ui.add_space(((avail - w) / 2.0).max(0.0));
+        ui.vertical(|ui| {
+            ui.set_width(w);
+            let guard = xfer.job.lock().unwrap();
+            let phase = guard.as_ref().map(|j| j.phase.clone());
+            drop(guard);
+            match phase {
+                None => setup(app, ui),
+                Some(Phase::Review) if app.xfer.reviewing => review(app, ui),
+                Some(Phase::Done) => done(app, ui),
+                Some(Phase::Failed(e)) => failed(app, ui, &e),
+                Some(_) => running(app, ui, now),
+            }
+        });
+    });
+}
+
+fn candidate_row(
+    ui: &mut Ui,
+    t: &YtTrack,
+    video: bool,
+    current: bool,
+    selected: bool,
+    accent: Color32,
+    acts: &mut Vec<Action>,
+) -> bool {
+    let (rect, resp) = ui.allocate_exact_size(vec2(ui.available_width(), 52.0), Sense::click());
+    let resp = named(resp, &t.title).on_hover_cursor(egui::CursorIcon::PointingHand);
+    let h = theme::anim_bool(ui.ctx(), resp.id.with("h"), resp.hovered(), 0.12);
+    let s = theme::anim_bool(ui.ctx(), resp.id.with("s"), selected, 0.15);
+    ui.painter()
+        .rect_filled(rect, 10.0, theme::glass(0.04 * h + 0.05 * s));
+    if s > 0.0 {
+        ui.painter().rect_stroke(
+            rect,
+            10.0,
+            egui::Stroke::new(1.5, theme::with_alpha(accent, s)),
+            egui::StrokeKind::Inside,
+        );
+    }
+    radio(ui, pos2(rect.left() + 20.0, rect.center().y), s, accent);
+    let img = Rect::from_min_size(
+        pos2(rect.left() + 40.0, rect.center().y - 20.0),
+        vec2(40.0, 40.0),
+    );
+    paint_cover(ui, img, &t.thumbs, theme::thumb_radius(), 1.0);
+    let play = ui.interact(img, resp.id.with("play"), Sense::click());
+    if play.hovered() {
+        ui.painter()
+            .rect_filled(img, theme::thumb_radius(), theme::shade(0.45));
+        widgets::play_triangle(ui, img.center(), 8.0, Color32::WHITE);
+    }
+    let play = named(play, "Play")
+        .on_hover_text("Play")
+        .on_hover_cursor(egui::CursorIcon::PointingHand);
+    let mut right = rect.right() - 12.0;
+    if let Some(d) = t.duration {
+        ui.painter().text(
+            pos2(right, rect.center().y),
+            Align2::RIGHT_CENTER,
+            format!("{}:{:02}", d / 60, d % 60),
+            theme::regular(13.0),
+            theme::text_dim(),
+        );
+        right -= 52.0;
+    }
+    right = tag(
+        ui,
+        pos2(right, rect.center().y),
+        if video { "VIDEO" } else { "SONG" },
+        theme::glass(if video { 0.16 } else { 0.10 }),
+    ) - 8.0;
+    if current {
+        right = tag(
+            ui,
+            pos2(right, rect.center().y),
+            "CURRENT PICK",
+            theme::with_alpha(accent, 0.35),
+        ) - 8.0;
+    }
+    let x = img.right() + 12.0;
+    let tw = right - x - 8.0;
+    text_at(
+        ui,
+        pos2(x, rect.top() + 7.0),
+        &t.title,
+        theme::semibold(14.5),
+        theme::text(),
+        tw,
+    );
+    let mut meta = t.artist_line();
+    if let Some(a) = &t.album {
+        meta = format!("{meta} • {}", a.name);
+    } else if let Some(p) = t.plays {
+        meta = format!("{meta} • {} views", crate::backend::compact(p));
+    }
+    text_at(
+        ui,
+        pos2(x, rect.top() + 28.0),
+        &meta,
+        theme::regular(13.0),
+        theme::text_dim(),
+        tw,
+    );
+    if play.clicked() {
+        acts.push(Action::Play(vec![t.clone()], 0));
+        return false;
+    }
+    resp.clicked()
+}
+
+pub fn settings_section(app: &mut App, ui: &mut Ui) {
+    section_label(ui, "Import", None);
+    let mut open = false;
+    settings_card(ui, |ui| {
+        let w = ui.available_width();
+        let (rect, _) = ui.allocate_exact_size(vec2(w, 78.0), Sense::hover());
+        let b = Rect::from_min_size(pos2(rect.left(), rect.center().y - 22.0), vec2(44.0, 44.0));
+        badge(ui, b);
+        let x = b.right() + 16.0;
+        let tw = rect.right() - x - 120.0;
+        ui.painter().text(
+            pos2(x, rect.center().y - 10.0),
+            Align2::LEFT_CENTER,
+            "Transfer from Spotify",
+            theme::semibold(14.5),
+            theme::text(),
+        );
+        let g = widgets::galley_wrapped(
+            ui,
+            "Copy your Liked Songs or any playlist into YouTube Music. It runs in the background, so you can keep listening.",
+            theme::regular(12.5),
+            theme::text_dim(),
+            tw,
+            2,
+        );
+        ui.painter()
+            .galley(pos2(x, rect.center().y + 2.0), g, theme::text_dim());
+        let mut child = ui.new_child(
+            egui::UiBuilder::new()
+                .max_rect(rect)
+                .layout(egui::Layout::right_to_left(egui::Align::Center)),
+        );
+        open = pill(&mut child, "Open", None, true).clicked();
+    });
+    if open {
+        app.actions.push(Action::Go(Page::Transfer));
+    }
+    let mut pick = false;
+    settings_card(ui, |ui| {
+        setting_row(
+            ui,
+            "Import a playlist file",
+            Some(
+                "An M3U or CSV file, e.g. one exported from vyral on your phone. Songs with a YouTube link become a vyral playlist on this computer; other entries are counted and left out.",
+            ),
+            |ui| {
+                pick = pill(ui, "Choose file", None, false).clicked();
+            },
+        );
+    });
+    if pick {
+        import_file(app);
+    }
+}
+
+/// Reads an M3U or CSV playlist (at most 5 MB) into a new vyral playlist on this computer.
+fn import_file(app: &mut App) {
+    let Some(path) = rfd::FileDialog::new()
+        .set_title("Import playlist")
+        .add_filter("Playlist", &["m3u", "m3u8", "csv"])
+        .pick_file()
+    else {
+        return;
+    };
+    let text = match std::fs::metadata(&path) {
+        Ok(m) if m.len() > 5 * 1024 * 1024 => {
+            return app.toast("That file is too large for a playlist");
+        }
+        _ => match std::fs::read(&path) {
+            Ok(bytes) => String::from_utf8_lossy(&bytes).into_owned(),
+            Err(e) => return app.toast(format!("Couldn't open that file: {e}")),
+        },
+    };
+    let parsed = crate::playlist_file::parse(&text);
+    if parsed.tracks.is_empty() {
+        return app.toast("No YouTube songs in that file");
+    }
+    let title = parsed.title.unwrap_or_else(|| {
+        path.file_stem().map_or("Imported playlist".into(), |s| {
+            s.to_string_lossy().into_owned()
+        })
+    });
+    let count = parsed.tracks.len();
+    let id = app.save_local_playlist(title.clone(), parsed.tracks);
+    app.toast(match parsed.unmatched {
+        0 => format!("Imported {count} songs into “{title}”"),
+        n => format!("Imported {count} songs into “{title}”; {n} without a YouTube link left out"),
+    });
+    app.actions.push(Action::Go(Page::Playlist(id)));
+}
+
+pub fn spotify_section(app: &mut App, ui: &mut Ui) {
+    let xfer = app.transfer.clone();
+    xfer.ensure_account(&app.backend);
+    let account = xfer.account.lock().unwrap().clone();
+    section_label(ui, "Spotify", None);
+    settings_card(ui, |ui| spotify_account_row(app, ui, &account, false));
+}
+
+pub fn sidebar_visible(app: &App, now: f64) -> bool {
+    match app.transfer.job.lock().unwrap().as_ref().map(|j| &j.phase) {
+        None => false,
+        Some(Phase::Done) => app.xfer.done_at.is_none_or(|t| now - t < DONE_LINGER),
+        Some(_) => true,
+    }
+}
+
+const DONE_LINGER: f64 = 6.0;
+
+pub fn sidebar_card(app: &mut App, ui: &mut Ui, collapsed: bool, fade: f32, icon_x: f32) {
+    let (frac, status) = {
+        let guard = app.transfer.job.lock().unwrap();
+        let Some(job) = guard.as_ref() else { return };
+        match &job.phase {
+            Phase::Reading => (0.0, "Reading".to_owned()),
+            Phase::Searching => {
+                let f = job.searched() as f32 / job.tracks.len().max(1) as f32;
+                (
+                    f,
+                    if job.paused {
+                        "Paused".to_owned()
+                    } else {
+                        format!("{}%", (f * 100.0) as u32)
+                    },
+                )
+            }
+            Phase::Checking => (1.0, "Checking".to_owned()),
+            Phase::Review => (1.0, "Review".to_owned()),
+            Phase::Saving => match job.redo {
+                Some((done, of)) => (done as f32 / of.max(1) as f32, "Re-adding".to_owned()),
+                None => (
+                    job.saving.0 as f32 / job.saving.1.max(1) as f32,
+                    "Adding".to_owned(),
+                ),
+            },
+            Phase::Done => (1.0, "Done".to_owned()),
+            Phase::Failed(_) => (0.0, "Stopped".to_owned()),
+        }
+    };
+    let accent = app.accent_color();
+    ui.add_space(6.0);
+    let (rect, resp) = ui.allocate_exact_size(vec2(ui.available_width(), 58.0), Sense::click());
+    let mut resp = named(resp, "Spotify transfer").on_hover_cursor(egui::CursorIcon::PointingHand);
+    if collapsed {
+        resp = resp.on_hover_text(format!("Spotify transfer: {status}"));
+    } else if status == "Review" {
+        resp = resp.on_hover_text("Some songs need a look before they're added");
+    }
+    let h = theme::anim_bool(ui.ctx(), resp.id.with("h"), resp.hovered(), 0.15);
+    ui.painter()
+        .rect_filled(rect, 12.0, theme::glass(0.06 + 0.04 * h));
+    ui.painter().rect_stroke(
+        rect,
+        12.0,
+        egui::Stroke::new(1.0, theme::glass(0.10)),
+        egui::StrokeKind::Inside,
+    );
+    let b = Rect::from_center_size(
+        pos2(rect.left() + icon_x, rect.top() + 22.0),
+        vec2(20.0, 20.0),
+    );
+    badge(ui, b);
+    if fade > 0.0 {
+        let c = theme::with_alpha(theme::text(), fade);
+        let st = ui.painter().text(
+            pos2(rect.right() - 12.0, rect.top() + 22.0),
+            Align2::RIGHT_CENTER,
+            &status,
+            theme::regular(12.0),
+            theme::with_alpha(
+                if status == "Review" {
+                    accent
+                } else {
+                    theme::text_dim()
+                },
+                fade,
+            ),
+        );
+        text_at(
+            ui,
+            pos2(rect.left() + 48.0, rect.top() + 14.0),
+            "Spotify transfer",
+            theme::semibold(13.0),
+            c,
+            st.left() - rect.left() - 56.0,
+        );
+    }
+    let bar = Rect::from_min_max(
+        pos2(rect.left() + 12.0, rect.bottom() - 14.0),
+        pos2(rect.right() - 12.0, rect.bottom() - 10.0),
+    );
+    ui.painter().rect_filled(bar, 2.0, theme::glass(0.14));
+    ui.painter().rect_filled(
+        Rect::from_min_size(
+            bar.min,
+            vec2(bar.width() * frac.clamp(0.0, 1.0), bar.height()),
+        ),
+        2.0,
+        accent,
+    );
+    if resp.clicked() {
+        app.actions.push(Action::Go(Page::Transfer));
+    }
+}
+
+pub fn poll(app: &mut App, ctx: &egui::Context, now: f64) {
+    if !app.xfer.dev
+        && app.xfer.link.is_empty()
+        && let Some(l) = super::dev_var("VYRAL_RUST_TRANSFER_LINK")
+    {
+        app.xfer.link = l.to_owned();
+    }
+    let (phase, name, doubts) = {
+        let guard = app.transfer.job.lock().unwrap();
+        match guard.as_ref() {
+            Some(j) => (Some(j.phase.clone()), j.name.clone(), j.doubts.len()),
+            None => (None, String::new(), 0),
+        }
+    };
+    if let Some(t) = app.xfer.done_at.filter(|_| phase == Some(Phase::Done))
+        && now - t < DONE_LINGER
+    {
+        ctx.request_repaint_after(std::time::Duration::from_secs_f64(
+            DONE_LINGER - (now - t) + 0.05,
+        ));
+    }
+    if phase == app.xfer.seen {
+        return;
+    }
+    app.xfer.done_at = (phase == Some(Phase::Done)).then_some(now);
+    if phase != Some(Phase::Review) {
+        app.xfer.reviewing = false;
+    }
+    let on_page = app.page == Page::Transfer;
+    match &phase {
+        Some(Phase::Review) if !on_page => app.toast(format!(
+            "Spotify transfer: {} songs need a look",
+            fmt_n(doubts)
+        )),
+        Some(Phase::Done) => {
+            app.request_library();
+            app.request_liked(true);
+            if !on_page {
+                app.toast(format!("Finished copying {name} from Spotify"));
+            }
+        }
+        Some(Phase::Failed(_)) if !on_page => {
+            app.toast("The Spotify transfer stopped. Open it to try again")
+        }
+        _ => {}
+    }
+    app.xfer.seen = phase;
+}

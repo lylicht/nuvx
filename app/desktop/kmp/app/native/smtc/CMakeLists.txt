@@ -1,0 +1,10 @@
+cmake_minimum_required(VERSION 3.16)
+project(vyral_smtc_tests LANGUAGES CXX)
+
+enable_testing()
+find_package(Threads REQUIRED)
+add_executable(vyral_smtc_startup_test startup_test.cpp)
+target_compile_features(vyral_smtc_startup_test PRIVATE cxx_std_17)
+target_link_libraries(vyral_smtc_startup_test PRIVATE Threads::Threads)
+add_test(NAME smtc_startup_ownership COMMAND vyral_smtc_startup_test)
+set_tests_properties(smtc_startup_ownership PROPERTIES TIMEOUT 30)

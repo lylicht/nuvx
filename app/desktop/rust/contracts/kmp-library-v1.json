@@ -1,0 +1,18 @@
+{
+  "app": "vyral",
+  "version": 1,
+  "versionName": "1.10.0",
+  "exportedAt": "2026-11-27T00:00:00Z",
+  "settings": {},
+  "listening": [],
+  "playlists": [
+    {
+      "id": "vyral-kmp:fixture-one",
+      "title": "آهنگ‌های من",
+      "songs": [
+        {"videoId": "abcdefghijk", "title": "First", "artist": "night", "durationText": "3:12", "isVideo": false},
+        {"videoId": "zyxwvutsrqp", "title": "Second", "artist": "night", "isVideo": true}
+      ]
+    }
+  ]
+}

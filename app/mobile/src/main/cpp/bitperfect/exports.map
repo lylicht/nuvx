@@ -1,0 +1,5 @@
+{
+    global:
+        Java_app_vyral_night_playback_audio_bitperfect_*;
+    local: *;
+};

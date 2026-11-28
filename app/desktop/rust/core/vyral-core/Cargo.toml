@@ -1,0 +1,21 @@
+[package]
+name = "vyral-core"
+version = "0.1.0"
+edition = "2024"
+license = "GPL-3.0-only"
+description = "Shared VYRAL Rust domain and protocol rules."
+publish = false
+
+[dependencies]
+aes-gcm = "0.11.1"
+serde = { version = "1.0.229", features = ["derive"] }
+base64 = "0.23.1"
+p256 = { version = "0.14", default-features = false, features = ["ecdh", "std"] }
+serde_json = "1.0.151"
+sha2 = "0.11.1"
+url = "2.5.8"
+roxmltree = "0.21.1"
+
+
+[dev-dependencies]
+serde_json = "1.0.151"

@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=VYRAL
+GenericName=Music Player
+Comment=VYRAL music player
+Exec=vyral-rust
+Icon=vyral-rust
+Terminal=false
+Categories=AudioVideo;Audio;Player;
+Keywords=music;player;
+StartupWMClass=vyral-rust

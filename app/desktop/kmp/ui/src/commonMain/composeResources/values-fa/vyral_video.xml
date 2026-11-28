@@ -1,0 +1,15 @@
+<resources>
+    <string name="vyral_music">موسیقی</string>
+    <string name="vyral_video_search">جستجوی ویدیوهای YouTube</string>
+    <string name="vyral_video_feed">بازگشت به ویدیوها</string>
+    <string name="vyral_video_suggestions">پیشنهادها برای شما</string>
+    <string name="vyral_video_explore">کاوش ویدیوها</string>
+    <string name="vyral_video_empty">برای شروع تماشا، یک ویدیو جستجو کنید.</string>
+    <string name="vyral_video_no_results">ویدیویی پیدا نشد. جستجوی دیگری را امتحان کنید.</string>
+    <string name="vyral_video_more">بارگیری ویدیوهای بیشتر</string>
+    <string name="vyral_loading">در حال بارگیری…</string>
+    <string name="vyral_retry">تلاش دوباره</string>
+    <string name="vyral_search">جستجو</string>
+    <string name="vyral_settings">تنظیمات</string>
+    <string name="vyral_video_failure">بارگیری YouTube ممکن نشد. دوباره تلاش کنید.</string>
+</resources>

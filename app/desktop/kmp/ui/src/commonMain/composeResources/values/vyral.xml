@@ -1,0 +1,20 @@
+<resources>
+    <string name="vyral_tagline">Your music, your way</string>
+    <string name="vyral_stable">Stable</string>
+    <string name="vyral_version_code">Version Code</string>
+    <string name="vyral_license">License</string>
+    <string name="vyral_open_source_licenses">Open source licenses</string>
+    <string name="vyral_lead_dev">Lead Developer</string>
+    <string name="vyral_quality_assurance_tester">Quality Assurance Tester</string>
+    <string name="vyral_app_info">App info</string>
+    <string name="vyral_website">Website</string>
+    <string name="vyral_source">Source code</string>
+    <string name="vyral_github_stars">GitHub stars</string>
+    <string name="vyral_community">Community</string>
+    <string name="vyral_support">Support vyral</string>
+    <string name="vyral_reserved">Reserved</string>
+    <string name="vyral_reserved_detail">A shared space for your music. Listen Together will be available when the Vyral service is ready.</string>
+    <string name="vyral_speed_dial">Speed dial</string>
+    <string name="vyral_daily_discover">Your daily discover</string>
+    <string name="vyral_daily_discover_subtitle">Picked from the music you listen to</string>
+</resources>

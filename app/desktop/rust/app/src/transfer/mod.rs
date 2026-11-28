@@ -1,0 +1,1226 @@
+mod account;
+mod execution;
+mod lifecycle;
+mod matching;
+mod persistence;
+mod review;
+pub mod spotify;
+
+use matching::*;
+
+use std::collections::HashSet;
+use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, Mutex};
+use std::time::{Duration, Instant};
+
+use anyhow::{Context, Result, bail};
+use futures_util::{StreamExt, stream};
+
+use crate::model::Track as YtTrack;
+use crate::ytm;
+use crate::ytmapi::Api;
+use spotify::{Source, Track};
+
+const CONCURRENCY: usize = 8;
+const SEARCHES: usize = 16;
+const PLAYLIST_MAX: usize = 5000;
+const SAVE_EVERY: Duration = Duration::from_secs(5);
+const VAULT: &str = "spotify sp_dc";
+
+/// The Spotify sign-in saved under Account & integrations, if any (for Spotify Canvas; never logged or shown).
+pub(crate) fn saved_cookie(data_dir: &std::path::Path) -> Option<String> {
+    crate::vault::get(VAULT, data_dir)
+        .and_then(|b| String::from_utf8(b).ok())
+        .filter(|c| !c.trim().is_empty())
+}
+
+#[derive(Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+pub enum Search {
+    Pending,
+    Found(YtTrack),
+    Unsure(YtTrack),
+    Missing,
+    Skipped,
+}
+
+impl Search {
+    pub fn track(&self) -> Option<&YtTrack> {
+        match self {
+            Search::Found(t) | Search::Unsure(t) => Some(t),
+            _ => None,
+        }
+    }
+}
+
+#[derive(Clone, PartialEq, Debug, serde::Serialize, serde::Deserialize)]
+pub enum Dest {
+    Playlist(String),
+    Liked,
+}
+
+#[derive(Clone, PartialEq, Debug)]
+pub enum Phase {
+    Reading,
+    Searching,
+    Checking,
+    Review,
+    Saving,
+    Done,
+    Failed(String),
+}
+
+impl Phase {
+    pub fn running(&self) -> bool {
+        !matches!(self, Phase::Done | Phase::Failed(_))
+    }
+}
+
+pub struct Doubt {
+    pub index: usize,
+    pub candidates: Vec<YtTrack>,
+    pub videos: Vec<bool>,
+    pub decision: Option<Decision>,
+    pub loading: bool,
+}
+
+#[derive(Clone, Copy, PartialEq, Debug)]
+pub enum Decision {
+    Keep,
+    Pick(usize),
+    Skip,
+}
+
+pub struct Summary {
+    pub added: usize,
+    pub duplicates: usize,
+    pub already: usize,
+    pub playlists: Vec<String>,
+    pub elapsed: Duration,
+}
+
+pub struct Job {
+    pub waiting: bool,
+    pub source: Source,
+    pub name: String,
+    pub dest: Dest,
+    pub phase: Phase,
+    pub read: (usize, usize),
+    pub read_secs: Option<f32>,
+    pub tracks: Vec<Track>,
+    pub results: Vec<Search>,
+    pub not_songs: usize,
+    search_started: Option<(Instant, usize)>,
+    pub doubts: Vec<Doubt>,
+    pub saving: (usize, usize),
+    pub redo: Option<(usize, usize)>,
+    pub summary: Option<Summary>,
+    pub paused: bool,
+    started: Instant,
+    created: Vec<String>,
+    added: usize,
+    liked: usize,
+    reviewed: bool,
+}
+
+impl Job {
+    pub fn searched(&self) -> usize {
+        self.results
+            .iter()
+            .filter(|r| **r != Search::Pending)
+            .count()
+    }
+
+    pub fn count(&self, f: impl Fn(&Search) -> bool) -> usize {
+        self.results.iter().filter(|r| f(r)).count()
+    }
+
+    pub fn eta(&self) -> Option<u64> {
+        let (at, left_then) = self.search_started?;
+        let left = self.results.len() - self.searched();
+        let done = left_then.saturating_sub(left);
+        let secs = at.elapsed().as_secs_f64();
+        (done >= 8 && secs > 1.0).then(|| (left as f64 * secs / done as f64).ceil() as u64)
+    }
+
+    pub fn current_doubt(&self) -> Option<usize> {
+        self.doubts.iter().position(|d| d.decision.is_none())
+    }
+}
+
+pub fn is_likes(name: &str) -> bool {
+    let n = name.trim().to_lowercase();
+    matches!(n.as_str(), "liked songs" | "likes")
+}
+
+#[derive(Clone)]
+pub enum Account {
+    Unknown,
+    SignedOut,
+    Loading,
+    SignedIn {
+        name: String,
+        library: Vec<spotify::Entry>,
+    },
+    Failed(String),
+}
+
+#[derive(Clone)]
+pub struct Resumable {
+    pub source: Source,
+    pub name: String,
+    pub dest: Dest,
+    pub searched: usize,
+    pub total: usize,
+}
+
+pub type Lookup = (String, Option<Result<spotify::Entry, String>>);
+
+pub struct Transfer {
+    pub job: Mutex<Option<Job>>,
+    pub account: Mutex<Account>,
+    pub resumable: Mutex<Option<Resumable>>,
+    pub lookup: Mutex<Option<Lookup>>,
+    pub signing_in: AtomicBool,
+    account_gen: std::sync::atomic::AtomicU64,
+    cancel: AtomicBool,
+    pinned: Mutex<Option<(Arc<Api>, u64)>>,
+    review_done: tokio::sync::Notify,
+    data_dir: PathBuf,
+    wake: Arc<dyn Fn() + Send + Sync>,
+}
+
+#[derive(serde::Serialize, serde::Deserialize)]
+struct Saved {
+    version: u32,
+    key: String,
+    name: String,
+    dest: Dest,
+    tracks: Vec<Track>,
+    results: Vec<Search>,
+    not_songs: usize,
+    created: Vec<String>,
+    #[serde(default)]
+    added: usize,
+    #[serde(default)]
+    liked: usize,
+    #[serde(default)]
+    reviewed: bool,
+}
+
+const SAVED_VERSION: u32 = 1;
+
+impl Transfer {
+    pub fn new(data_dir: &Path, wake: Arc<dyn Fn() + Send + Sync>) -> Arc<Self> {
+        let this = Arc::new(Self {
+            job: Mutex::new(None),
+            account: Mutex::new(if crate::vault::get(VAULT, data_dir).is_some() {
+                Account::Unknown
+            } else {
+                Account::SignedOut
+            }),
+            lookup: Mutex::new(None),
+            resumable: Mutex::new(None),
+            signing_in: AtomicBool::new(false),
+            account_gen: Default::default(),
+            cancel: AtomicBool::new(false),
+            pinned: Mutex::new(None),
+            review_done: tokio::sync::Notify::new(),
+            data_dir: data_dir.to_owned(),
+            wake,
+        });
+        *this.resumable.lock().unwrap() = this.find_resumable();
+        this
+    }
+
+    fn wake(&self) {
+        (self.wake)()
+    }
+
+    pub fn running(&self) -> bool {
+        self.job
+            .lock()
+            .unwrap()
+            .as_ref()
+            .is_some_and(|j| j.phase.running())
+    }
+
+    fn with_job<R>(&self, f: impl FnOnce(&mut Job) -> R) -> R {
+        f(self.job.lock().unwrap().as_mut().expect("transfer job"))
+    }
+}
+
+impl Source {
+    fn parse_key(key: &str) -> Self {
+        if key == "liked" {
+            Source::Liked
+        } else {
+            Source::Playlist(key.to_owned())
+        }
+    }
+}
+
+async fn retry<T, F: std::future::Future<Output = Result<T>>>(
+    mut f: impl FnMut() -> F,
+) -> Result<T> {
+    let mut tries = 0;
+    loop {
+        tries += 1;
+        match f().await {
+            Err(e) if tries < 3 && !signed_out(&e) => {
+                log::debug!("transfer: {e:#}; retrying");
+                tokio::time::sleep(Duration::from_millis(1000 * tries)).await;
+            }
+            r => return r,
+        }
+    }
+}
+
+fn signed_out(e: &anyhow::Error) -> bool {
+    e.chain().any(|c| {
+        c.downcast_ref::<crate::ytmapi::ApiError>()
+            .is_some_and(|a| a.status == 401)
+    })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::model::Link;
+
+    fn hit(title: &str, artists: &str) -> YtTrack {
+        YtTrack {
+            id: title.into(),
+            title: title.into(),
+            artists: vec![Link {
+                name: artists.into(),
+                id: None,
+            }],
+            album: None,
+            duration: None,
+            thumbs: vec![],
+            track_nr: None,
+            plays: None,
+            music_video: false,
+        }
+    }
+
+    fn track(name: &str, artists: &[&str]) -> Track {
+        Track {
+            name: name.into(),
+            artists: artists.iter().map(|a| a.to_string()).collect(),
+            local: false,
+            art: None,
+            duration: None,
+        }
+    }
+
+    #[test]
+    fn ranking() {
+        let pick = |t: &Track, hits: Vec<YtTrack>| best(&hits, t).unwrap().0.id;
+        let t = track("One Dance", &["Drake", "Wizkid", "Kyla"]);
+        assert_eq!(
+            pick(
+                &t,
+                vec![
+                    hit("Passionfruit", "Drake"),
+                    hit("One Dance", "Drake, Wizkid & Kyla")
+                ]
+            ),
+            "One Dance"
+        );
+        let t = track("No Lie", &["Sean Paul", "Dua Lipa"]);
+        assert_eq!(
+            pick(
+                &t,
+                vec![
+                    hit("No Lie (Relax Edit)", "Release"),
+                    hit("No Lie", "Sean Paul & Dua Lipa")
+                ]
+            ),
+            "No Lie"
+        );
+        let t = track("Numb", &["Linkin Park"]);
+        let (a, mut b) = (hit("Numb", "Linkin Park"), hit("Numb", "Linkin Park"));
+        b.id = "second".into();
+        assert_eq!(pick(&t, vec![a, b]), "Numb");
+        let t = track("Chimp", &["Juice WRLD"]);
+        assert!(!best(&[hit("Lucid Dreams", "Juice WRLD")], &t).unwrap().1);
+        assert!(best(&[hit("Chimp", "Juice WRLD")], &t).unwrap().1);
+        assert!(
+            best(
+                &[hit("死ぬのがいいわ - Shinunoga E-Wa", "Fujii Kaze")],
+                &track("Shinunoga E-Wa", &["Fujii Kaze"])
+            )
+            .unwrap()
+            .1
+        );
+        let t = track(
+            "Silk & Cologne (EI8HT & Offset) - Spider-Verse Remix",
+            &["EI8HT", "Offset"],
+        );
+        assert!(
+            best(
+                &[hit(
+                    "Silk and Cologne (Spider-Verse Remix)",
+                    "EI8HT & Offset"
+                )],
+                &t
+            )
+            .unwrap()
+            .1
+        );
+    }
+
+    fn timed(mut h: YtTrack, id: &str, secs: u32) -> YtTrack {
+        h.id = id.into();
+        h.duration = Some(secs);
+        h
+    }
+
+    fn track_of(name: &str, artists: &[&str], secs: u32) -> Track {
+        Track {
+            duration: Some(secs),
+            ..track(name, artists)
+        }
+    }
+
+    #[test]
+    fn ranking_with_lengths() {
+        let pick =
+            |t: &Track, hits: Vec<YtTrack>| best(&hits, t).map(|(h, sure)| (h.id, sure)).unwrap();
+        let t = track_of("Respect", &["Aretha Franklin"], 147);
+        let hits = vec![
+            timed(hit("Respect", "Aretha Franklin"), "long", 275),
+            timed(hit("Respect", "Smooth Jazz All Stars"), "cover", 180),
+            timed(hit("Respect (Mono)", "Aretha Franklin"), "mono", 146),
+        ];
+        assert_eq!(pick(&t, hits), ("mono".into(), true));
+        assert!(
+            !best(&[timed(hit("Respect", "Aretha Franklin"), "long", 275)], &t)
+                .unwrap()
+                .1
+        );
+        let t = track_of("Mas Que Nada", &["Sergio Mendes & Brasil '66"], 159);
+        let hits = vec![
+            timed(hit("Mas Que Nada", "Styline, Raul Mendes"), "styline", 275),
+            timed(
+                hit("Mais Que Nada", "Sergio Mendes & Brasil '66"),
+                "real",
+                159,
+            ),
+        ];
+        assert_eq!(pick(&t, hits), ("real".into(), true));
+        assert!(
+            best(
+                &[hit("Loneliness", "Rude.")],
+                &track("Loneliness", &["RŮDE"])
+            )
+            .unwrap()
+            .1
+        );
+        let t = track_of("夜空のイヤリング", &["Junko Yagami"], 238);
+        assert_eq!(
+            pick(
+                &t,
+                vec![timed(hit("夜空のイヤリング", "八神純子"), "a", 239)]
+            ),
+            ("a".into(), true)
+        );
+        let t = track_of("Come To Me", &["ITSA THEIS"], 250);
+        assert!(!pick(&t, vec![timed(hit("Come To Me", "itsnottheis"), "a", 251)]).1);
+        let t = track_of("Fleeting Lullaby", &["Ado"], 173);
+        let hits = vec![
+            timed(
+                hit("Fleeting Lullaby (from \"One Piece Film: Red\")", "AmaLee"),
+                "cover",
+                173,
+            ),
+            timed(
+                hit("ウタカタララバイ - Fleeting Lullaby", "Ado"),
+                "ado",
+                174,
+            ),
+        ];
+        assert_eq!(pick(&t, hits), ("ado".into(), true));
+        let t = track_of(
+            "You're My Angel - Hypnose Remix Edit",
+            &["Styles & Breeze", "Hypnose"],
+            170,
+        );
+        let hits = vec![
+            timed(hit("You're My Angel", "Styles & Breeze"), "orig", 315),
+            timed(
+                hit("You're My Angel (Hypnose Remix Edit)", "Styles & Breeze"),
+                "remix",
+                171,
+            ),
+        ];
+        assert_eq!(pick(&t, hits), ("remix".into(), true));
+        let t = track_of("Friends Die", &["F1guss"], 205);
+        let hits = vec![
+            timed(hit("Burn", "F1guss"), "same artist", 218),
+            timed(hit("Stolen", "ABress"), "same length", 205),
+        ];
+        assert_eq!(pick(&t, hits), ("same artist".into(), false));
+    }
+
+    #[test]
+    fn bracketed_titles_and_groups() {
+        assert_eq!(
+            base_title("(Sittin' On) the Dock of the Bay"),
+            "sittinonthedockofthebay"
+        );
+        assert_eq!(
+            base_title("(Love Is Like A) Heat Wave (Mono) - 2005 Remaster"),
+            "loveislikeaheatwave"
+        );
+        assert_eq!(base_title("Respect (Mono)"), "respect");
+        assert!(
+            best(
+                &[hit("I Left My Heart in San Francisco", "Tony Bennett")],
+                &track("(I Left My Heart) In San Francisco", &["Tony Bennett"])
+            )
+            .unwrap()
+            .1
+        );
+        assert!(
+            best(
+                &[hit("Wonderful World", "Sam Cooke")],
+                &track("(What A) Wonderful World", &["Sam Cooke"])
+            )
+            .unwrap()
+            .1
+        );
+        assert!(
+            best(
+                &[hit("Who's Lovin' You", "Jackson 5")],
+                &track("Who's Lovin' You", &["The Jackson 5"])
+            )
+            .unwrap()
+            .1
+        );
+        assert!(
+            best(
+                &[hit("The Tracks of My Tears", "The Miracles")],
+                &track(
+                    "The Tracks Of My Tears",
+                    &["Smokey Robinson & The Miracles"]
+                )
+            )
+            .unwrap()
+            .1
+        );
+        assert!(
+            best(
+                &[hit("A Natural Woman", "Aretha Frankiln")],
+                &track("A Natural Woman", &["Aretha Franklin"])
+            )
+            .unwrap()
+            .1
+        );
+        assert!(
+            !best(
+                &[hit("Black Magic Woman", "Madeaux")],
+                &track("Black Magic Woman", &["Santana"])
+            )
+            .unwrap()
+            .1
+        );
+        assert!(
+            !best(
+                &[hit("Found a Way", "Drake")],
+                &track("Found a Way", &["Drake Bell"])
+            )
+            .unwrap()
+            .1
+        );
+    }
+
+    #[test]
+    fn near_titles() {
+        assert!(similar("masquenada", "maisquenada"));
+        assert!(!similar("loveme", "loveyou"));
+        assert!(!similar("numb", "numa"));
+    }
+
+    #[test]
+    fn plain_queries() {
+        assert_eq!(
+            queries(&track(
+                "GO (feat. Juice WRLD)",
+                &["The Kid LAROI", "Juice WRLD"]
+            ))[0],
+            "GO The Kid LAROI"
+        );
+        assert_eq!(
+            queries(&track(
+                "Drunk And Nasty (feat. Sharc)",
+                &["Pi'erre Bourne", "Sharc"]
+            ))[0],
+            "Drunk And Nasty Pi'erre Bourne"
+        );
+        assert_eq!(
+            queries(&track("Numb", &["Linkin Park"])),
+            vec!["Numb Linkin Park"]
+        );
+        assert_eq!(plain_title("Wonderwall - Remastered"), "Wonderwall");
+        assert_eq!(
+            plain_title("(What's the Story) Morning Glory?"),
+            "(What's the Story) Morning Glory?"
+        );
+    }
+
+    #[test]
+    fn likes_playlists() {
+        for name in ["Liked Songs", "likes", " Likes ", "LIKED SONGS"] {
+            assert!(is_likes(name), "{name}");
+        }
+        for name in ["Liked Songs 2", "Vibe", "My likes mix", "Liked Music"] {
+            assert!(!is_likes(name), "{name}");
+        }
+    }
+}
+
+#[cfg(test)]
+mod live {
+    #[tokio::test]
+    #[ignore]
+    async fn session_live() {
+        let dir = std::path::PathBuf::from(std::env::var("VYRAL_RUST_DATA_DIR").unwrap());
+        let api = crate::ytmapi::Api::new(&dir);
+        let a = api.account().expect("no session in the vault");
+        let names = |c: &str| {
+            c.split(';')
+                .filter_map(|kv| kv.trim().split_once('=').map(|(k, _)| k.to_owned()))
+                .collect::<Vec<_>>()
+                .join(",")
+        };
+        println!("cookies: {}", names(&a.cookie));
+        for round in 0..2 {
+            let a = api.account().unwrap();
+            match api.session_from_cookie(&a.cookie).await {
+                Ok(_) => println!("[{round}] youtube.com check: signed in"),
+                Err(e) => println!("[{round}] youtube.com check: {e:#}"),
+            }
+            match api
+                .call(
+                    "browse",
+                    serde_json::json!({"browseId": "FEmusic_liked_playlists"}),
+                    true,
+                )
+                .await
+            {
+                Ok(v) => println!(
+                    "[{round}] signed-in browse: logged_out={}",
+                    crate::ytmapi::logged_out(&v)
+                ),
+                Err(e) => println!("[{round}] signed-in browse: {e:#}"),
+            }
+            if round == 0 {
+                match api.rotate().await {
+                    Ok(()) => println!(
+                        "rotate: ok; cookies now {}",
+                        names(&api.account().unwrap().cookie)
+                    ),
+                    Err(e) => println!("rotate: {e:#}"),
+                }
+            }
+        }
+    }
+
+    #[tokio::test]
+    #[ignore]
+    async fn bulk_live() {
+        use futures_util::{StreamExt, stream};
+        use std::time::Instant;
+        let _ = env_logger::builder()
+            .filter_level(log::LevelFilter::Warn)
+            .filter_module("vyral::ytmapi", log::LevelFilter::Info)
+            .try_init();
+        let dir = std::path::PathBuf::from(std::env::var("VYRAL_RUST_DATA_DIR").unwrap());
+        let api = crate::ytmapi::Api::new(&dir);
+        assert!(api.account().is_some(), "no session in the vault");
+        let n: usize = std::env::var("VYRAL_RUST_BULK_N")
+            .ok()
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(150);
+        async fn listed(api: &crate::ytmapi::Api) -> std::collections::HashSet<String> {
+            crate::ytm::playlist(api, "LM", true, None)
+                .await
+                .map(|p| p.tracks.into_iter().map(|t| t.id).collect())
+                .unwrap_or_default()
+        }
+
+        let mut tracks: Vec<super::Track> = Vec::new();
+        for q in [
+            "drake",
+            "taylor swift",
+            "the weeknd",
+            "kendrick lamar",
+            "billie eilish",
+            "travis scott",
+            "sza",
+            "bad bunny",
+            "doja cat",
+            "post malone",
+            "ariana grande",
+            "frank ocean",
+            "tyler the creator",
+            "lana del rey",
+            "j cole",
+        ] {
+            for t in crate::ytm::search_songs(&api, q, false)
+                .await
+                .unwrap_or_default()
+            {
+                if tracks.len() < n && !tracks.iter().any(|x| x.name == t.title) {
+                    tracks.push(super::Track {
+                        name: t.title.clone(),
+                        artists: t.artists.iter().map(|a| a.name.clone()).collect(),
+                        local: false,
+                        art: None,
+                        duration: None,
+                    });
+                }
+            }
+        }
+        println!("{} songs to search", tracks.len());
+
+        let t = Instant::now();
+        let found: Vec<String> = stream::iter(tracks.iter())
+            .map(|tr| super::search_song(&api, tr))
+            .buffer_unordered(super::SEARCHES)
+            .filter_map(|r| async move { r.ok().flatten().map(|(t, _)| t.id) })
+            .collect()
+            .await;
+        let mut ids: Vec<String> = Vec::new();
+        for id in found {
+            if !ids.contains(&id) {
+                ids.push(id);
+            }
+        }
+        println!(
+            "search: {} found of {} in {:.1}s ({:.2} s/song), paused now: {}",
+            ids.len(),
+            tracks.len(),
+            t.elapsed().as_secs_f32(),
+            t.elapsed().as_secs_f32() / tracks.len().max(1) as f32,
+            api.limited()
+        );
+
+        let before = listed(&api).await.len();
+        let t = Instant::now();
+        let (done, failed) = crate::backend::like_many(&api, ids.clone(), true, |_, _| {}).await;
+        let now = listed(&api).await;
+        let have = ids.iter().filter(|id| now.contains(*id)).count();
+        println!(
+            "like: {} taken, {} refused in {:.1}s ({:.2} s/song); Liked Music {} -> {}, {have} of {} listed",
+            done.len(),
+            failed.len(),
+            t.elapsed().as_secs_f32(),
+            t.elapsed().as_secs_f32() / ids.len().max(1) as f32,
+            before,
+            now.len(),
+            ids.len()
+        );
+
+        let t = Instant::now();
+        let (done, failed) = crate::backend::like_many(&api, ids.clone(), false, |_, _| {}).await;
+        let now = listed(&api).await;
+        let left = ids.iter().filter(|id| now.contains(*id)).count();
+        println!(
+            "unlike: {} taken, {} refused in {:.1}s ({:.2} s/song); Liked Music now {}, {left} of {} still listed",
+            done.len(),
+            failed.len(),
+            t.elapsed().as_secs_f32(),
+            t.elapsed().as_secs_f32() / ids.len().max(1) as f32,
+            now.len(),
+            ids.len()
+        );
+    }
+
+    #[tokio::test]
+    #[ignore]
+    async fn unlike_all_live() {
+        let dir = std::path::PathBuf::from(std::env::var("VYRAL_RUST_DATA_DIR").unwrap());
+        let api = crate::ytmapi::Api::new(&dir);
+        let ids: Vec<String> = crate::ytm::playlist(&api, "LM", true, None)
+            .await
+            .unwrap()
+            .tracks
+            .into_iter()
+            .map(|t| t.id)
+            .collect();
+        let t = std::time::Instant::now();
+        let (done, failed) = crate::backend::like_many(&api, ids.clone(), false, |_, _| {}).await;
+        let left = crate::ytm::playlist(&api, "LM", true, None)
+            .await
+            .map(|p| p.tracks.len())
+            .unwrap_or(usize::MAX);
+        println!(
+            "unlike all: {} listed, {} taken, {} refused in {:.1}s; Liked Music now lists {left}",
+            ids.len(),
+            done.len(),
+            failed.len(),
+            t.elapsed().as_secs_f32()
+        );
+    }
+
+    #[tokio::test]
+    #[ignore]
+    async fn refusals_live() {
+        let dir = std::env::temp_dir().join("vyral-refusals-test");
+        let api = crate::ytmapi::Api::new(&dir);
+        let visitor = api.visitor_data(false).await.unwrap();
+        let http = crate::proxy::http();
+        let queries = [
+            "drake", "sza", "adele", "queen", "abba", "eminem", "rihanna", "beyonce", "coldplay",
+            "muse",
+        ];
+        let (mut ours, mut browser) = ((0, 0), (0, 0));
+        for i in 0..40 {
+            let q = format!("{} {}", queries[i % queries.len()], i);
+            let body = serde_json::json!({"query": q, "context": {"client": {"clientName": "WEB_REMIX", "clientVersion": "1.20261027.10.00", "hl": "en", "gl": "US", "visitorData": visitor}}});
+            let as_app = i % 2 == 0;
+            let mut req = http
+                .post("https://music.youtube.com/youtubei/v1/search?prettyPrint=false")
+                .json(&body)
+                .header("Origin", "https://music.youtube.com")
+                .header("X-Goog-Visitor-Id", &visitor);
+            req = if as_app {
+                req.header("User-Agent", crate::webmusic::UA)
+                    .header("X-Origin", "https://music.youtube.com")
+                    .header("Referer", "https://music.youtube.com")
+                    .header("X-YouTube-Client-Name", "67")
+                    .header("X-YouTube-Client-Version", "1.20261027.10.00")
+                    .header("Cookie", "SOCS=CAISAiAD")
+            } else {
+                req.header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:140.0) Gecko/20100101 Firefox/140.0")
+                    .header("Accept-Language", "en-US,en;q=0.5")
+                    .header("Referer", "https://music.youtube.com/")
+                    .header("X-Goog-Api-Format-Version", "1")
+                    .header("X-YouTube-Client-Name", "67")
+                    .header("X-YouTube-Client-Version", "1.20261027.10.00")
+                    .header("Cookie", "SOCS=CAISAiAD")
+            };
+            let status = req.send().await.map(|r| r.status().as_u16()).unwrap_or(0);
+            let slot = if as_app { &mut ours } else { &mut browser };
+            slot.0 += 1;
+            if status == 403 {
+                slot.1 += 1;
+            }
+            tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+        }
+        println!(
+            "as the app: {} of {} refused; as a browser: {} of {} refused",
+            ours.1, ours.0, browser.1, browser.0
+        );
+    }
+
+    #[tokio::test]
+    #[ignore]
+    async fn match_speed_live() {
+        use futures_util::{StreamExt, stream};
+        let file = std::env::var("VYRAL_RUST_SAVED").unwrap();
+        let v: serde_json::Value = serde_json::from_slice(&std::fs::read(file).unwrap()).unwrap();
+        let n: usize = std::env::var("VYRAL_RUST_MATCH_N")
+            .ok()
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(200);
+        let tracks: Vec<super::Track> = serde_json::from_value(v["tracks"].clone()).unwrap();
+        let tracks: Vec<super::Track> = tracks
+            .into_iter()
+            .filter(|t| !t.local)
+            .skip(
+                std::env::var("VYRAL_RUST_MATCH_SKIP")
+                    .ok()
+                    .and_then(|v| v.parse().ok())
+                    .unwrap_or(0),
+            )
+            .take(n)
+            .collect();
+        let _ = env_logger::builder()
+            .filter_level(log::LevelFilter::Warn)
+            .filter_module("vyral::ytmapi", log::LevelFilter::Info)
+            .is_test(false)
+            .try_init();
+        let api = crate::ytmapi::Api::new(&std::env::temp_dir().join("vyral-match-speed"));
+        assert!(api.account().is_none());
+        let t0 = std::time::Instant::now();
+        let results: Vec<_> = stream::iter(tracks.iter())
+            .map(|t| super::search_song(&api, t))
+            .buffer_unordered(
+                std::env::var("VYRAL_RUST_CONC")
+                    .ok()
+                    .and_then(|v| v.parse().ok())
+                    .unwrap_or(super::SEARCHES),
+            )
+            .collect()
+            .await;
+        let sure = results
+            .iter()
+            .filter(|r| matches!(r, Ok(Some((_, true)))))
+            .count();
+        let unsure = results
+            .iter()
+            .filter(|r| matches!(r, Ok(Some((_, false))) | Ok(None)))
+            .count();
+        let failed = results.iter().filter(|r| r.is_err()).count();
+        let secs = t0.elapsed().as_secs_f32();
+        println!(
+            "{} songs in {secs:.1}s ({:.2} s/song): {sure} sure, {unsure} not sure (these get one signed-in search), {failed} failed",
+            tracks.len(),
+            secs / tracks.len() as f32
+        );
+    }
+
+    #[tokio::test]
+    #[ignore]
+    async fn artist_thumbs_live() {
+        let dir = std::env::temp_dir().join("vyral-thumbs-test");
+        let api = crate::ytmapi::Api::new(&dir);
+        for c in crate::ytm::search_cards(&api, "drake", crate::ytm::Filter::Artists, false)
+            .await
+            .unwrap()
+            .iter()
+            .take(5)
+        {
+            println!(
+                "{}: {:?}",
+                c.title,
+                c.thumbs
+                    .iter()
+                    .map(|t| format!("{}x{} {}", t.width, t.height, t.url))
+                    .collect::<Vec<_>>()
+            );
+        }
+    }
+
+    #[tokio::test]
+    #[ignore]
+    async fn liked_menu_live() {
+        let dir = std::path::PathBuf::from(std::env::var("VYRAL_RUST_DATA_DIR").unwrap());
+        let api = crate::ytmapi::Api::new(&dir);
+        assert!(api.account().is_some(), "no session in the vault");
+        let v = api
+            .call("browse", serde_json::json!({ "browseId": "VLLM" }), true)
+            .await
+            .unwrap();
+        let shelf = &v["contents"]["twoColumnBrowseResultsRenderer"]["secondaryContents"]["sectionListRenderer"]
+            ["contents"][0];
+        let shelf = if shelf["musicPlaylistShelfRenderer"].is_null() {
+            &shelf["musicShelfRenderer"]
+        } else {
+            &shelf["musicPlaylistShelfRenderer"]
+        };
+        let row = &shelf["contents"][0]["musicResponsiveListItemRenderer"];
+        println!("playlistItemData: {}", row["playlistItemData"]);
+        for item in row["menu"]["menuRenderer"]["items"]
+            .as_array()
+            .into_iter()
+            .flatten()
+        {
+            let (kind, r) = item.as_object().and_then(|o| o.iter().next()).unwrap();
+            let text = r["text"]["runs"][0]["text"].as_str().unwrap_or("?");
+            let ep = if r["serviceEndpoint"].is_null() {
+                &r["navigationEndpoint"]
+            } else {
+                &r["serviceEndpoint"]
+            };
+            println!(
+                "{kind} {text:?}: {}",
+                serde_json::to_string(ep)
+                    .unwrap()
+                    .chars()
+                    .take(400)
+                    .collect::<String>()
+            );
+        }
+        for b in row["menu"]["menuRenderer"]["topLevelButtons"]
+            .as_array()
+            .into_iter()
+            .flatten()
+        {
+            println!(
+                "top button: {}",
+                serde_json::to_string(b)
+                    .unwrap()
+                    .chars()
+                    .take(600)
+                    .collect::<String>()
+            );
+        }
+    }
+
+    #[tokio::test]
+    #[ignore]
+    async fn removal_methods_live() {
+        use std::time::{Duration, Instant};
+        let dir = std::path::PathBuf::from(std::env::var("VYRAL_RUST_DATA_DIR").unwrap());
+        let api = crate::ytmapi::Api::new(&dir);
+        assert!(api.account().is_some(), "no session in the vault");
+        async fn liked(api: &crate::ytmapi::Api) -> crate::backend::Collection {
+            crate::ytm::playlist(api, "LM", true, None).await.unwrap()
+        }
+        async fn watch(api: &crate::ytmapi::Api, ids: &[String], t: Instant) {
+            for _ in 0..8 {
+                tokio::time::sleep(Duration::from_secs(4)).await;
+                let now: Vec<String> = liked(api).await.tracks.into_iter().map(|t| t.id).collect();
+                let left = ids.iter().filter(|id| now.contains(id)).count();
+                println!(
+                    "  {:>5.1}s: {left} of {} still listed (Liked Music lists {})",
+                    t.elapsed().as_secs_f32(),
+                    ids.len(),
+                    now.len()
+                );
+                if left == 0 {
+                    return;
+                }
+            }
+        }
+        let mut songs: Vec<String> = Vec::new();
+        for q in [
+            "drake",
+            "taylor swift",
+            "the weeknd",
+            "kendrick lamar",
+            "billie eilish",
+            "travis scott",
+        ] {
+            for t in crate::ytm::search_songs(&api, q, true).await.unwrap() {
+                if !songs.contains(&t.id) {
+                    songs.push(t.id);
+                }
+            }
+        }
+        songs.truncate(60);
+        println!("liking {} songs, 500 ms apart", songs.len());
+        for id in songs.iter().rev() {
+            crate::ytm::set_like(&api, id, true).await.unwrap();
+            tokio::time::sleep(Duration::from_millis(500)).await;
+        }
+        let t = Instant::now();
+        watch(&api, &[], t).await;
+        for _ in 0..8 {
+            let now: Vec<String> = liked(&api).await.tracks.into_iter().map(|t| t.id).collect();
+            let have = songs.iter().filter(|id| now.contains(id)).count();
+            println!(
+                "  {:>5.1}s: {have} of {} liked songs listed",
+                t.elapsed().as_secs_f32(),
+                songs.len()
+            );
+            if have == songs.len() {
+                break;
+            }
+            tokio::time::sleep(Duration::from_secs(4)).await;
+        }
+        let lm = liked(&api).await;
+        let set_of = |id: &str| {
+            lm.tracks
+                .iter()
+                .position(|t| t.id == id)
+                .and_then(|i| lm.set_ids[i].clone())
+        };
+        let (a, rest) = songs.split_at(20.min(songs.len()));
+        let (b, c) = rest.split_at(20.min(rest.len()));
+
+        println!("A: {} unlikes, no gap", a.len());
+        let t = Instant::now();
+        for id in a {
+            if let Err(e) = crate::ytm::set_like(&api, id, false).await {
+                println!("  unlike {id}: {e:#}");
+            }
+        }
+        println!("  sent in {:.1}s", t.elapsed().as_secs_f32());
+        watch(&api, a, t).await;
+
+        let items: Vec<(String, String)> = b
+            .iter()
+            .filter_map(|id| Some((id.clone(), set_of(id)?)))
+            .collect();
+        println!(
+            "B: one Liked Music edit removing {} ({} had entry ids)",
+            b.len(),
+            items.len()
+        );
+        let t = Instant::now();
+        match crate::ytm::remove_videos(&api, "LM", &items).await {
+            Ok(()) => println!("  edit taken in {:.1}s", t.elapsed().as_secs_f32()),
+            Err(e) => println!("  edit: {e:#}"),
+        }
+        watch(&api, b, t).await;
+
+        println!("C: {} unlikes, 400 ms apart", c.len());
+        let t = Instant::now();
+        for id in c {
+            if let Err(e) = crate::ytm::set_like(&api, id, false).await {
+                println!("  unlike {id}: {e:#}");
+            }
+            tokio::time::sleep(Duration::from_millis(400)).await;
+        }
+        println!("  sent in {:.1}s", t.elapsed().as_secs_f32());
+        watch(&api, c, t).await;
+    }
+
+    #[tokio::test]
+    #[ignore]
+    async fn unlike_lag_live() {
+        use std::time::{Duration, Instant};
+        let dir = std::path::PathBuf::from(std::env::var("VYRAL_RUST_DATA_DIR").unwrap());
+        let api = crate::ytmapi::Api::new(&dir);
+        assert!(api.account().is_some(), "no session in the vault");
+        let n: usize = std::env::var("VYRAL_RUST_LAG_N")
+            .ok()
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(20);
+        let gap = Duration::from_millis(
+            std::env::var("VYRAL_RUST_LAG_GAP")
+                .ok()
+                .and_then(|v| v.parse().ok())
+                .unwrap_or(0),
+        );
+        async fn listed(api: &crate::ytmapi::Api) -> anyhow::Result<Vec<String>> {
+            Ok(crate::ytm::playlist(api, "LM", true, None)
+                .await?
+                .tracks
+                .into_iter()
+                .map(|t| t.id)
+                .collect())
+        }
+        let edit = std::env::var("VYRAL_RUST_LAG_MODE").is_ok_and(|m| m == "edit");
+        let lm = crate::ytm::playlist(&api, "LM", true, None).await.unwrap();
+        let before: Vec<String> = lm.tracks.iter().map(|t| t.id.clone()).collect();
+        let pick: Vec<String> = before.iter().take(n).cloned().collect();
+        let sets: Vec<(String, String)> = lm
+            .tracks
+            .iter()
+            .zip(&lm.set_ids)
+            .take(n)
+            .filter_map(|(t, s)| Some((t.id.clone(), s.clone()?)))
+            .collect();
+        println!(
+            "Liked Music lists {}; {} of the newest {n} have entry ids",
+            before.len(),
+            sets.len()
+        );
+        let t = Instant::now();
+        if edit {
+            println!("one playlist edit removing {}", sets.len());
+            if let Err(e) = crate::ytm::remove_videos(&api, "LM", &sets).await {
+                println!("edit: {e:#}");
+            }
+        } else {
+            println!("unliking one by one, {gap:?} apart");
+            for id in &pick {
+                if let Err(e) = crate::ytm::set_like(&api, id, false).await {
+                    println!("unlike {id}: {e:#}");
+                }
+                tokio::time::sleep(gap).await;
+            }
+        }
+        println!("{:?}: all sent", t.elapsed());
+        for _ in 0..12 {
+            tokio::time::sleep(Duration::from_secs(5)).await;
+            match listed(&api).await {
+                Ok(now) => {
+                    let left = pick.iter().filter(|id| now.contains(id)).count();
+                    println!(
+                        "{:?}: Liked Music lists {}, {left} of the {n} still in it",
+                        t.elapsed(),
+                        now.len()
+                    );
+                    if left == 0 {
+                        break;
+                    }
+                }
+                Err(e) => println!("{:?}: reading Liked Music: {e:#}", t.elapsed()),
+            }
+        }
+        for id in pick.iter().rev() {
+            if let Err(e) = crate::ytm::set_like(&api, id, true).await {
+                println!("like {id}: {e:#}");
+            }
+            tokio::time::sleep(Duration::from_millis(600)).await;
+        }
+        for _ in 0..12 {
+            tokio::time::sleep(Duration::from_secs(5)).await;
+            if let Ok(now) = listed(&api).await {
+                let top: Vec<String> = now.iter().take(n).cloned().collect();
+                println!(
+                    "restore: top {n} match before: {}, listed {}",
+                    top == pick,
+                    now.len()
+                );
+                if top == pick {
+                    break;
+                }
+            }
+        }
+    }
+
+    #[tokio::test]
+    #[ignore]
+    async fn matching_live() {
+        let dir = directories::ProjectDirs::from("", "", "vyral")
+            .unwrap()
+            .data_dir()
+            .to_path_buf();
+        let api = crate::ytmapi::Api::new(&dir);
+        assert!(api.account().is_some(), "not signed in");
+        let songs: &[(&str, &[&str])] = &[
+            ("GO (feat. Juice WRLD)", &["The Kid LAROI", "Juice WRLD"]),
+            (
+                "Drunk And Nasty (feat. Sharc)",
+                &["Pi'erre Bourne", "Sharc"],
+            ),
+            (
+                "Miss The Rage (feat. Playboi Carti)",
+                &["Trippie Redd", "Playboi Carti"],
+            ),
+            (
+                "Nuketown (feat. Juice WRLD)",
+                &["Ski Mask The Slump God", "Juice WRLD"],
+            ),
+            ("One Dance", &["Drake", "Wizkid", "Kyla"]),
+            ("Shinunoga E-Wa", &["Fujii Kaze"]),
+        ];
+        let mut sure = 0;
+        for (name, artists) in songs {
+            let t = super::Track {
+                name: name.to_string(),
+                artists: artists.iter().map(|a| a.to_string()).collect(),
+                local: false,
+                art: None,
+                duration: None,
+            };
+            let r = super::search_song(&api, &t).await.unwrap();
+            println!(
+                "{name} -> {:?}",
+                r.as_ref()
+                    .map(|(h, s)| (h.title.clone(), h.artist_line(), *s))
+            );
+            sure += r.is_some_and(|(_, s)| s) as usize;
+        }
+        assert_eq!(sure, songs.len());
+    }
+
+    #[tokio::test]
+    #[ignore]
+    async fn liked_music_live() {
+        let dir = std::path::PathBuf::from(std::env::var("VYRAL_RUST_DATA_DIR").unwrap());
+        let api = crate::ytmapi::Api::new(&dir);
+        assert!(api.account().is_some(), "no session in the vault");
+        for limit in [100, 1000, 20_000] {
+            let t = std::time::Instant::now();
+            match crate::ytm::playlist(&api, "LM", true, Some(limit)).await {
+                Ok(p) => println!(
+                    "limit {limit}: {} tracks in {:?}",
+                    p.tracks.len(),
+                    t.elapsed()
+                ),
+                Err(e) => println!("limit {limit}: {e:#}"),
+            }
+        }
+    }
+}

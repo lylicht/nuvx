@@ -1,0 +1,20 @@
+<resources>
+    <string name="vyral_tagline">موسيقاك، بطريقتك</string>
+    <string name="vyral_stable">مستقر</string>
+    <string name="vyral_version_code">رمز الإصدار</string>
+    <string name="vyral_license">الترخيص</string>
+    <string name="vyral_open_source_licenses">تراخيص المصادر المفتوحة</string>
+    <string name="vyral_lead_dev">المطور الرئيسي</string>
+    <string name="vyral_quality_assurance_tester">مختبر ضمان الجودة</string>
+    <string name="vyral_app_info">معلومات التطبيق</string>
+    <string name="vyral_website">الموقع الإلكتروني</string>
+    <string name="vyral_source">الشيفرة المصدرية</string>
+    <string name="vyral_github_stars">نجوم GitHub</string>
+    <string name="vyral_community">المجتمع</string>
+    <string name="vyral_support">ادعم vyral</string>
+    <string name="vyral_reserved">قريبًا</string>
+    <string name="vyral_reserved_detail">مساحة مشتركة لموسيقاك. ستتوفر ميزة الاستماع معًا عندما تصبح خدمة vyral جاهزة.</string>
+    <string name="vyral_speed_dial">الوصول السريع</string>
+    <string name="vyral_daily_discover">اكتشافك اليومي</string>
+    <string name="vyral_daily_discover_subtitle">اختيرت من الموسيقى التي تستمع إليها</string>
+</resources>

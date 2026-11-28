@@ -1,0 +1,282 @@
+use std::path::{Path, PathBuf};
+use std::process::Command;
+use std::time::{Duration, SystemTime};
+
+use serde_json::Value;
+
+#[cfg(windows)]
+const BIN: &str = "yt-dlp.exe";
+#[cfg(not(windows))]
+const BIN: &str = "yt-dlp";
+#[cfg(all(windows, not(target_arch = "aarch64")))]
+fn download_url() -> &'static str {
+    "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe"
+}
+#[cfg(all(windows, target_arch = "aarch64"))]
+fn download_url() -> &'static str {
+    "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_arm64.exe"
+}
+#[cfg(target_os = "linux")]
+fn download_url() -> &'static str {
+    linux_url_for_arch(std::env::consts::ARCH)
+}
+
+#[cfg(any(target_os = "linux", test))]
+const LINUX_X64_URL: &str =
+    "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux";
+#[cfg(any(target_os = "linux", test))]
+const LINUX_ARM64_URL: &str =
+    "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux_aarch64";
+
+#[cfg(any(target_os = "linux", test))]
+fn linux_url_for_arch(arch: &str) -> &'static str {
+    if arch == "aarch64" {
+        LINUX_ARM64_URL
+    } else {
+        LINUX_X64_URL
+    }
+}
+
+const MAX_AGE: Duration = Duration::from_secs(7 * 24 * 3600);
+
+pub struct Stream {
+    pub url: String,
+    pub size: u64,
+    pub duration_ms: u64,
+    pub user_agent: String,
+    pub replaced: Vec<String>,
+}
+
+async fn ensure(http: &reqwest::Client, data_dir: &Path) -> anyhow::Result<PathBuf> {
+    let bin = data_dir.join(BIN);
+    let fresh = std::fs::metadata(&bin)
+        .and_then(|m| m.modified())
+        .is_ok_and(|t| SystemTime::now().duration_since(t).unwrap_or_default() < MAX_AGE);
+    if fresh {
+        return Ok(bin);
+    }
+    log::info!("downloading yt-dlp");
+    let bytes = http
+        .get(download_url())
+        .timeout(Duration::from_secs(120))
+        .send()
+        .await?
+        .error_for_status()?
+        .bytes()
+        .await?;
+    anyhow::ensure!(
+        bytes.len() > 1_000_000,
+        "yt-dlp download looks truncated ({} bytes)",
+        bytes.len()
+    );
+    let tmp = bin.with_extension("part");
+    std::fs::write(&tmp, &bytes)?;
+    #[cfg(target_os = "linux")]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::set_permissions(&tmp, std::fs::Permissions::from_mode(0o755))?;
+    }
+    std::fs::rename(&tmp, &bin)?;
+    Ok(bin)
+}
+
+pub async fn resolve(
+    http: &reqwest::Client,
+    data_dir: &Path,
+    cookie: &str,
+    video_id: &str,
+) -> anyhow::Result<Stream> {
+    let bin = ensure(http, data_dir).await?;
+    let data_dir = data_dir.to_owned();
+    let (cookie, video_id) = (cookie.to_owned(), video_id.to_owned());
+    let mut s =
+        tokio::task::spawn_blocking(move || run(&bin, &data_dir, &video_id, &cookie)).await??;
+    if s.size == 0 {
+        let head = http
+            .head(&s.url)
+            .header("User-Agent", &s.user_agent)
+            .send()
+            .await?
+            .error_for_status()?;
+        let len = head
+            .headers()
+            .get(reqwest::header::CONTENT_LENGTH)
+            .and_then(|v| v.to_str().ok()?.parse::<u64>().ok());
+        s.size = len
+            .filter(|&n| n > 0)
+            .ok_or_else(|| anyhow::anyhow!("unknown stream size"))?;
+    }
+    Ok(s)
+}
+
+fn run(bin: &Path, data_dir: &Path, video_id: &str, cookie: &str) -> anyhow::Result<Stream> {
+    let nonce = SystemTime::now()
+        .duration_since(SystemTime::UNIX_EPOCH)
+        .map_or(0, |d| d.as_nanos());
+    let jar = data_dir.join(format!("cookies-{nonce}.txt"));
+    struct Remove<'a>(&'a Path);
+    impl Drop for Remove<'_> {
+        fn drop(&mut self) {
+            let _ = std::fs::remove_file(self.0);
+        }
+    }
+    let _guard = Remove(&jar);
+    let mut txt = String::from("# Netscape HTTP Cookie File\n");
+    for kv in cookie.split(';') {
+        if let Some((k, v)) = kv.trim().split_once('=') {
+            txt.push_str(&format!(
+                ".youtube.com\tTRUE\t/\tTRUE\t2147483647\t{k}\t{v}\n"
+            ));
+        }
+    }
+    std::fs::write(&jar, txt)?;
+
+    let mut cmd = Command::new(bin);
+    cmd.args([
+        "--js-runtimes",
+        "node",
+        "--no-warnings",
+        "--no-playlist",
+        "--no-cache-dir",
+        "-f",
+        "140/bestaudio[ext=m4a]",
+        "-j",
+        "--cookies",
+    ])
+    .arg(&jar)
+    .args(crate::proxy::ytdlp_args())
+    .arg(format!("https://music.youtube.com/watch?v={video_id}"));
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+        cmd.creation_flags(CREATE_NO_WINDOW);
+        if let Some(path) = std::env::var_os("PATH")
+            && let Some(path) = usable_path(&path, |d| std::fs::canonicalize(d).is_ok())
+        {
+            cmd.env("PATH", path);
+        }
+    }
+    #[cfg(target_os = "linux")]
+    {
+        use std::os::unix::process::CommandExt;
+        cmd.process_group(0);
+    }
+    let child = cmd
+        .stdin(std::process::Stdio::null())
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::piped())
+        .spawn()?;
+    let (pid, done) = (
+        child.id(),
+        std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false)),
+    );
+    let watch = done.clone();
+    std::thread::spawn(move || {
+        for _ in 0..90 {
+            std::thread::sleep(Duration::from_secs(1));
+            if watch.load(std::sync::atomic::Ordering::Relaxed) {
+                return;
+            }
+        }
+        log::warn!("yt-dlp took too long; stopping it");
+        #[cfg(windows)]
+        {
+            use std::os::windows::process::CommandExt;
+            let mut kill = Command::new("taskkill");
+            kill.args(["/PID", &pid.to_string(), "/T", "/F"])
+                .stdout(std::process::Stdio::null())
+                .stderr(std::process::Stdio::null());
+            kill.creation_flags(0x0800_0000);
+            let _ = kill.status();
+        }
+        #[cfg(target_os = "linux")]
+        unsafe {
+            libc::killpg(pid as libc::pid_t, libc::SIGKILL);
+        }
+    });
+    let out = child.wait_with_output();
+    done.store(true, std::sync::atomic::Ordering::Relaxed);
+    let out = out?;
+    if !out.status.success() {
+        let err = String::from_utf8_lossy(&out.stderr);
+        let line = err
+            .lines()
+            .rfind(|l| l.contains("ERROR"))
+            .unwrap_or("yt-dlp failed");
+        anyhow::bail!("{}", line.trim_start_matches("ERROR: ").trim());
+    }
+    let v: Value = serde_json::from_slice(&out.stdout)?;
+    let replaced = std::fs::read_to_string(&jar)
+        .unwrap_or_default()
+        .lines()
+        .map(|l| l.strip_prefix("#HttpOnly_").unwrap_or(l))
+        .filter(|l| !l.starts_with('#'))
+        .filter_map(|l| {
+            let f: Vec<&str> = l.split('\t').collect();
+            (f.len() >= 7
+                && f[0]
+                    .trim_start_matches('.')
+                    .eq_ignore_ascii_case("youtube.com"))
+            .then(|| format!("{}={}; Domain=.youtube.com", f[5], f[6]))
+        })
+        .collect();
+    Ok(Stream {
+        replaced,
+        url: v["url"]
+            .as_str()
+            .ok_or_else(|| anyhow::anyhow!("yt-dlp returned no URL"))?
+            .to_owned(),
+        size: v["filesize"].as_u64().unwrap_or(0),
+        duration_ms: v["duration"].as_f64().map_or(0, |d| (d * 1000.0) as u64),
+        user_agent: v["http_headers"]["User-Agent"]
+            .as_str()
+            .unwrap_or_default()
+            .to_owned(),
+    })
+}
+
+/// yt-dlp looks for Node by calling Python's `os.path.realpath` on every PATH folder, and one
+/// folder Windows refuses to resolve (WinError 448, an untrusted mount point) fails the whole
+/// song. Keep only the folders that resolve, in order and spelled as before. `None` keeps PATH as is.
+#[cfg(any(windows, test))]
+fn usable_path(
+    path: &std::ffi::OsStr,
+    resolves: impl Fn(&Path) -> bool,
+) -> Option<std::ffi::OsString> {
+    std::env::join_paths(
+        std::env::split_paths(path).filter(|d| !d.as_os_str().is_empty() && resolves(d)),
+    )
+    .ok()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{LINUX_ARM64_URL, LINUX_X64_URL, linux_url_for_arch, usable_path};
+    use std::path::{Path, PathBuf};
+
+    #[test]
+    fn aarch64_uses_native_binary() {
+        assert_eq!(linux_url_for_arch("aarch64"), LINUX_ARM64_URL);
+        assert_eq!(linux_url_for_arch("x86_64"), LINUX_X64_URL);
+    }
+
+    #[test]
+    fn unresolvable_path_folders_are_dropped_in_order() {
+        let (sys, bad, node) = (
+            PathBuf::from("sys"),
+            PathBuf::from("bad"),
+            PathBuf::from("node"),
+        );
+        let path = std::env::join_paths([&sys, Path::new(""), &bad, &node]).unwrap();
+        let out = usable_path(&path, |d| d != bad).unwrap();
+        assert_eq!(std::env::split_paths(&out).collect::<Vec<_>>(), [sys, node]);
+    }
+
+    #[test]
+    fn real_folders_keep_their_spelling() {
+        let here = std::env::current_dir().unwrap();
+        let out = usable_path(here.as_os_str(), |d| std::fs::canonicalize(d).is_ok()).unwrap();
+        assert_eq!(out, here.as_os_str());
+    }
+}

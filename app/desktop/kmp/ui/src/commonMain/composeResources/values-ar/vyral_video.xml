@@ -1,0 +1,15 @@
+<resources>
+    <string name="vyral_music">الموسيقى</string>
+    <string name="vyral_video_search">البحث في فيديوهات YouTube</string>
+    <string name="vyral_video_feed">العودة إلى الفيديوهات</string>
+    <string name="vyral_video_suggestions">اقتراحات لك</string>
+    <string name="vyral_video_explore">استكشف الفيديوهات</string>
+    <string name="vyral_video_empty">ابحث عن فيديو لبدء المشاهدة.</string>
+    <string name="vyral_video_no_results">لم يتم العثور على فيديوهات. جرّب بحثًا آخر.</string>
+    <string name="vyral_video_more">تحميل المزيد من الفيديوهات</string>
+    <string name="vyral_loading">جارٍ التحميل…</string>
+    <string name="vyral_retry">إعادة المحاولة</string>
+    <string name="vyral_search">بحث</string>
+    <string name="vyral_settings">الإعدادات</string>
+    <string name="vyral_video_failure">تعذّر تحميل YouTube. حاول مرة أخرى.</string>
+</resources>

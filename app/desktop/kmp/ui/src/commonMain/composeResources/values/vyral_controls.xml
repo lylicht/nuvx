@@ -1,0 +1,11 @@
+<resources>
+<string name="vyral_edit">Edit</string>
+<string name="vyral_done">Done</string>
+<string name="vyral_pin_hint">Pin music here for one-tap access.</string>
+<string name="vyral_auto_update">Automatic update checks</string>
+<string name="vyral_update_notices">Update notifications</string>
+<string name="vyral_bluetooth_resume">Resume on Bluetooth connection</string>
+<string name="vyral_about">About vyral</string>
+<string name="arabic">العربية</string>
+<string name="persian">فارسی</string>
+</resources>

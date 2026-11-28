@@ -1,0 +1,8 @@
+<resources>
+    <string name="migration_title">انتقال فهرست‌های پخش به دسکتاپ Rust</string>
+    <string name="migration_description">یک رونوشت برون‌بری کنید و سپس در Rust از تنظیمات ← داده‌های شما ← درون‌ریزی نسخهٔ پشتیبان وارد کنید. فایل‌های محلی، آهنگ‌های منابع شبکه، حساب‌ها و تنظیمات در این برنامه باقی می‌مانند.</string>
+    <string name="migration_export">برون‌بری برای دسکتاپ Rust</string>
+    <string name="migration_saved">%1$d فهرست پخش و %2$d آهنگ برون‌بری شد. %3$d آهنگ پشتیبانی‌نشده در KMP باقی ماند.</string>
+    <string name="migration_failed">برون‌بری انجام نشد؛ کتابخانهٔ اصلی تغییری نکرده است.</string>
+    <string name="migration_file_exists">نام فایل تازه‌ای انتخاب کنید؛ فایل‌های موجود بازنویسی نمی‌شوند.</string>
+</resources>

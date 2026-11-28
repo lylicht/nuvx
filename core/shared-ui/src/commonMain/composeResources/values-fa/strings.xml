@@ -1,0 +1,295 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="analysis_complete">تحلیل انجام شد</string>
+  <string name="analysis_in_progress">در حال تحلیل…</string>
+  <string name="analysis_refining">تحلیل انجام شد، در حال بهبود…</string>
+  <string name="audio_output">خروجی صدا</string>
+  <string name="audio_output_playing">در همین‌جا پخش می‌شود</string>
+  <string name="audio_pipeline">خط لوله صوتی</string>
+  <string name="automix_analysis_status">میکس خودکار · این آهنگ: %1$s · بعدی: %2$s</string>
+  <string name="automix_not_supported_video">میکس خودکار برای آهنگ‌های ویدیویی پشتیبانی نمی‌شود</string>
+  <string name="best_part">بهترین بخش</string>
+  <string name="best_part_description">رفتن به بهترین بخش</string>
+  <string name="automix_stopped_in_party">میکس خودکار در Listen Together متوقف شد</string>
+  <string name="autoplay">پخش خودکار</string>
+  <string name="autoplay_empty_description">موسیقی‌های مشابه به پخش ادامه می‌دهند</string>
+  <string name="autoplay_off">پخش خودکار خاموش</string>
+  <string name="autoplay_on">پخش خودکار روشن</string>
+  <string name="autoplay_queue_description">موسیقی‌های مشابه برای پخش بعدی انتخاب شده‌اند</string>
+  <string name="bit_depth">%1$d بیت</string>
+  <string name="cancel">لغو</string>
+  <string name="cast">پخش</string>
+  <string name="cast_casting">در حال پخش</string>
+  <string name="cast_connecting">در حال اتصال…</string>
+  <string name="cast_row_subtitle">Chromecast و بلندگوهای Google Cast</string>
+  <string name="channel_count">%1$d کانال</string>
+  <string name="choose_lyrics_provider">انتخاب ارائه‌دهندهٔ متن ترانه</string>
+  <string name="clear">پاکسازی</string>
+  <string name="close_lyrics">بستن متن ترانه</string>
+  <string name="data_saver">صرفه‌جویی در داده</string>
+  <string name="decrease_lyrics_offset">کاهش تأخیر متن ترانه</string>
+  <string name="downgraded_from">↓ از %1$s</string>
+  <string name="drag_to_reorder">برای تغییر ترتیب، بکشید</string>
+  <string name="failed">خطا رخ داد</string>
+  <string name="hi_res_lossless">بدون افت، وضوح‌بالا</string>
+  <string name="high_quality">کیفیت بالا</string>
+  <string name="high_quality_upgrading">کیفیت بالا، در حال ارتقا</string>
+  <string name="increase_lyrics_offset">افزایش تأخیر متن ترانه</string>
+  <string name="instrumental">بی‌کلام</string>
+  <string name="like">پسندیدم</string>
+  <string name="listen_together">با هم گوش دهیم</string>
+  <string name="listen_together_away">دور — جای خالی آن‌ها پر شده است</string>
+  <string name="listen_together_host">میزبان</string>
+  <string name="listen_together_in_party">در یک مهمانی · %1$s</string>
+  <string name="listen_together_jam">Jamِ %1$s</string>
+  <string name="listen_together_jam_unnamed">گوش‌دادن گروهی</string>
+  <string name="listen_together_manage">مدیریت</string>
+  <string name="listen_together_open">گوش‌دادن گروهی</string>
+  <string name="listen_together_open_count">گوش‌دادن گروهی · %1$d</string>
+  <string name="listen_together_you">شما</string>
+  <string name="mixing">در حال ترکیب</string>
+  <string name="lossless">بدون افتادگی</string>
+  <string name="lyrics_already_in_language">متن ترانه از قبل به %1$s است</string>
+  <string name="lyrics_already_romanized">متن ترانه از قبل با حروف لاتین نوشته شده است</string>
+  <string name="lyrics_by">متن ترانه از %1$s</string>
+  <string name="lyrics_not_available">متن ترانه در دسترس نیست</string>
+  <string name="lyrics_offset">متن ترانه</string>
+  <string name="lyrics_offset_description">مقدار مثبت، متن ترانه را دیرتر نشان می‌دهد</string>
+  <string name="lyrics_offset_reset">بازنشانی</string>
+  <string name="lyrics_provider_current">ارائه‌دهندهٔ فعلی</string>
+  <string name="lyrics_provider_fetching">در حال دریافت متن ترانه…</string>
+  <string name="lyrics_provider_found">متن ترانه پیدا شد · برای استفاده بزنید</string>
+  <string name="lyrics_provider_not_fetched">برای دریافت بزنید</string>
+  <string name="lyrics_provider_not_found">متن ترانه پیدا نشد</string>
+  <string name="lyrics_romanization_unavailable">آوانویسی این متن ترانه در دسترس نیست</string>
+  <string name="lyrics_romanized">تلفظ آوانویسی‌شده</string>
+  <string name="lyrics_saved_with_download">متن ترانه همراه این دانلود ذخیره شد</string>
+  <string name="lyrics_share_pick_limit">ظرفیت کارت تکمیل است</string>
+  <string name="lyrics_translated_to">ترجمه‌شده به %1$s</string>
+  <string name="lyrics_translation_unavailable">ترجمه اکنون در دسترس نیست</string>
+  <string name="medium_quality">کیفیت متوسط</string>
+  <string name="mono">مونو</string>
+  <string name="more">بیشتر</string>
+  <string name="next_from">بعدی از: %1$s</string>
+  <string name="next_in_queue">بعدی در صف</string>
+  <string name="no_lyrics_for_track">برای این قطعه متنی وجود ندارد</string>
+  <string name="no_lyrics_found">متنی پیدا نشد</string>
+  <string name="now_playing">در حال پخش</string>
+  <string name="previously_played">قبلاً پخش‌شده</string>
+  <string name="open_lyrics">متن ترانه</string>
+  <string name="pause">متوقف</string>
+  <string name="play">پخش</string>
+  <string name="played_by">پخش‌شده توسط %1$s</string>
+  <string name="playing_from">در حال پخش از %1$s</string>
+  <string name="playing_radio">رادیوی %1$s در حال پخش است</string>
+  <string name="queue">در صف پخش شود</string>
+  <string name="remove_from_liked">حذف از موسیقی‌های پسندیده</string>
+  <string name="add_to_queue">به صف اضافه کنید</string>
+  <string name="remove_from_queue">حذف از صف</string>
+  <string name="repeat_all">تکرار همه</string>
+  <string name="repeat_off">تکرار خاموش</string>
+  <string name="repeat_one">تکرار همین آهنگ</string>
+  <string name="romanize_lyrics">آوانویسی متن ترانه</string>
+  <string name="romanizing_lyrics">در حال آوانویسی…</string>
+  <string name="show_original_lyrics">نمایش متن اصلی</string>
+  <string name="shuffle_off">موزیک را پخش نکن</string>
+  <string name="shuffle_on">موزیک را پخش کن</string>
+  <string name="stereo">استریو</string>
+  <string name="translate_lyrics">ترجمهٔ متن ترانه</string>
+  <string name="translating_lyrics_to">در حال ترجمه به %1$s…</string>
+  <string name="up_next">بعدی</string>
+  <string name="upgrading_quality">در حال ارتقای کیفیت</string>
+  <string name="waiting">در انتظار</string>
+  <string name="widget_next">بعدی</string>
+  <string name="widget_previous">قبلی</string>
+  <string name="wired_headphones">هدفون سیمی</string>
+  <string name="usb_audio">صدای USB</string>
+  <string name="hdmi_output">HDMI</string>
+  <string name="personal_phone">تلفن %1$s</string>
+  <string name="this_phone">این تلفن</string>
+  <string name="albums">آلبوم‌ها</string>
+  <string name="artists">هنرمندان</string>
+  <string name="card_plays_format">%1$s پخش</string>
+  <string name="card_songs_format">%1$s آهنگ</string>
+  <string name="card_views_format">%1$s بازدید</string>
+  <string name="clear_search">پاکسازی جستجو</string>
+  <string name="downloaded">دانلود شد</string>
+  <string name="explore">کاوش کنید</string>
+  <string name="library">کتابخانه</string>
+  <string name="library_sign_in_description">برای مشاهده‌ی آهنگ‌ها، لیست‌های پخش و تاریخچه موسیقی در یوتیوب موزیک، وارد حساب گوگل خود شوید.</string>
+  <string name="new_playlist">لیست پخش جدید</string>
+  <string name="on_device">در دستگاه</string>
+  <string name="personalized_recommendations">پیشنهادهای شخصی‌سازی شده برای شما</string>
+  <string name="pinned">پین شده</string>
+  <string name="play_next">بعدی پخش شود</string>
+  <string name="playlist">لیست پخش</string>
+  <string name="playlist_action">لیست پخش</string>
+  <string name="playlists">لیست‌های پخش</string>
+  <string name="recent_search_edit">ویرایش «%1$s»</string>
+  <string name="recent_search_remove">عبارت «%1$s» از جست‌وجوهای اخیر حذف شد</string>
+  <string name="recent_searches">جستجوهای اخیره</string>
+  <string name="replay_subtitle">برترین آهنگ‌ها، هنرمندان، آلبوم‌ها و ژانرهاي شما</string>
+  <string name="retry">دوباره تلاش کن</string>
+  <string name="saved_to_youtube_music">در یوتیوب موزیک ذخیره شد</string>
+  <string name="search">جستجو</string>
+  <string name="search_empty">میلیون‌ها آهنگ را در یوتیوب موزیک جستجو کنید.</string>
+  <string name="search_hint">هنرمندان، آهنگ‌ها، متن‌ها و موارد دیگر</string>
+  <string name="search_library_empty">آهنگ‌های پوشهٔ موسیقی محلی را جستجو کنید.</string>
+  <string name="search_library_hint">آهنگ‌ها، هنرمندان و آلبوم‌ها</string>
+  <string name="search_sources_hint">جستجوی منابع فعال</string>
+  <string name="search_sources_empty">همهٔ منابع فعال را هم‌زمان جستجو کنید. قطعه‌ها مستقیماً از ارائه‌دهنده پخش می‌شوند.</string>
+  <string name="search_sources_no_results">هیچ منبع فعالی «%1$s» را ندارد.</string>
+  <string name="search_library_no_results">چیزی در موسیقی محلی با «%1$s» مطابقت ندارد.</string>
+  <string name="selected">انتخاب شده</string>
+  <string name="share">اشتراک‌گذاری</string>
+  <string name="shelf_artists_on_the_rise">هنرمندان در حال رشد</string>
+  <string name="shelf_chart">جدول موسیقی</string>
+  <string name="shelf_charts">نمودارها</string>
+  <string name="shelf_concerts">کنسرت‌ها</string>
+  <string name="shelf_featured_playlists_for_you">لیست‌های پخش ویژه برای شما</string>
+  <string name="shelf_for_you">برای شما</string>
+  <string name="shelf_forgotten_favorites">محبوب‌های فراموش‌شده</string>
+  <string name="shelf_from_the_community">از جامعه کاربرانبری</string>
+  <string name="shelf_from_your_library">از کتابخانه‌ی شما</string>
+  <string name="shelf_hits_today">موزیک‌های داغ امروز</string>
+  <string name="shelf_listen_again">دوباره گوش بده</string>
+  <string name="shelf_mixed_for_you">برای شما میکس شده</string>
+  <string name="shelf_new_releases">انتشار جدید</string>
+  <string name="shelf_quick_picks">انتخاب‌های سریعه</string>
+  <string name="shelf_recents">آخرین موارد</string>
+  <string name="shelf_recommended_music_videos">موزیک ویدیوهای پیشنهادی</string>
+  <string name="shelf_shorts">محتواهای کوتاه</string>
+  <string name="shelf_similar_to">مشابه با %1$s</string>
+  <string name="shelf_single">سینگل</string>
+  <string name="shelf_song_item">آهنگ</string>
+  <string name="shelf_top_music_videos">برترین موزیک ویدیوها</string>
+  <string name="shelf_top_tunes_right_now">برترین موزیک‌ها در حال حاضر</string>
+  <string name="shelf_trending">موضوعات داغ</string>
+  <string name="shelf_trending_community_playlists">لیست‌های پخش داغ جامعه</string>
+  <string name="shelf_youtube_charts">نمودارهای یوتیوب</string>
+  <string name="show_all">همه را نشان بده</string>
+  <string name="sign_in">ورود به حساب کاربری</string>
+  <string name="sign_in_youtube_music">در یوتیوب موزیک وارد حساب کاربرداری کنید</string>
+  <string name="subscriptions">اشتراک‌ها</string>
+  <string name="your_replay">ریپلی شما</string>
+  <string name="your_listening_experience">تجربه شنیداری شما</string>
+  <string name="default_replay_holder">شنونده‌ی ویرال</string>
+  <string name="member_since">عضویت از</string>
+  <string name="import_spotify">وارد کردن اسپاتیفای</string>
+  <string name="import_spotify_subtitle">از لینک لیست پخش</string>
+  <string name="sign_in_with_google">ورود با Google</string>
+  <string name="top_picks_for_you">انتخاب‌های برتر برای شما</string>
+  <string name="top_pick_made_for_you">ساخته‌شده برای شما</string>
+  <string name="mixes_yours">میکس‌های شما</string>
+  <string name="mixes_none">هنوز میکسی ندارید. به گوش‌دادن ادامه دهید تا YouTube Music برایتان میکس بسازد.</string>
+  <string name="top_pick_mood_for_you">حال‌وهوای شما</string>
+  <string name="top_pick_featuring">با حضور %1$s</string>
+  <string name="top_pick_and_similar">%1$s و هنرمندان مشابه</string>
+  <string name="top_pick_named_station">ایستگاه %1$s</string>
+  <string name="top_pick_your_station">ایستگاه شما</string>
+  <string name="top_pick_discovery_station">ایستگاه کشف موسیقی</string>
+  <string name="top_pick_new_from">تازه از %1$s</string>
+  <string name="mood_energy">انرژی</string>
+  <string name="mood_energy_line">آهنگ‌های پرانرژی برای اینکه به حرکت ادامه دهید.</string>
+  <string name="mood_relax">آرامش</string>
+  <string name="mood_relax_line">آهنگ‌های ملایم و آرام برای کندتر کردن ریتم.</string>
+  <string name="mood_feeling_blue">دل‌گرفته</string>
+  <string name="mood_feeling_blue_line">آهنگ‌های غمگین برای وقت‌هایی که به آن‌ها نیاز دارید.</string>
+  <string name="mood_feel_good">حال خوب</string>
+  <string name="mood_feel_good_line">آهنگ‌های شاد و پرنشاط برای بهتر شدن روز.</string>
+  <string name="mood_focus">تمرکز</string>
+  <string name="mood_focus_line">موسیقی پیوسته برای حفظ تمرکز.</string>
+  <string name="mood_heartbreak">دل‌شکستگی</string>
+  <string name="mood_heartbreak_line">ترانه‌های جدایی، قطره‌ای اشک در هر بار.</string>
+  <string name="mood_love">عشق</string>
+  <string name="mood_love_line">آهنگ‌های عاشقانه برای این لحظه.</string>
+  <string name="find_your_mood">حالت رو پیدا کن</string>
+  <string name="mood_after_hours">پس از نیمه‌شب</string>
+  <string name="mood_after_hours_line">آهنگ‌هایی برای وقتی شهر آرام می‌شود.</string>
+  <string name="mood_alone_time">خلوت</string>
+  <string name="mood_alone_time_line">آهنگ‌های ملایم برای وقت‌گذرانی با خودتان.</string>
+  <string name="mood_chill">آرام</string>
+  <string name="mood_chill_line">آهنگ‌های راحت برای آسوده‌گذراندن وقت.</string>
+  <string name="mood_commuting">رفت‌وآمد</string>
+  <string name="mood_commuting_line">موسیقی مناسب مسیر شما.</string>
+  <string name="mood_eating_cooking">آشپزی و غذا</string>
+  <string name="mood_eating_cooking_line">موسیقی گرم و دلنشین برای آشپزخانه و سفره.</string>
+  <string name="mood_evening">عصر</string>
+  <string name="mood_evening_line">آهنگ‌های آرام برای پایان روز.</string>
+  <string name="mood_fitness">ورزش</string>
+  <string name="mood_fitness_line">آهنگ‌های کوبنده برای اینکه بیشتر تلاش کنید.</string>
+  <string name="mood_gaming">بازی</string>
+  <string name="mood_gaming_line">موسیقی‌هایی برای بالابردن سطح بازی.</string>
+  <string name="mood_home">خانه</string>
+  <string name="mood_home_line">موسیقی دلنشین برای یک روز آرام در خانه.</string>
+  <string name="mood_morning">صبح</string>
+  <string name="mood_morning_line">آهنگ‌های پرنشاط برای شروع خوب روز.</string>
+  <string name="mood_motivation">انگیزه</string>
+  <string name="mood_motivation_line">سرودهایی برای بلندشدن و شروع‌کردن.</string>
+  <string name="mood_outdoors">فضای باز</string>
+  <string name="mood_outdoors_line">موسیقی برای هوای تازه و جاده‌های باز.</string>
+  <string name="mood_party">مهمانی</string>
+  <string name="mood_party_line">آهنگ‌های محبوب برای ادامه‌دادن شب.</string>
+  <string name="mood_sleep">خواب</string>
+  <string name="mood_sleep_line">آهنگ‌های نرم و آرام برای به‌خواب‌رفتن.</string>
+  <string name="mood_social">دورهمی</string>
+  <string name="mood_social_line">آهنگ‌هایی که همهٔ جمع می‌شناسند.</string>
+  <string name="mood_sports">ورزش</string>
+  <string name="mood_sports_line">انرژی روز مسابقه از ابتدا تا انتها.</string>
+  <string name="mood_summertime">آهنگ‌های تابستانی</string>
+  <string name="mood_summertime_line">آهنگ‌های آفتابی برای روزهای گرم و بلند.</string>
+  <string name="mood_holiday">تعطیلات</string>
+  <string name="mood_holiday_line">آهنگ‌های جشن و تعطیلات.</string>
+  <string name="mood_weekend">آخر هفته</string>
+  <string name="mood_weekend_line">موسیقی شاد برای روزهای استراحت.</string>
+  <string name="mood_wellbeing">تندرستی</string>
+  <string name="mood_wellbeing_line">موسیقی آرام برای ذهن‌آگاهی و یوگا.</string>
+  <string name="mood_work">کار</string>
+  <string name="mood_work_line">موسیقی بی‌کلام و پیوسته برای انجام کارها.</string>
+  <string name="video_quality">کیفیت ویدیو</string>
+  <string name="video_quality_auto">خودکار</string>
+  <string name="mix_view_bars">%1$d میزان</string>
+  <string name="mix_view_one_bar">۱ میزان</string>
+  <string name="mix_view_seconds">%1$d ثانیه</string>
+  <string name="mix_view_bpm">%1$d ضرب در دقیقه</string>
+  <string name="automix_overview_unavailable">انتقال میکس خودکاری در راه نیست</string>
+  <string name="queue_selected_count">انتخاب شد: %1$d</string>
+  <string name="queue_select_all">انتخاب همه</string>
+  <string name="queue_select">انتخاب</string>
+  <string name="queue_close_selection">بستن حالت انتخاب</string>
+  <string name="queue_add_to_playlist">فهرست پخش</string>
+  <string name="queue_download">دانلود</string>
+  <string name="queue_selection_remove">حذف</string>
+  <string name="queue_add_all_to_playlist">افزودن همه به فهرست پخش</string>
+  <string name="browse_categories">مرور دسته‌بندی‌ها</string>
+  <string name="app_icon_white_transparent">شفاف سفید</string>
+  <string name="app_icon_black_transparent">شفاف سیاه</string>
+  <string-array name="lyrics_intro_lines">
+    <item>ریتم دارد شکل می‌گیرد</item>
+    <item>آهنگ شروع شده است</item>
+    <item>در حال آماده‌شدن</item>
+    <item>در حال ساختن حال‌وهوا</item>
+    <item>اول بیس، بعدتر کلام</item>
+    <item>منتظرش باشید</item>
+    <item>اوج‌گرفتن را حس کنید</item>
+    <item>فعلاً فقط ریتم</item>
+    <item>ترجیع‌بند در راه است</item>
+    <item>بگذارید موسیقی نفس بکشد</item>
+    <item>آمادهٔ ورود صدای خواننده</item>
+    <item>نت‌های اول شروع شدند</item>
+  </string-array>
+  <string-array name="lyrics_loading_lines">
+    <item>در حال دریافت متن ترانه</item>
+    <item>در حال پیدا کردن کلمات</item>
+    <item>در حال دریافت بندها</item>
+    <item>متن ترانه در حال بارگیری است</item>
+    <item>در حال بررسی متن ترانه</item>
+    <item>در حال جستجو در ترانه‌نامه</item>
+    <item>در حال هماهنگ‌کردن متن ترانه</item>
+    <item>کلمات در راه‌اند</item>
+    <item>در حال بررسی بایگانی</item>
+    <item>در حال پیدا کردن کلمات درست</item>
+    <item>متن ترانه در حال آماده‌شدن است</item>
+    <item>کلمات تقریباً پیدا شدند</item>
+  </string-array>
+</resources>
